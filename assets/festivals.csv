@@ -1,0 +1,50 @@
+# Public festivals and holidays, shown in the countdown and with their scene on the day.
+# Dates: Drik Panchang for New Delhi (drikpanchang.com/calendars/indian/indiancalendar.html?year=YYYY);
+# national days and Eid as in the Government of India (DoPT) holiday list.
+#
+# date,name,greeting,scene[,expected]
+#   scene: one of the Festive.Theme names, or PLAIN for none. Days between two entries with the
+#          same scene, up to 9 days apart, share it (so all of Diwali week and Navratri glow).
+#   expected: the date depends on a moon sighting and may move by a day.
+2026-10-29,Karwa Chauth,Karwa Chauth today,KARWA
+2026-11-01,Haryana Day,Happy Haryana Day,PLAIN
+2026-11-06,Dhanteras,Happy Dhanteras,DIWALI
+2026-11-08,Diwali,Happy Diwali,DIWALI
+2026-11-10,Govardhan Puja,Happy Govardhan Puja,DIWALI
+2026-11-11,Bhai Dooj,Happy Bhai Dooj,DIWALI
+2026-11-15,Chhath Puja,Happy Chhath Puja,SUNSET
+2026-11-24,Guru Nanak Jayanti,Happy Gurpurab,DEEPMALA
+2026-12-25,Christmas,Merry Christmas,CHRISTMAS
+2027-01-01,New Year's Day,Happy New Year,FIREWORKS
+2027-01-14,Lohri,Happy Lohri,BONFIRE
+2027-01-15,Makar Sankranti,Happy Makar Sankranti,KITES
+2027-01-26,Republic Day,Happy Republic Day,TRICOLOUR
+2027-02-11,Basant Panchami,Happy Basant Panchami,BASANT
+2027-03-06,Maha Shivratri,Maha Shivratri today,CRESCENT
+2027-03-10,Eid al-Fitr,Eid Mubarak,EID,expected
+2027-03-21,Holika Dahan,Holika Dahan tonight,BONFIRE
+2027-03-22,Holi,Happy Holi,HOLI
+2027-04-07,Navratri begins,Happy Navratri,TORAN
+2027-04-14,Baisakhi,Happy Baisakhi,TORAN
+2027-04-15,Ram Navami,Happy Ram Navami,TORAN
+2027-05-17,Eid al-Adha,Eid Mubarak,EID,expected
+2027-05-20,Buddha Purnima,Buddha Purnima today,MOON
+2027-07-18,Guru Purnima,Guru Purnima today,MOON
+2027-08-15,Independence Day,Happy Independence Day,TRICOLOUR
+2027-08-17,Raksha Bandhan,Happy Raksha Bandhan,RAKHI
+2027-08-25,Janmashtami,Happy Janmashtami,PEACOCK
+2027-09-04,Ganesh Chaturthi,Happy Ganesh Chaturthi,TORAN
+2027-09-30,Navratri begins,Happy Navratri,TORAN
+2027-10-02,Gandhi Jayanti,Gandhi Jayanti today,PLAIN
+2027-10-07,Durga Ashtami,Durga Ashtami today,TORAN
+2027-10-09,Dussehra,Happy Dussehra,TORAN
+2027-10-18,Karwa Chauth,Karwa Chauth today,KARWA
+2027-10-27,Dhanteras,Happy Dhanteras,DIWALI
+2027-10-28,Choti Diwali,Happy Choti Diwali,DIWALI
+2027-10-29,Diwali,Happy Diwali,DIWALI
+2027-10-30,Govardhan Puja,Happy Govardhan Puja,DIWALI
+2027-10-31,Bhai Dooj,Happy Bhai Dooj,DIWALI
+2027-11-01,Haryana Day,Happy Haryana Day,PLAIN
+2027-11-04,Chhath Puja,Happy Chhath Puja,SUNSET
+2027-11-14,Guru Nanak Jayanti,Happy Gurpurab,DEEPMALA
+2027-12-25,Christmas,Merry Christmas,CHRISTMAS

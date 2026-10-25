@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Aangan's TV banner: the icon's lit doorway, centred on a wide indigo card. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="160"
+    android:viewportHeight="90">
+    <path android:pathData="M0,0 H160 V90 H0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="0" android:startY="0" android:endX="0" android:endY="90"
+                android:startColor="#FF262A52" android:endColor="#FF14162E" />
+        </aapt:attr>
+    </path>
+    <path android:pathData="M68,70 V40 A12,12 0 0 1 92,40 V70 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="0" android:startY="28" android:endX="0" android:endY="70"
+                android:startColor="#FFFFD58A" android:endColor="#FFFF7A45" />
+        </aapt:attr>
+    </path>
+    <path android:fillColor="#FFFFF4D6" android:pathData="M80,38 m-4.5,0 a4.5,4.5 0 1,0 9,0 a4.5,4.5 0 1,0 -9,0" />
+    <path android:strokeColor="#FFFFE3B0" android:strokeWidth="1.8" android:fillColor="#00000000"
+        android:pathData="M65,70 V40 A15,15 0 0 1 95,40 V70" />
+    <path android:fillColor="#FFFFE3B0" android:pathData="M58,70 H102 V73 H58 Z" />
+</vector>

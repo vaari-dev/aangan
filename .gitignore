@@ -1,0 +1,3 @@
+build/
+# The signing key stays off any repository.
+keystore/
