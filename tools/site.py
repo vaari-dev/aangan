@@ -150,7 +150,7 @@ def structured(name, meta, body, url):
             "image": SITE + "social.png", "author": {"@id": SITE + "#org"}, "publisher": {"@id": SITE + "#org"},
             "featureList": ["No ads, tracking or account", "Weather and air quality (CPCB AQI, US AQI)",
                             "Indian festival countdowns and animated scenes", "Birthdays and anniversaries",
-                            "Arrange, pin and hide apps", "Set up from your phone by QR code",
+                            "A dock of four apps you choose", "Set up from your phone by QR code",
                             "Opens with the Home button without adb", "Screensaver"],
         })
     else:

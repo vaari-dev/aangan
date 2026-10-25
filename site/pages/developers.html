@@ -2,7 +2,7 @@
 <div class="wrap page-head">
   <p class=eyebrow>Developers</p>
   <h1>Small enough to read in an afternoon.</h1>
-  <p class=lede>Aangan is about 5,700 lines of plain Java with no third-party libraries and no Gradle. It builds with one shell script and the Android SDK. Here's how it fits together.</p>
+  <p class=lede>Aangan is about 6,700 lines of plain Java with no third-party libraries and no Gradle. It builds with one shell script and the Android SDK. Here's how it fits together.</p>
 </div>
 <div class="wrap doc">
   <nav class=toc aria-label="On this page"><b>On this page</b>
@@ -19,7 +19,7 @@
     </ul>
 
     <h2 id=build>Building</h2>
-    <p>You need the Android SDK (build-tools 34, platform 34) and JDK 17. By default the script looks in <code>~/.local/share/android</code>; set <code>ANDROID_HOME</code> to point elsewhere.</p>
+    <p>You need the Android SDK (build-tools 37.0.0, platform android-37.2) and JDK 17 or later. By default the script looks in <code>~/.local/share/android</code>; set <code>ANDROID_HOME</code> to point elsewhere.</p>
 <pre><code>git clone {{REPO}}
 cd aangan
 ./build.sh            # build/aangan.apk, signed with a local development key
@@ -33,24 +33,25 @@ cd aangan
     <h2 id=release>Releases</h2>
     <p>Release builds are signed with the project's key, kept off any repository:</p>
 <pre><code>AANGAN_KEYSTORE=~/keys/aangan-release.jks AANGAN_KEY_PASS=… ./build.sh bundle</code></pre>
-    <p>The same key signs the APK on GitHub Releases and is the Google Play app-signing key, so either can update the other. Bump <code>--version-code</code> and <code>--version-name</code> in <code>build.sh</code> for each release.</p>
+    <p>The same key signs the APK on GitHub Releases and is the Google Play app-signing key, so either can update the other. Raise <code>VERSION_CODE</code> and <code>VERSION_NAME</code> in <code>build.sh</code> for each release.</p>
 
     <h2 id=map>Source map</h2>
     <div class=table><table>
       <tr><th>File</th><th>What it is</th></tr>
-      <tr><td><code>HomeActivity</code></td><td>The home screen: clock, date and countdown, the weather pill, the top row and app grid, the app menu, and the scene layer.</td></tr>
+      <tr><td><code>HomeActivity</code></td><td>The home screen: clock, date and countdown, the weather pill, the dock and app grid, the app menu, and the scene layer.</td></tr>
+      <tr><td><code>Apps</code>, <code>Dock</code></td><td>The TV's launchable apps, and the four in the dock: filled once, then changed only by you.</td></tr>
       <tr><td><code>Ambient</code>, <code>Backdrop</code></td><td>The focused app's coloured glow, and the background painted once into a bitmap.</td></tr>
       <tr><td><code>Weather</code>, <code>WeatherGlyph</code></td><td>Open-Meteo forecast and air quality, the CPCB and EPA scales, and line-art weather icons.</td></tr>
       <tr><td><code>TodayCard</code></td><td>The sheet behind the weather pill: hours, sun, UV, moon, the PM2.5 chart and what's coming up.</td></tr>
       <tr><td><code>Festival</code></td><td>The calendar: festivals from the CSV with the family's moves and hides on top, plus personal days.</td></tr>
       <tr><td><code>Festive</code></td><td>Every scene, drawn on a canvas, with its opening and gentle loop.</td></tr>
-      <tr><td><code>People</code>, <code>Place</code></td><td>The family's days, and the chosen city with its search.</td></tr>
-      <tr><td><code>SetupActivity</code>, <code>WelcomeActivity</code></td><td>Settings and the first-run welcome.</td></tr>
+      <tr><td><code>People</code>, <code>Place</code></td><td>The family's days, and the chosen city with its search: popular cities, older names, and results ranked by country and size.</td></tr>
+      <tr><td><code>SetupActivity</code>, <code>CityActivity</code>, <code>WelcomeActivity</code></td><td>Settings, the city picker with results as you type, and the first-run welcome.</td></tr>
       <tr><td><code>PhoneSetup</code>, <code>QrCode</code></td><td>The phone setup page's tiny HTTP server and pages, and the QR encoder.</td></tr>
       <tr><td><code>HomeButton</code></td><td>The accessibility service that answers the Home button.</td></tr>
       <tr><td><code>ClockDream</code></td><td>The screensaver.</td></tr>
     </table></div>
-    <p>Other files: <code>assets/festivals.csv</code> (the calendar), <code>assets/phone/</code> (the phone page's stylesheet, font and logo), <code>res/drawable/</code> (the icon and banner) and <code>res/xml/home_button.xml</code> (the service's limits).</p>
+    <p>Other files: <code>assets/festivals.csv</code> (the calendar), <code>assets/phone/</code> (the phone page's stylesheet, font, logo and the small script that suggests cities as you type), <code>res/drawable/</code> (the icon and banner) and <code>res/xml/home_button.xml</code> (the service's limits).</p>
 
     <h2 id=calendar>The festival calendar</h2>
     <p><code>assets/festivals.csv</code> has one line per festival day:</p>
@@ -78,7 +79,8 @@ cd aangan
     <p>Everything lives in one <code>SharedPreferences</code> file, <code>aangan</code>, with backup disabled:</p>
     <div class=table><table>
       <tr><th>Key</th><th>Holds</th></tr>
-      <tr><td><code>pins</code>, <code>hidden</code></td><td>Package names for the top row (in order) and hidden apps</td></tr>
+      <tr><td><code>dock</code></td><td>JSON list of four package names, left to right; <code>""</code> for an empty place</td></tr>
+      <tr><td><code>hidden</code></td><td>Package names of hidden apps</td></tr>
       <tr><td><code>people</code></td><td>JSON list of <code>{m, d, birthday, who}</code></td></tr>
       <tr><td><code>festival_edits</code></td><td>JSON object keyed <code>"2026-11-08|Diwali"</code>: <code>{date}</code> and/or <code>{hidden}</code></td></tr>
       <tr><td><code>place</code></td><td>The chosen city as JSON</td></tr>
@@ -90,9 +92,12 @@ cd aangan
     <h3>The phone setup page</h3>
     <ul>
       <li><b>Lifetime:</b> a server socket on port 8737 (or any free port) opens in <code>SetupActivity.onResume</code> and closes in <code>onPause</code>.</li>
-      <li><b>Authorisation:</b> every path is under a 10-character secret drawn from a 32-letter alphabet with <code>SecureRandom</code> (50 bits), new each time Settings opens and shown only on the TV. Anything else gets a "link expired" page.</li>
+      <li><b>Authorisation:</b> every path is under a 10-character secret drawn from a 32-letter alphabet with <code>SecureRandom</code> (50 bits), new each time Settings opens and shown only on the TV. Anything else gets a plain "link expired" page that links to nothing.</li>
       <li><b>Input:</b> bodies are capped at 8 KB; names at 40 characters; dates are validated, and festival moves are limited to a year either side of the calendar's date. All output is HTML-escaped.</li>
-      <li><b>Headers:</b> <code>Cache-Control: no-store</code>, <code>Referrer-Policy: no-referrer</code> and <code>X-Content-Type-Options: nosniff</code>. No cookies, no scripts, and no outside resources.</li>
+      <li><b>Reach:</b> the server listens only on the TV's home-network address, not on every interface (such as a VPN or a public IPv6 address). It refuses any request that doesn't name that address as its host, which stops a web page elsewhere from pointing its own domain at the TV ("DNS rebinding").</li>
+      <li><b>Limits:</b> a request's line and headers are capped at 8 KB, its body at 8 KB, and the whole request must arrive within 10 seconds, so a slow or endless sender can't hold the server. City searches are capped at 100 characters and recent ones are cached. A city from the phone must have real coordinates and a known time zone, and there can be at most 200 family days.</li>
+      <li><b>Headers:</b> <code>Cache-Control: no-store</code>, <code>Referrer-Policy: no-referrer</code>, <code>X-Content-Type-Options: nosniff</code>, and a Content Security Policy that lets the page load only the TV's own stylesheet, font, logo and script, and send forms and requests only to the TV. No cookies and no outside resources.</li>
+      <li><b>Script:</b> one small file of the page's own, for city suggestions and the dock's choices. It builds everything with <code>textContent</code>, never HTML, and the page works without it.</li>
       <li><b>Transport:</b> plain HTTP on the local network. The threat model assumes a trusted home network; an attacker who can watch it during setup could see what's entered there, but not reach the page later.</li>
     </ul>
     <h3>The Home-button service</h3>

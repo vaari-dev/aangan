@@ -20,10 +20,10 @@
     <p class=lede>Aangan is small enough to read in an afternoon, so none of this has to be taken on trust.</p>
   </div>
   <div class=pillars>
-    <div class=pillar><span class="tile t1">O</span><h3>Open</h3><p>Every line is on GitHub under the MIT licence: about 5,700 lines of plain Java, no libraries, and a build script you can read top to bottom. Fork it, audit it, change it.</p></div>
+    <div class=pillar><span class="tile t1">O</span><h3>Open</h3><p>Every line is on GitHub under the MIT licence: about 6,700 lines of plain Java, no libraries, and a build script you can read top to bottom. Fork it, audit it, change it.</p></div>
     <div class=pillar><span class="tile t2">P</span><h3>Private</h3><p>No ads, analytics, crash reports or account. No location permission. Your family's birthdays never leave the TV. The only outside service is a weather forecast for your city.</p></div>
     <div class=pillar><span class="tile t3">M</span><h3>Minimal</h3><p>One small app that does one job. On an ordinary day nothing on screen moves, so it uses no processor time while you watch. It checks the weather only while you're looking at it.</p></div>
-    <div class=pillar><span class="tile t4">C</span><h3>Yours to arrange</h3><p>Pin, order and hide apps. Choose your city. Add the family's days, and move or hide any festival. Do it with the remote, or from your phone by scanning a code.</p></div>
+    <div class=pillar><span class="tile t4">C</span><h3>Yours to arrange</h3><p>Choose the four apps in the dock, and hide the ones you never open. Choose your city. Add the family's days, and move or hide any festival. Do it with the remote, or from your phone by scanning a code.</p></div>
   </div>
 </div></section>
 
@@ -32,14 +32,15 @@
     <div class=text>
       <p class=eyebrow>Your apps</p>
       <h2>Your apps, and nothing else.</h2>
-      <p>A row of favourites across the top and every other app in a tidy grid below. No sponsored rows, no "continue watching" from services you didn't open, no autoplaying trailers.</p>
+      <p>A dock of four favourites, large across the top, and every other app in a tidy grid below. No sponsored rows, no "continue watching" from services you didn't open, no autoplaying trailers.</p>
       <ul class=ticks>
-        <li>Hold <kbd>OK</kbd> on any app to move it, pin it to the top row or hide it.</li>
+        <li>You choose the dock, and it stays put: Aangan never rearranges it by what you watch.</li>
+        <li>Hold <kbd>OK</kbd> on any app to put it in the dock or hide it.</li>
         <li>The focused app grows a little and casts a soft light in its own colour.</li>
         <li>Opens instantly with the Home button, and when the TV turns on.</li>
       </ul>
     </div>
-    <div class=shot><img src="home.jpg" alt="The app grid with Netflix in focus" width=1600 height=900 loading=lazy></div>
+    <div class=shot><img src="home.jpg" alt="The dock of four large apps, Netflix in focus, above the grid of other apps" width=1600 height=900 loading=lazy></div>
   </div>
 
   <div class="feature flip">
@@ -100,7 +101,7 @@
   </div>
   <div class=flow style="margin-top:18px">
     <div><h3>The forecast</h3><p>Your city's coordinates, rounded to two decimals, go to <code>api.open-meteo.com</code> and <code>air-quality-api.open-meteo.com</code>. At most every 30 and 60 minutes, and only while the home screen is on screen.</p></div>
-    <div><h3>City search</h3><p>When you search for a city, the words you typed go to <code>geocoding-api.open-meteo.com</code>. Nothing else is sent, and only when you search.</p></div>
+    <div><h3>City search</h3><p>When you type a city's name, the letters you typed go to <code>geocoding-api.open-meteo.com</code>, a moment after you stop typing. Nothing else is sent, and only while you search. Choosing from the list of large cities sends nothing.</p></div>
     <div><h3>Your phone</h3><p>The setup page is served by the TV itself, on your Wi-Fi, only while Settings is open, at an address with a fresh secret. It loads nothing from the internet.</p></div>
   </div>
 </div></section>
@@ -110,21 +111,21 @@
     <div class=text>
       <p class=eyebrow>Set up from your phone</p>
       <h2>Typing with a remote is slow. So don't.</h2>
-      <p>Open Settings on the TV and scan the code. Your phone's browser opens a page served by the TV itself, where you can choose the city, add and edit birthdays and anniversaries, and move or hide festival dates. Changes appear on the TV as you make them.</p>
+      <p>Open Settings on the TV and scan the code. Your phone's browser opens a page served by the TV itself, where you can choose the city, set the dock, add and edit birthdays and anniversaries, and move or hide festival dates. Changes appear on the TV as you make them.</p>
       <ul class=ticks>
         <li>No app to install, no account, no cloud in between.</li>
         <li>The page and its font come from the TV, so nothing loads from the internet.</li>
         <li>It stops the moment you leave Settings.</li>
       </ul>
     </div>
-    <div class="shot phone"><img src="phone.png" alt="The phone page: the city and the family's days, one open for editing" width=600 height=1954 loading=lazy><img src="phone-festivals.png" alt="The phone page: the festival list with Bhai Dooj moved by a day" width=600 height=2000 loading=lazy></div>
+    <div class="shot phone"><img src="phone.png" alt="The phone page: city suggestions as you type, the dock's four choices, and the family's days" width=600 height=1954 loading=lazy><img src="phone-festivals.png" alt="The phone page: the festival list with Bhai Dooj moved by a day" width=600 height=2000 loading=lazy></div>
   </div>
   <div class=head style="margin-top:clamp(56px,8vw,96px)">
     <h3>Everything you can change</h3>
   </div>
   <div class=knobs>
-    <div class=knob><b>City</b><span>Any place in the world; Gurgaon until you choose.</span></div>
-    <div class=knob><b>Top row</b><span>Which apps, and in what order.</span></div>
+    <div class=knob><b>City</b><span>Any town in the world, or a large city in one press; Gurgaon until you choose.</span></div>
+    <div class=knob><b>The dock</b><span>Which four apps, and in what order.</span></div>
     <div class=knob><b>Hidden apps</b><span>Hide any app; bring them all back from Settings.</span></div>
     <div class=knob><b>Birthdays and anniversaries</b><span>Add, edit and remove, with names as you say them.</span></div>
     <div class=knob><b>Festival dates</b><span>Move a festival your family keeps on another day.</span></div>

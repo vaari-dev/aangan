@@ -70,6 +70,13 @@
             android:screenOrientation="landscape" />
 
         <activity
+            android:name=".CityActivity"
+            android:exported="false"
+            android:label="Your city"
+            android:screenOrientation="landscape"
+            android:windowSoftInputMode="adjustNothing|stateHidden" />
+
+        <activity
             android:name=".SetupActivity"
             android:exported="false"
             android:label="Aangan settings"

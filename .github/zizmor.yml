@@ -1,0 +1,6 @@
+# zizmor, which audits the workflows in CI.
+rules:
+  # It suggests a newer "$/" syntax for the repository's own actions; "./" is the long-standing,
+  # documented form, and means the same here, as every job checks out this repository first.
+  self-repository:
+    disable: true

@@ -17,8 +17,8 @@ screen, with its rows of ads and recommendations, with something quiet, beautifu
 
 ## What it does
 
-- **Your apps, and nothing else.** A row of favourites and every other app in a tidy grid. Hold OK on any app to move it, pin it or hide it. The focused app casts a soft light in its own colour.
-- **The sky outside.** The time, the weather and the air quality for your city, always in the corner.
+- **Your apps, and nothing else.** A dock of four favourites, large across the top, and every other app in a tidy grid. You choose the dock, and it never rearranges itself. Hold OK on any app to put it in the dock or hide it. The focused app casts a soft light in its own colour.
+- **The sky outside.** The time, the weather and the air quality for your city, always in the corner. Pick your city from a list of large ones, or type a few letters and choose from what appears; old names like Bombay or Gurgaon work too.
 - **Today, at a glance.** Press Up then OK on the weather: the next hours, high and low, sunrise and sunset, UV, the moon, a 36-hour air-quality trend with your country's safe limit, and the best time to air out the house.
 - **Festivals.** A countdown to the next one, and on the day itself a hand-drawn scene behind your apps. If your family keeps a festival on another day, move it, or hide one you don't celebrate.
 - **Your family's days.** Birthdays and anniversaries get balloons, confetti, rings and petals, with a greeting by name. Add, edit and remove them on the TV or from your phone.
@@ -81,8 +81,8 @@ streamer and install Aangan there; see [why, and how](https://vaari-dev.github.i
 ## Set up from your phone
 
 Typing with a TV remote is slow, so Aangan's settings show a QR code. Scan it with your phone's camera, on the same
-Wi-Fi, to choose your city, add or edit birthdays and anniversaries, and move or hide festival dates, all from the
-phone's browser. The TV itself serves the page:
+Wi-Fi, to choose your city (with suggestions as you type), set the dock, add or edit birthdays and anniversaries, and
+move or hide festival dates, all from the phone's browser. The TV itself serves the page:
 
 - it runs only while the settings screen is open;
 - its address carries a fresh one-time secret;
@@ -91,7 +91,7 @@ phone's browser. The TV itself serves the page:
 ![Settings on the TV](docs/settings.jpg)
 
 <p align="center">
-<img src="docs/phone.png" alt="The phone page: your city and the family's days" width="300">&nbsp;&nbsp;
+<img src="docs/phone.png" alt="The phone page: city suggestions as you type, the dock, and the family's days" width="300">&nbsp;&nbsp;
 <img src="docs/phone-festivals.png" alt="The phone page: moving a festival date" width="300">
 </p>
 
@@ -101,7 +101,8 @@ phone's browser. The TV itself serves the page:
 
 ## Build from source
 
-You need the Android SDK (build-tools 34, platform 34) and JDK 17. There's no Gradle.
+You need the Android SDK (build-tools 37.0.0, platform android-37.2) and JDK 17 or later. There's no Gradle, and no
+third-party libraries: the app uses only Android itself.
 
     ./build.sh            # builds build/aangan.apk, signed with a local development key
     ./build.sh install    # and installs it over adb (set ANDROID_SERIAL when several devices are connected)
@@ -118,6 +119,16 @@ You need the Android SDK (build-tools 34, platform 34) and JDK 17. There's no Gr
 3. Seeing a version with no release yet, CI waits for an owner to approve the `release` environment. Then it builds
    with the release key, checks the certificate, publishes the GitHub release with the changelog as its notes, and,
    once Google Play is set up, uploads the bundle to Play's internal track. See [`store/README.md`](store/README.md).
+
+### Supply chain
+
+- **Actions:** every GitHub Action is pinned to a full commit, never a tag, and the repository requires that.
+  Dependabot proposes updates weekly, waiting a week after each release so a bad one is likely caught first.
+- **Workflows:** [zizmor](https://docs.zizmor.sh) audits them on every push. Checkouts don't keep the token, and each
+  job has only the permissions it needs.
+- **Signing:** the signing key lives only in the approval-gated `release` environment, and a release build fails
+  unless it's signed with the known certificate.
+- **Downloads:** the only one, bundletool, is checked against a pinned SHA-256.
 
 To preview a festival's scene: `adb shell "am start -n dev.vaari.aangan/.HomeActivity --es festival Diwali"`.
 Press Home to clear it.

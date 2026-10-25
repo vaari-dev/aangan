@@ -2,7 +2,16 @@
 
 Each version's notes become its GitHub release notes and the website's changelog page.
 
-## 1.2
+## 1.3
+
+- **The dock.** Four apps you choose, larger than the rest, across the top of the home screen. It starts with the apps from your old top row, and only you change it: it never rearranges itself, and an uninstalled app leaves an empty place rather than shuffling the others. Hold OK on any app to put it in the dock, or set it in Settings or from your phone.
+- **Easier city search.** A screen of its own, with large cities to choose straight away and places appearing as you type. Results show the state and size to tell same-named places apart, leave out airports and neighbourhoods, and older names such as Bombay, Bangalore and Gurgaon find the right city.
+- **Suggestions as you type** for the city on the phone page.
+- **Security fix for the phone page.** While Settings was open, any device on your Wi-Fi could learn the page's secret address from the "link expired" page, and then change settings or read the family's days. That page now gives nothing away. The page also now answers only on your home network's address, only to requests addressed to it, and only within strict size and time limits, and it tells the browser to load nothing but the TV's own files.
+- Settings text that was too faint to read comfortably from across the room is brighter.
+- Built with the newest Android tools, and ready for Android 16's Back button.
+
+## 1.2 · 25 October 2026
 
 - Before you switch on **Open with Home**, Aangan now explains exactly what the Home-button service does and asks you to agree.
 - Marked as a TV app, so Google Play offers it to TVs only.

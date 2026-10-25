@@ -13,7 +13,7 @@ import java.util.List;
 
 /**
  * Aangan's one preferences file, and the small formats kept in it: JSON for the city, the family's
- * days and festival changes, and comma-separated package names for pinned and hidden apps.
+ * days, festival changes and the dock, and comma-separated package names for hidden apps.
  *
  * Every write uses apply(): it updates the in-memory copy at once, so the next read anywhere in the
  * app (the home screen, Settings, or the phone page's thread) already sees the change, and the disk
@@ -48,7 +48,7 @@ final class Prefs {
         }
     }
 
-    /** A comma-separated list, such as the pinned apps' package names. */
+    /** A comma-separated list, such as the hidden apps' package names. */
     static List<String> list(SharedPreferences prefs, String key) {
         List<String> out = new ArrayList<>();
         for (String s : prefs.getString(key, "").split(",")) if (!s.isEmpty()) out.add(s);

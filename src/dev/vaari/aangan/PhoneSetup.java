@@ -9,16 +9,20 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
 
-import java.io.BufferedReader;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.Inet4Address;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
@@ -26,6 +30,8 @@ import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.time.format.TextStyle;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -43,9 +49,16 @@ final class PhoneSetup {
     /** The secret in the page's address: ten characters, avoiding ones easily misread (l, o, 0, 1). */
     private static final String SECRET_ALPHABET = "abcdefghijkmnpqrstuvwxyz23456789";
     private static final int SECRET_LENGTH = 10;
-    /** A request's form data is read up to this many characters; the page's forms are far smaller. */
+    /** A request's form data is read up to this many bytes; the page's forms are far smaller. */
     private static final int MAX_BODY = 8192;
+    /** The request line and headers together; a browser's are well under this. */
+    private static final int MAX_HEAD = 8192;
+    /** How long one request may take, from connecting to the end of its body. */
     private static final int TIMEOUT_MS = 10_000;
+    /** Shown for any address without the current secret. It links to nothing, so it gives nothing away. */
+    private static final String EXPIRED = "<!doctype html><html lang=en><meta charset=utf-8>"
+            + "<meta name=viewport content='width=device-width,initial-scale=1'><title>Link expired</title>"
+            + "<h1>This link has expired</h1><p>Open Aangan's Settings on the TV and scan the new code.</p></html>";
     /** The family's longest name, as the form allows. */
     private static final int MAX_NAME = 40;
     /** Days ahead within which the page says "in 9 days"; it lists the whole year, so this reaches further than the home screen. */
@@ -55,17 +68,23 @@ final class PhoneSetup {
     private static final String[] MONTHS = Dates.months(TextStyle.FULL);
     /** What the page says after each kind of change. */
     private static final Map<String, String> DONE = new HashMap<>();
+    /** Everything the page uses comes from the TV itself, and only its own script runs. */
+    private static final String POLICY = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; "
+            + "font-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'";
 
     static {
         DONE.put("added", "Added");
         DONE.put("saved", "Saved");
         DONE.put("removed", "Removed");
         DONE.put("city", "City changed");
+        DONE.put("nocity", "Not saved: search for the city again");
+        DONE.put("dock", "Dock saved");
         DONE.put("moved", "Date changed");
         DONE.put("hidden", "Hidden this year");
         DONE.put("shown", "Showing again");
         DONE.put("restored", "Back to the calendar's date");
         DONE.put("invalid", "Not saved: check the name and date");
+        DONE.put("full", "Not saved: there are " + People.MAX + " days already");
         DONE.put("gone", "Not saved: that day was changed on the TV");
     }
 
@@ -75,6 +94,8 @@ final class PhoneSetup {
     private final Handler main = new Handler(Looper.getMainLooper());
     private final String secret;
     private ServerSocket server;
+    /** "192.168.1.20:8737", the address in the QR code; requests naming any other host are refused. */
+    private volatile String host;
 
     PhoneSetup(Context context, SharedPreferences prefs, Runnable onChange) {
         this.context = context.getApplicationContext();
@@ -91,23 +112,27 @@ final class PhoneSetup {
         String ip = localAddress(context);
         if (ip == null) return null;
         try {
+            // Only on the home network's address, not every interface the TV has (a VPN, or public IPv6).
+            InetAddress address = InetAddress.getByName(ip);
             server = new ServerSocket();
             server.setReuseAddress(true);
             try {
-                server.bind(new InetSocketAddress(PORT));
+                server.bind(new InetSocketAddress(address, PORT));
             } catch (IOException taken) {
                 // Something else has the usual port: let the system pick one.
                 server.close();
-                server = new ServerSocket(0);
+                server = new ServerSocket();
+                server.bind(new InetSocketAddress(address, 0));
             }
         } catch (IOException e) {
             stop();
             return null;
         }
+        host = ip + ":" + server.getLocalPort();
         Thread thread = new Thread(this::serve, "phone-setup");
         thread.setDaemon(true);
         thread.start();
-        return "http://" + ip + ":" + server.getLocalPort() + "/" + secret;
+        return "http://" + host + "/" + secret;
     }
 
     void stop() {
@@ -135,32 +160,37 @@ final class PhoneSetup {
         ServerSocket s = server;
         while (s != null && !s.isClosed()) {
             try (Socket socket = s.accept()) {
-                socket.setSoTimeout(TIMEOUT_MS);
-                handle(socket);
+                handle(socket, System.currentTimeMillis() + TIMEOUT_MS);
             } catch (IOException | RuntimeException e) {
                 // A closed server ends the loop; a broken or malformed request is just dropped.
             }
         }
     }
 
-    private void handle(Socket socket) throws IOException {
-        BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
-        String request = in.readLine();
-        if (request == null) return;
-        String[] parts = request.split(" ");
+    /**
+     * Answers one request. Everything about it is bounded, since anyone on the network can connect:
+     * its size, and its time in total (a slow sender can't hold the one-at-a-time server).
+     */
+    private void handle(Socket socket, long deadline) throws IOException {
+        InputStream in = new BufferedInputStream(socket.getInputStream());
+        String[] head = new String(read(socket, in, deadline, MAX_HEAD, true), StandardCharsets.UTF_8).split("\r\n");
+        String[] parts = head[0].split(" ");
         if (parts.length < 2) return;
         int length = 0;
-        for (String line; (line = in.readLine()) != null && !line.isEmpty(); ) {
-            if (line.toLowerCase().startsWith("content-length:")) length = Integer.parseInt(line.substring(15).trim());
+        String hostHeader = "";
+        for (String line : head) {
+            String lower = line.toLowerCase(Locale.ROOT);
+            if (lower.startsWith("content-length:")) length = parseInt(lower.substring(15).trim());
+            else if (lower.startsWith("host:")) hostHeader = lower.substring(5).trim();
         }
-        char[] body = new char[Math.max(0, Math.min(length, MAX_BODY))];
-        for (int read = 0; read < body.length; ) {
-            int n = in.read(body, read, body.length - read);
-            if (n < 0) break;
-            read += n;
-        }
-        Map<String, String> form = parseForm(new String(body));
         OutputStream out = socket.getOutputStream();
+        // A web page elsewhere can point its own domain name at the TV ("DNS rebinding"); its requests
+        // then name that domain, not the TV's address, and get nothing.
+        if (!hostHeader.equals(host)) {
+            send(out, "421 Misdirected Request", "text/plain; charset=utf-8", "no-store",
+                    "Use the address shown on the TV.".getBytes(StandardCharsets.UTF_8));
+            return;
+        }
         String base = "/" + secret;
         String path = parts[1];
         String query = "";
@@ -172,10 +202,11 @@ final class PhoneSetup {
         boolean post = parts[0].equals("POST");
 
         if (!path.equals(base) && !path.startsWith(base + "/")) {
-            respond(out, "404 Not Found", page(base, "Link expired", "<section><h1>This link has expired</h1>"
-                    + "<p class=lede>Open Aangan's Settings on the TV and scan the new code.</p></section>", null));
+            respond(out, "404 Not Found", EXPIRED);
             return;
         }
+        Map<String, String> form = parseForm(new String(
+                read(socket, in, deadline, Math.max(0, Math.min(length, MAX_BODY)), false), StandardCharsets.UTF_8));
         String route = path.substring(base.length());
         Festival.load(context, prefs);
         switch (route) {
@@ -188,6 +219,13 @@ final class PhoneSetup {
             case "/mark.svg":
                 asset(out, "phone/mark.svg", "image/svg+xml");
                 return;
+            case "/page.js":
+                asset(out, "phone/page.js", "text/javascript; charset=utf-8");
+                return;
+            case "/city.json":
+                send(out, "200 OK", "application/json; charset=utf-8", "no-store",
+                        cityJson(parseForm(query).getOrDefault("q", "")).getBytes(StandardCharsets.UTF_8));
+                return;
             default:
                 break;
         }
@@ -198,8 +236,8 @@ final class PhoneSetup {
         switch (route) {
             case "/add": {
                 People.Day day = day(form);
-                if (day != null) People.add(prefs, day);
-                redirect(out, base, day == null ? "invalid" : changed("added"), "family");
+                String result = day == null ? "invalid" : People.add(prefs, day) ? changed("added") : "full";
+                redirect(out, base, result, "family");
                 break;
             }
             case "/edit": {
@@ -216,15 +254,19 @@ final class PhoneSetup {
                 respond(out, "200 OK", cityResults(base, form.getOrDefault("q", "")));
                 break;
             case "/city/set":
-                try {
-                    new Place(form.get("name"), form.getOrDefault("region", ""), Double.parseDouble(form.get("lat")),
-                            Double.parseDouble(form.get("lon")), form.get("tz"), form.getOrDefault("cc", "")).save(prefs);
+            {
+                Place place = Place.of(form.get("name"), form.get("region"), form.get("lat"), form.get("lon"),
+                        form.get("tz"), form.get("cc"));
+                // A malformed form leaves the city as it was.
+                if (place != null) {
+                    place.save(prefs);
                     Weather.clear(prefs);
-                    changed();
-                } catch (RuntimeException ignored) {
-                    // A malformed form leaves the city as it was.
                 }
-                redirect(out, base, "city", "city");
+                redirect(out, base, place == null ? "nocity" : changed("city"), "city");
+            }
+                break;
+            case "/dock":
+                redirect(out, base, dock(form), "dock");
                 break;
             case "/festival/move":
             case "/festival/hide":
@@ -235,6 +277,41 @@ final class PhoneSetup {
             default:
                 redirect(out, base, null, null);
         }
+    }
+
+    /** Saves the dock from the page's four choices. The page swaps choices rather than repeat one; without its script, an app chosen twice keeps only its first place. */
+    private String dock(Map<String, String> form) {
+        Map<String, Apps.App> apps = Apps.load(context);
+        List<String> dock = new ArrayList<>();
+        for (int i = 0; i < Dock.SIZE; i++) {
+            String pkg = form.getOrDefault("s" + i, Dock.EMPTY);
+            dock.add(apps.containsKey(pkg) && !dock.contains(pkg) ? pkg : Dock.EMPTY);
+        }
+        Dock.set(prefs, dock);
+        return changed("dock");
+    }
+
+    /**
+     * Reads the request's head, up to its blank line ({@code head}), or exactly {@code limit} bytes of
+     * body. Fails if the head runs past {@code limit} or the deadline passes.
+     */
+    private static byte[] read(Socket socket, InputStream in, long deadline, int limit, boolean head) throws IOException {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        int matched = 0;
+        while (bytes.size() < limit || head) {
+            long left = deadline - System.currentTimeMillis();
+            if (left <= 0) throw new SocketTimeoutException("too slow");
+            socket.setSoTimeout((int) left);
+            int b = in.read();
+            if (b < 0) break;
+            if (head && bytes.size() >= limit) throw new IOException("head too long");
+            bytes.write(b);
+            // The head ends at the first CR LF CR LF.
+            matched = b == (matched % 2 == 0 ? '\r' : '\n') ? matched + 1 : b == '\r' ? 1 : 0;
+            if (head && matched == 4) return Arrays.copyOf(bytes.toByteArray(), bytes.size() - 4);
+        }
+        if (head) throw new IOException("no end to the head");
+        return bytes.toByteArray();
     }
 
     /** Applies a change to a festival day and says which, or returns null if nothing changed. */
@@ -311,6 +388,7 @@ final class PhoneSetup {
     private static void send(OutputStream out, String status, String type, String cache, byte[] bytes) throws IOException {
         out.write(("HTTP/1.1 " + status + "\r\nContent-Type: " + type + "\r\nContent-Length: " + bytes.length
                 + "\r\nCache-Control: " + cache + "\r\nReferrer-Policy: no-referrer\r\nX-Content-Type-Options: nosniff"
+                + "\r\nContent-Security-Policy: " + POLICY
                 + "\r\nConnection: close\r\n\r\n").getBytes(StandardCharsets.UTF_8));
         out.write(bytes);
     }
@@ -348,6 +426,24 @@ final class PhoneSetup {
                 .append("<form class=search method=post action='").append(base).append("/city'>")
                 .append("<input type=search name=q placeholder='Search for another city' aria-label='City' required ")
                 .append("autocomplete=off enterkeyhint=search><button>Search</button></form></div></section>");
+
+        // The dock.
+        Map<String, Apps.App> apps = Apps.load(context);
+        List<Apps.App> sorted = Apps.sorted(apps.values());
+        List<String> dock = Dock.load(prefs, apps, Prefs.list(prefs, HomeActivity.HIDDEN));
+        h.append("<section id=dock><h2>Dock</h2><form class='card dock' method=post action='").append(base).append("/dock'>");
+        for (int i = 0; i < Dock.SIZE; i++) {
+            h.append("<label class=slot><span class=n aria-hidden=true>").append(i + 1).append("</span>")
+                    .append("<select name=s").append(i).append(" aria-label='Dock place ").append(i + 1).append("'>")
+                    .append("<option value=''>Empty</option>");
+            for (Apps.App app : sorted) {
+                h.append("<option value='").append(esc(app.pkg)).append('\'')
+                        .append(app.pkg.equals(dock.get(i)) ? " selected" : "").append('>').append(esc(app.label)).append("</option>");
+            }
+            h.append("</select></label>");
+        }
+        h.append("<button class=wide>Save</button></form>")
+                .append("<p class=note>The four large apps at the top of the home screen, from left to right.</p></section>");
 
         // The family's days.
         List<People.Day> days = People.load(prefs);
@@ -467,7 +563,7 @@ final class PhoneSetup {
         StringBuilder h = new StringBuilder("<div><a class=back href='").append(base).append("#city'>‹ Back</a>")
                 .append("<h1>Choose your city</h1></div><section><ul class='card list'>");
         try {
-            List<Place> places = Place.search(query);
+            List<Place> places = Place.search(query, Place.load(prefs).country);
             if (places.isEmpty()) {
                 h.append("<li class=item><span class=text>No places called “").append(esc(query)).append("”. ")
                         .append("Try the nearest large town.</span></li>");
@@ -478,7 +574,7 @@ final class PhoneSetup {
                         .append(hidden("lat", String.valueOf(p.lat))).append(hidden("lon", String.valueOf(p.lon)))
                         .append(hidden("tz", p.timezone)).append(hidden("cc", p.country))
                         .append("<button class=place><span><b>").append(esc(p.name)).append("</b><span>")
-                        .append(esc(p.region)).append("</span></span><span class=chev style='transform:rotate(-45deg)'></span>")
+                        .append(esc(p.describe())).append("</span></span><span class='chev go'></span>")
                         .append("</button></form></li>");
             }
         } catch (Exception e) {
@@ -486,6 +582,21 @@ final class PhoneSetup {
         }
         h.append("</ul></section>");
         return page(base, "Choose your city", h.toString(), null);
+    }
+
+    /** Places matching {@code query}, for the page's suggestions as you type; null if the search failed. */
+    private String cityJson(String query) {
+        if (query.trim().length() < 2) return "[]";
+        try {
+            JSONArray a = new JSONArray();
+            for (Place p : Place.search(query, Place.load(prefs).country)) {
+                a.put(new JSONObject().put("name", p.name).put("region", p.region).put("about", p.describe())
+                        .put("lat", p.lat).put("lon", p.lon).put("tz", p.timezone).put("cc", p.country));
+            }
+            return a.toString();
+        } catch (Exception e) {
+            return "null";
+        }
     }
 
     /** "Today", "Tomorrow" or "in 9 days", for anything within {@link #WHEN_DAYS}; otherwise nothing. */
@@ -515,6 +626,7 @@ final class PhoneSetup {
                 + "<meta name=theme-color content='#14100d' media='(prefers-color-scheme: dark)'>"
                 + "<title>" + esc(title) + "</title>"
                 + "<link rel=icon href='" + base + "/mark.svg'><link rel=stylesheet href='" + base + "/page.css'>"
+                + "<script src='" + base + "/page.js' defer></script>"
                 + "</head><body><main><header class=mast><img src='" + base + "/mark.svg' alt=''><div><b>Aangan</b>"
                 + "<span>" + esc(tv == null || tv.isEmpty() ? "Your TV" : tv) + "</span></div></header>"
                 + body

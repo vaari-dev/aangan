@@ -1,0 +1,14 @@
+# Proposes updates to the GitHub Actions the workflows use, as pull requests that update both the
+# pinned commit and its version comment. Each new version waits a week first, so a compromised
+# release is likely to be caught and pulled before it's proposed here.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directories: ["/", "/.github/actions/*"]
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]

@@ -20,6 +20,8 @@ import java.util.List;
 final class People {
 
     private static final String KEY = "people";
+    /** More than any family needs, and a limit on what a stranger on the Wi-Fi could pile up. */
+    static final int MAX = 200;
 
     static final class Day {
         final int month;
@@ -91,10 +93,13 @@ final class People {
         prefs.edit().putString(KEY, a.toString()).apply();
     }
 
-    static void add(SharedPreferences prefs, Day day) {
+    /** Adds a day; false, changing nothing, once there are {@link #MAX} already. */
+    static boolean add(SharedPreferences prefs, Day day) {
         List<Day> days = load(prefs);
+        if (days.size() >= MAX) return false;
         days.add(day);
         save(prefs, days);
+        return true;
     }
 
     /** Replaces the day with this {@link Day#key()}; false, changing nothing, if it has gone. */

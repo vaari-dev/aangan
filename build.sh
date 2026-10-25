@@ -14,17 +14,19 @@ esac
 
 # The release version. Raising VERSION_NAME on main publishes it (see .github/workflows/ci.yml);
 # VERSION_CODE must go up with every release, and CHANGELOG.md needs a section for the new name.
-VERSION_CODE=8
-VERSION_NAME=1.2
-# The Android versions built for: Android 9 and up, targeting Android 14's behaviour.
+VERSION_CODE=9
+VERSION_NAME=1.3
+# The Android versions built for: Android 9 and up, targeting Android 16's behaviour, compiled
+# against the newest SDK. (Targeting 17 would need a local-network permission prompt for the phone page.)
 MIN_SDK=28
-TARGET_SDK=34
-BUILD_TOOLS=34.0.0
+TARGET_SDK=36
+COMPILE_SDK=37.2
+BUILD_TOOLS=37.0.0
 
 # ANDROID_HOME and JAVA_HOME are honoured when set (CI sets both); otherwise the usual local installs.
 SDK="${ANDROID_HOME:-$HOME/.local/share/android}"
 BT="$SDK/build-tools/$BUILD_TOOLS"
-JAR="$SDK/platforms/android-$TARGET_SDK/android.jar"
+JAR="$SDK/platforms/android-$COMPILE_SDK/android.jar"
 if [ -z "${JAVA_HOME:-}" ]; then
     # The first JDK 17 under ~/.local/share/jdk, laid out for macOS (Contents/Home) or Linux.
     for candidate in "$HOME"/.local/share/jdk/jdk-17*/Contents/Home "$HOME"/.local/share/jdk/jdk-17*; do
@@ -66,23 +68,28 @@ javac -source 8 -target 8 -Xlint:-options -encoding UTF-8 \
 
 "$BT/zipalign" -f 4 build/unsigned.apk build/aligned.apk
 
-# The signing key must stay the same for future updates to install over this one.
+# The signing key must stay the same for future updates to install over this one. The password
+# reaches each tool through the environment, never the command line, where other processes could see it.
+export KEY_PASS
 if [ ! -f "$KEYSTORE" ]; then
     mkdir -p "$(dirname "$KEYSTORE")"
-    keytool -genkeypair -keystore "$KEYSTORE" -storepass "$KEY_PASS" -keypass "$KEY_PASS" \
+    keytool -genkeypair -keystore "$KEYSTORE" -storepass:env KEY_PASS -keypass:env KEY_PASS \
         -alias aangan -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Aangan" >/dev/null 2>&1
 fi
-"$BT/apksigner" sign --ks "$KEYSTORE" --ks-pass "pass:$KEY_PASS" --out build/aangan.apk build/aligned.apk
+"$BT/apksigner" sign --ks "$KEYSTORE" --ks-pass env:KEY_PASS --out build/aangan.apk build/aligned.apk
 echo "built build/aangan.apk ($(du -h build/aangan.apk | cut -f1))"
 
 case "${1:-}" in
 bundle)
-    # bundletool, fetched once and checked against the release's published digest.
+    # bundletool, fetched once, and checked against the release's published digest every time it runs.
     if [ ! -f "$BUNDLETOOL" ]; then
         curl -fsSL -o "$BUNDLETOOL.part" \
             "https://github.com/google/bundletool/releases/download/$BUNDLETOOL_VERSION/bundletool-all-$BUNDLETOOL_VERSION.jar"
-        echo "$BUNDLETOOL_SHA256  $BUNDLETOOL.part" | shasum -a 256 -c - >/dev/null
         mv "$BUNDLETOOL.part" "$BUNDLETOOL"
+    fi
+    if ! echo "$BUNDLETOOL_SHA256  $BUNDLETOOL" | shasum -a 256 -c - >/dev/null 2>&1; then
+        echo "build.sh: $BUNDLETOOL doesn't match bundletool $BUNDLETOOL_VERSION's digest; delete it to fetch it again." >&2
+        exit 1
     fi
 
     # Same resources in protobuf form, laid out as a base module: manifest/, dex/, res/, assets/, resources.pb.
@@ -94,7 +101,6 @@ bundle)
 
     java -jar "$BUNDLETOOL" build-bundle --modules=build/base.zip --output=build/unsigned.aab
     # Signed with the APK's key: the upload key, and the Play app-signing key too.
-    export KEY_PASS
     jarsigner -keystore "$KEYSTORE" -storepass:env KEY_PASS -digestalg SHA-256 -sigalg SHA256withRSA \
         -signedjar build/aangan.aab build/unsigned.aab aangan >/dev/null
     echo "built build/aangan.aab ($(du -h build/aangan.aab | cut -f1))"

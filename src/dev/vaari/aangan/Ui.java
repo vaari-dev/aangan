@@ -24,7 +24,8 @@ final class Ui {
     // The palette: text on the dark background at three strengths, then hairlines, cards and accents.
     static final int LABEL = 0xFFF5F5F7;
     static final int SECONDARY = 0x99EBEBF5;
-    static final int TERTIARY = 0x4DEBEBF5;
+    /** Half-strength white: the faintest text that still reads comfortably from the sofa (about 4.5:1). */
+    static final int TERTIARY = 0x80EBEBF5;
     static final int HAIRLINE = 0x1FFFFFFF;
     /** Behind a focused row or button. */
     static final int FOCUS_FILL = 0x26FFFFFF;

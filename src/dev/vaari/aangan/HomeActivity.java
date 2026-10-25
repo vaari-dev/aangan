@@ -4,13 +4,13 @@ import android.app.Activity;
 import android.app.ActivityOptions;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.os.Build;
 import android.graphics.Bitmap;
 import android.graphics.BlurMaskFilter;
 import android.graphics.Canvas;
@@ -38,6 +38,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
 import android.view.animation.DecelerateInterpolator;
+import android.window.OnBackInvokedDispatcher;
 import android.widget.FrameLayout;
 import android.widget.GridLayout;
 import android.widget.ImageView;
@@ -48,48 +49,42 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import dev.vaari.aangan.Apps.App;
+
 /**
  * A calm, offline-first home screen in the spirit of the Apple TV 4K: clock, date, weather and
- * air quality across the top, a row of pinned apps, and every other app in a uniform grid.
+ * air quality across the top, a dock of four large apps the viewer chooses, and every other app
+ * in a uniform grid.
  * The focused app casts a soft light in its own colour; press Up to the weather and OK for
  * the day's forecast and air. Hold OK on any tile for options. Laid out on tvOS proportions
  * for a 960x540dp canvas.
  */
 public class HomeActivity extends Activity {
 
-    private static final String[] DEFAULT_PINS = {
-            "com.netflix.ninja",
-            "com.amazon.amazonvideo.livingroom",
-            "com.google.android.youtube.tv",
-            "com.google.android.youtube.tvkids",
-            "com.apple.atve.sony.appletv",
-            "com.apple.atve.androidtv.appletv",
-            "in.startv.hotstar",
-    };
     private static final String SETTINGS_KEY = "__settings__";
     private static final String AANGAN_KEY = "__aangan__";
-    // Preference keys: pinned and hidden apps (package names), and how many visits have shown the tips.
-    private static final String PINS = "pins";
-    private static final String HIDDEN = "hidden";
-    private static final String TIPS = "tips";
+    /** Followed by the slot's number, for an empty place in the dock. */
+    private static final String EMPTY_KEY = "__empty__";
+    /** Followed by the slot's number, tags a dock tile, so focus stays on a place whatever app is in it. */
+    private static final String DOCK_TAG = "dock:";
+    // Preference keys: hidden apps (package names), and how many visits have shown the tips.
+    static final String HIDDEN = "hidden";
+    // "tips2" from 1.3, so people upgrading see the tips again, and learn about the dock.
+    private static final String TIPS = "tips2";
 
-    // Layout, in dp. Six 16:9 tiles with 20dp gaps span 868dp, centred on the 960dp canvas.
+    // Layout, in dp. Six 16:9 tiles with 20dp gaps span 868dp, centred on the 960dp canvas; so do
+    // the dock's four larger ones.
     private static final int COLUMNS = 6;
-    private static final int TILE_W = 128;
-    private static final int TILE_H = 72;
     private static final int GAP = 20;
     private static final int ROW_PITCH = 124;
+    private static final int DOCK_PITCH = 166;
     private static final int TOP = 30;
     private static final int HEADER_H = 86;
     private static final int FIRST_ROW = 132;
@@ -103,8 +98,8 @@ public class HomeActivity extends Activity {
     private static final int PILL_H = 40;
     private static final int TIP_MARGIN = 22;
 
-    // The ambient light's strength behind the top row, the grid, and apps with no strong colour.
-    private static final float GLOW_PINNED = 0.24f;
+    // The ambient light's strength behind the dock, the grid, and apps with no strong colour.
+    private static final float GLOW_DOCK = 0.24f;
     private static final float GLOW_GRID = 0.16f;
     private static final float GLOW_NEUTRAL = 0.10f;
     private static final int NEUTRAL = 0xFFB4C3E6;
@@ -115,7 +110,6 @@ public class HomeActivity extends Activity {
     private static final int ICON_SAMPLE = 16;
 
     // Motion.
-    private static final float FOCUS_SCALE = 1.15f;
     /** Tiles other than the focused one recede slightly, under a dark veil (they stay opaque). */
     private static final int UNFOCUSED_VEIL = 0x2E000000;
     private static final float PRESS_SCALE = 0.96f;
@@ -150,13 +144,31 @@ public class HomeActivity extends Activity {
     /** How often to check, while visible, whether weather or air quality is due a refresh. */
     private static final long WEATHER_CHECK_MS = 5 * 60_000L;
 
-    private static final class App {
-        String pkg;
-        String label;
-        Intent intent;
-        Drawable banner;
-        Drawable icon;
+    /** A tile's size: the dock's or the grid's. */
+    private static final class Size {
+        final int w;
+        final int h;
+        final int icon;
+        final float label;
+        /** How much a focused tile grows. */
+        final float scale;
+        final float glow;
+        final int pitch;
+        Bitmap shadow;
+
+        Size(int w, int h, int icon, float label, float scale, float glow, int pitch) {
+            this.w = w;
+            this.h = h;
+            this.icon = icon;
+            this.label = label;
+            this.scale = scale;
+            this.glow = glow;
+            this.pitch = pitch;
+        }
     }
+
+    private static final Size DOCK = new Size(202, 114, 56, 14, 1.1f, GLOW_DOCK, DOCK_PITCH);
+    private static final Size GRID = new Size(128, 72, 40, 12, 1.15f, GLOW_GRID, ROW_PITCH);
 
     private Ui ui;
     private SharedPreferences prefs;
@@ -164,10 +176,11 @@ public class HomeActivity extends Activity {
     private Ambient ambient;
     private ScrollView scroll;
     private View header;
-    private GridLayout pinnedGrid;
+    private GridLayout dockGrid;
     private GridLayout appGrid;
-    private Bitmap shadow;
     private String signature = "";
+    /** The tile to focus after the next refresh, when a change to the dock should keep focus there. */
+    private Object focusNext;
     private boolean resumed;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -214,9 +227,13 @@ public class HomeActivity extends Activity {
         ui = new Ui(this);
         prefs = Prefs.of(this);
         Festival.load(this, prefs);
-        if (!prefs.contains(PINS)) Prefs.putList(prefs, PINS, Arrays.asList(DEFAULT_PINS));
         weather = Weather.load(prefs);
-        shadow = shadowBitmap();
+        DOCK.shadow = shadowBitmap(DOCK);
+        GRID.shadow = shadowBitmap(GRID);
+        // From Android 16, Back reaches apps targeting it only through this callback, not onBackPressed.
+        if (Build.VERSION.SDK_INT >= 33) {
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::back);
+        }
         buildFrame();
         showWeather();
 
@@ -274,7 +291,7 @@ public class HomeActivity extends Activity {
         tip.animate().alpha(1f).setStartDelay(TIP_DELAY_MS).setDuration(TIP_FADE_MS).start();
     }
 
-    /** Pressing Home while already home returns to the top row. */
+    /** Pressing Home while already home returns to the dock. */
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
@@ -284,9 +301,13 @@ public class HomeActivity extends Activity {
         goToTop();
     }
 
-    /** Back never leaves the home screen; it returns to the top row instead. */
+    /** Back never leaves the home screen; it returns to the dock instead. */
     @Override
     public void onBackPressed() {
+        back();
+    }
+
+    private void back() {
         if (today != null) closeToday();
         else goToTop();
     }
@@ -316,7 +337,7 @@ public class HomeActivity extends Activity {
         scroll.setOnScrollChangeListener((v, x, y, oldX, oldY) ->
                 header.setAlpha(1f - Math.min(1f, y / (float) dp(ROW_PITCH))));
 
-        int side = (getResources().getDisplayMetrics().widthPixels - dp(COLUMNS * TILE_W + (COLUMNS - 1) * GAP)) / 2;
+        int side = (getResources().getDisplayMetrics().widthPixels - dp(COLUMNS * GRID.w + (COLUMNS - 1) * GAP)) / 2;
         LinearLayout content = ui.column();
         content.setClipChildren(false);
         content.setClipToPadding(false);
@@ -326,10 +347,10 @@ public class HomeActivity extends Activity {
         header = buildHeader();
         content.addView(header, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(HEADER_H)));
 
-        pinnedGrid = newGrid();
-        content.addView(pinnedGrid, ui.wrap(FIRST_ROW - TOP - HEADER_H));
+        dockGrid = newGrid(Dock.SIZE);
+        content.addView(dockGrid, ui.wrap(FIRST_ROW - TOP - HEADER_H));
 
-        appGrid = newGrid();
+        appGrid = newGrid(COLUMNS);
         content.addView(appGrid);
 
         // The light sits behind the scrolling content, so tiles always draw over it.
@@ -341,7 +362,7 @@ public class HomeActivity extends Activity {
         root.addView(scroll, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         // One-time tips along the bottom edge, for the first few visits.
         tip = ui.line(13, 400, Ui.SECONDARY,
-                "Press  ▲  then OK for today's weather and air     ·     Hold OK on an app to move or hide it");
+                "Press  ▲  then OK for today's weather and air     ·     Hold OK on an app to put it in the dock or hide it");
         tip.setAlpha(0f);
         FrameLayout.LayoutParams tipLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
@@ -479,9 +500,9 @@ public class HomeActivity extends Activity {
         return lp;
     }
 
-    private GridLayout newGrid() {
+    private GridLayout newGrid(int columns) {
         GridLayout grid = new GridLayout(this);
-        grid.setColumnCount(COLUMNS);
+        grid.setColumnCount(columns);
         grid.setUseDefaultMargins(false);
         grid.setClipChildren(false);
         grid.setClipToPadding(false);
@@ -605,30 +626,6 @@ public class HomeActivity extends Activity {
 
     // ---- apps -------------------------------------------------------------------------------
 
-    private Map<String, App> loadApps() {
-        PackageManager pm = getPackageManager();
-        Map<String, App> apps = new LinkedHashMap<>();
-        String[] categories = {Intent.CATEGORY_LEANBACK_LAUNCHER, Intent.CATEGORY_LAUNCHER};
-        for (String category : categories) {
-            Intent query = new Intent(Intent.ACTION_MAIN).addCategory(category);
-            for (ResolveInfo ri : pm.queryIntentActivities(query, 0)) {
-                String pkg = ri.activityInfo.packageName;
-                if (pkg.equals(getPackageName()) || apps.containsKey(pkg)) continue;
-                App app = new App();
-                app.pkg = pkg;
-                app.label = ri.loadLabel(pm).toString();
-                app.intent = new Intent(Intent.ACTION_MAIN)
-                        .addCategory(category)
-                        .setComponent(new ComponentName(pkg, ri.activityInfo.name))
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
-                app.banner = ri.activityInfo.loadBanner(pm);
-                app.icon = ri.loadIcon(pm);
-                apps.put(pkg, app);
-            }
-        }
-        return apps;
-    }
-
     private App settingsApp() {
         PackageManager pm = getPackageManager();
         Intent intent = new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -659,55 +656,61 @@ public class HomeActivity extends Activity {
         return home != null && getPackageName().equals(home.activityInfo.packageName);
     }
 
-    /** Rebuilds the grids only when the set of apps, pins or hidden apps actually changed. */
+    /** Rebuilds the grids only when the apps, the dock or the hidden apps actually changed. */
     private void refresh() {
-        Map<String, App> apps = loadApps();
-        List<String> pins = Prefs.list(prefs, PINS);
-        Set<String> hidden = new LinkedHashSet<>(Prefs.list(prefs, HIDDEN));
+        Map<String, App> apps = Apps.load(this);
+        List<String> hidden = Prefs.list(prefs, HIDDEN);
+        List<String> dock = Dock.load(prefs, apps, hidden);
 
         boolean setUp = isSetUp();
-        String sig = apps.keySet() + "|" + pins + "|" + hidden + "|" + setUp;
+        String sig = apps.keySet() + "|" + dock + "|" + hidden + "|" + setUp;
+        View focused = getCurrentFocus();
+        Object focusedKey = focusNext != null ? focusNext : focused != null ? focused.getTag() : null;
+        focusNext = null;
         if (sig.equals(signature)) return;
         signature = sig;
 
-        View focused = getCurrentFocus();
-        Object focusedKey = focused != null ? focused.getTag() : null;
-
-        pinnedGrid.removeAllViews();
+        dockGrid.removeAllViews();
         appGrid.removeAllViews();
 
-        for (String pkg : pins) {
-            App app = apps.get(pkg);
-            if (app != null) pinnedGrid.addView(makeTile(app, true), cellParams());
+        for (int slot = 0; slot < Dock.SIZE; slot++) {
+            App app = apps.get(dock.get(slot));
+            dockGrid.addView(makeTile(app != null ? app : emptySlot(slot), DOCK, slot), cellParams(DOCK));
         }
 
         List<App> rest = new ArrayList<>();
-        for (App app : apps.values()) {
-            if (!pins.contains(app.pkg) && !hidden.contains(app.pkg)) rest.add(app);
+        for (App app : Apps.sorted(apps.values())) {
+            if (!dock.contains(app.pkg) && !hidden.contains(app.pkg)) rest.add(app);
         }
-        Collections.sort(rest, (a, b) -> a.label.compareToIgnoreCase(b.label));
         // Until Aangan opens with the Home button, its setup tile leads the grid.
         rest.add(setUp ? rest.size() : 0, aanganApp(setUp));
         rest.add(settingsApp());
-        for (App app : rest) appGrid.addView(makeTile(app, false), cellParams());
+        for (App app : rest) appGrid.addView(makeTile(app, GRID, -1), cellParams(GRID));
 
         View target = focusedKey != null ? scroll.findViewWithTag(focusedKey) : null;
         if (target == null) target = firstTile();
         if (target != null) target.requestFocus();
     }
 
-    private GridLayout.LayoutParams cellParams() {
+    /** A dock slot with no app in it: OK chooses one. */
+    private App emptySlot(int slot) {
+        App app = new App();
+        app.pkg = EMPTY_KEY + slot;
+        app.label = "Choose an app";
+        return app;
+    }
+
+    private GridLayout.LayoutParams cellParams(Size size) {
         GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
-        lp.width = dp(TILE_W + GAP);
-        lp.height = dp(ROW_PITCH);
+        lp.width = dp(size.w + GAP);
+        lp.height = dp(size.pitch);
         return lp;
     }
 
     private View firstTile() {
-        GridLayout grid = pinnedGrid.getChildCount() > 0 ? pinnedGrid : appGrid;
-        if (grid.getChildCount() == 0) return null;
+        if (dockGrid.getChildCount() == 0) return null;
         // Each cell's first child is the focusable lift.
-        return ((ViewGroup) grid.getChildAt(0)).getChildAt(0);
+        return ((ViewGroup) dockGrid.getChildAt(0)).getChildAt(0);
     }
 
     private void goToTop() {
@@ -716,9 +719,9 @@ public class HomeActivity extends Activity {
         if (first != null) first.requestFocus();
     }
 
-    /** The pinned row shows the whole header; later rows rise just enough to stay on screen. */
-    private int scrollToRow(View cell, boolean pinned) {
-        int target = pinned ? 0 : Math.max(0, contentRect(cell).top - dp(LOWEST_ROW));
+    /** The dock shows the whole header; grid rows rise just enough to stay on screen. */
+    private int scrollToRow(View cell, Size size) {
+        int target = size == DOCK ? 0 : Math.max(0, contentRect(cell).top - dp(LOWEST_ROW));
         scroll.smoothScrollTo(0, target);
         return target;
     }
@@ -731,10 +734,10 @@ public class HomeActivity extends Activity {
     }
 
     /** Pools the app's colour under its tile, where the tile will be once scrolling settles. */
-    private void lightUp(App app, View lift, int scrollTarget, boolean pinned) {
+    private void lightUp(App app, View lift, int scrollTarget, Size size) {
         Rect r = contentRect(lift);
         int color = brandColor(app);
-        float strength = color == NEUTRAL ? GLOW_NEUTRAL : pinned ? GLOW_PINNED : GLOW_GRID;
+        float strength = color == NEUTRAL ? GLOW_NEUTRAL : size.glow;
         // Centred on the tile's lower edge, so the light pools beneath it rather than over the header.
         ambient.glow(r.exactCenterX(), r.bottom - scrollTarget + dp(8), color, strength);
     }
@@ -788,11 +791,12 @@ public class HomeActivity extends Activity {
 
     /**
      * One app: a 16:9 card with rounded corners, a soft shadow and a specular sheen that appear
-     * only on focus, and the app's name beneath the focused card.
+     * only on focus, and the app's name beneath the focused card. {@code slot} is its place in the
+     * dock, or -1 in the grid.
      */
-    private View makeTile(App app, boolean pinned) {
-        final int w = dp(TILE_W);
-        final int h = dp(TILE_H);
+    private View makeTile(App app, Size size, int slot) {
+        final int w = dp(size.w);
+        final int h = dp(size.h);
         final int blur = dp(SHADOW_BLUR);
 
         LinearLayout cell = ui.column();
@@ -801,7 +805,9 @@ public class HomeActivity extends Activity {
 
         // The lift scales as one: shadow and card together.
         FrameLayout lift = new FrameLayout(this);
-        lift.setTag(app.pkg);
+        lift.setTag(slot >= 0 ? DOCK_TAG + slot : app.pkg);
+        // The name shows only on focus, so screen readers need it spelt out.
+        lift.setContentDescription(app.intent == null ? "Empty place " + (slot + 1) + " in the dock. Choose an app" : app.label);
         lift.setFocusable(true);
         lift.setClickable(true);
         lift.setLongClickable(true);
@@ -809,7 +815,7 @@ public class HomeActivity extends Activity {
         lift.setClipToPadding(false);
 
         ImageView shadowView = new ImageView(this);
-        shadowView.setImageBitmap(shadow);
+        shadowView.setImageBitmap(size.shadow);
         shadowView.setAlpha(0f);
         FrameLayout.LayoutParams shadowLp = new FrameLayout.LayoutParams(w + 2 * blur, h + 2 * blur);
         shadowLp.leftMargin = -blur;
@@ -825,7 +831,16 @@ public class HomeActivity extends Activity {
                 outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), radius);
             }
         });
-        if (app.banner != null) {
+        if (app.intent == null) {
+            // An empty dock slot: an outline with a plus.
+            GradientDrawable outline = new GradientDrawable();
+            outline.setCornerRadius(radius);
+            outline.setColor(0x0DFFFFFF);
+            outline.setStroke(dp(1.5f), 0x40FFFFFF, dp(6), dp(5));
+            card.setBackground(outline);
+            card.addView(ui.line(32, 300, Ui.SECONDARY, "+"),
+                    new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
+        } else if (app.banner != null) {
             ImageView banner = new ImageView(this);
             banner.setScaleType(ImageView.ScaleType.CENTER_CROP);
             banner.setImageDrawable(app.banner);
@@ -838,7 +853,7 @@ public class HomeActivity extends Activity {
                 ImageView icon = new ImageView(this);
                 icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
                 icon.setImageDrawable(app.icon);
-                card.addView(icon, new FrameLayout.LayoutParams(dp(40), dp(40), Gravity.CENTER));
+                card.addView(icon, new FrameLayout.LayoutParams(dp(size.icon), dp(size.icon), Gravity.CENTER));
             }
             // A hairline edge so dark tiles don't dissolve into the background.
             GradientDrawable edge = new GradientDrawable();
@@ -855,7 +870,7 @@ public class HomeActivity extends Activity {
         lift.addView(card, new FrameLayout.LayoutParams(w, h));
         cell.addView(lift, new LinearLayout.LayoutParams(w, h));
 
-        TextView label = ui.line(12, 500, 0xE6F5F5F7, app.label);
+        TextView label = ui.line(size.label, 500, 0xE6F5F5F7, app.label);
         label.setGravity(Gravity.CENTER_HORIZONTAL);
         label.setEllipsize(TextUtils.TruncateAt.END);
         label.setAlpha(0f);
@@ -866,7 +881,7 @@ public class HomeActivity extends Activity {
         DecelerateInterpolator ease = new DecelerateInterpolator(1.5f);
         lift.setOnFocusChangeListener((v, hasFocus) -> {
             long ms = hasFocus ? FOCUS_IN_MS : FOCUS_OUT_MS;
-            float scale = hasFocus ? FOCUS_SCALE : 1f;
+            float scale = hasFocus ? size.scale : 1f;
             // Draw the focused cell last so its shadow falls over its neighbours, not under them.
             cell.setTranslationZ(hasFocus ? 1 : 0);
             v.animate().scaleX(scale).scaleY(scale).setDuration(ms).setInterpolator(ease).withLayer().start();
@@ -874,24 +889,28 @@ public class HomeActivity extends Activity {
             shadowView.animate().alpha(hasFocus ? 1f : 0f).setDuration(ms).setInterpolator(ease).start();
             sheen.animate().alpha(hasFocus ? 1f : 0f).setDuration(ms).setInterpolator(ease).start();
             label.animate().alpha(hasFocus ? 1f : 0f).setDuration(LABEL_MS).setInterpolator(ease).start();
-            if (hasFocus) lightUp(app, v, scrollToRow(cell, pinned), pinned);
+            if (hasFocus) lightUp(app, v, scrollToRow(cell, size), size);
         });
         // A quick press-in before launching, so the remote's OK feels physical.
         lift.setOnClickListener(v -> v.animate().scaleX(PRESS_SCALE).scaleY(PRESS_SCALE).setDuration(PRESS_MS)
-                .withEndAction(() -> v.animate().scaleX(FOCUS_SCALE).scaleY(FOCUS_SCALE).setDuration(RELEASE_MS)
-                        .withEndAction(() -> launch(app, v)).start())
+                .withEndAction(() -> v.animate().scaleX(size.scale).scaleY(size.scale).setDuration(RELEASE_MS)
+                        .withEndAction(() -> {
+                            if (app.intent == null) chooseForSlot(slot);
+                            else launch(app, v);
+                        }).start())
                 .start());
         lift.setOnLongClickListener(v -> {
-            showMenu(app, pinned);
+            if (app.intent == null) chooseForSlot(slot);
+            else showMenu(app, slot);
             return true;
         });
         return cell;
     }
 
-    /** One soft rounded-rectangle shadow, blurred once and shared by every tile. */
-    private Bitmap shadowBitmap() {
-        int w = dp(TILE_W);
-        int h = dp(TILE_H);
+    /** One soft rounded-rectangle shadow, blurred once and shared by every tile of this size. */
+    private Bitmap shadowBitmap(Size size) {
+        int w = dp(size.w);
+        int h = dp(size.h);
         int blur = dp(SHADOW_BLUR);
         Bitmap bmp = Bitmap.createBitmap(w + 2 * blur, h + 2 * blur, Bitmap.Config.ARGB_8888);
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -1027,42 +1046,49 @@ public class HomeActivity extends Activity {
 
     // ---- options menu -----------------------------------------------------------------------
 
-    private void showMenu(App app, boolean pinned) {
+    /** Options for a tile: {@code slot} is its place in the dock, or -1 in the grid. */
+    private void showMenu(App app, int slot) {
         if (app.pkg.equals(AANGAN_KEY)) return;
         List<String> labels = new ArrayList<>();
         List<Runnable> actions = new ArrayList<>();
-        List<String> pins = Prefs.list(prefs, PINS);
+        Map<String, App> apps = Apps.load(this);
         List<String> hidden = Prefs.list(prefs, HIDDEN);
+        List<String> dock = Dock.load(prefs, apps, hidden);
 
         if (app.pkg.equals(SETTINGS_KEY)) {
             if (hidden.isEmpty()) return;
             labels.add("Show " + hidden.size() + " hidden app" + (hidden.size() == 1 ? "" : "s"));
             actions.add(() -> Prefs.putList(prefs, HIDDEN, new ArrayList<String>()));
-        } else if (pinned) {
-            int index = pins.indexOf(app.pkg);
-            if (index > 0) {
+        } else if (slot >= 0) {
+            labels.add("Change app");
+            actions.add(() -> chooseForSlot(slot));
+            if (slot > 0) {
                 labels.add("Move left");
-                actions.add(swapPins(pins, index, index - 1));
+                actions.add(() -> {
+                    Dock.swap(prefs, dock, slot, slot - 1);
+                    focusNext = DOCK_TAG + (slot - 1);
+                });
             }
-            if (index < pins.size() - 1) {
+            if (slot < Dock.SIZE - 1) {
                 labels.add("Move right");
-                actions.add(swapPins(pins, index, index + 1));
+                actions.add(() -> {
+                    Dock.swap(prefs, dock, slot, slot + 1);
+                    focusNext = DOCK_TAG + (slot + 1);
+                });
             }
-            labels.add("Remove from top row");
+            labels.add("Remove from the dock");
             actions.add(() -> {
-                pins.remove(app.pkg);
-                Prefs.putList(prefs, PINS, pins);
+                Dock.put(prefs, dock, slot, Dock.EMPTY);
+                focusNext = DOCK_TAG + slot;
             });
         } else {
-            labels.add("Add to top row");
-            actions.add(() -> {
-                pins.add(app.pkg);
-                Prefs.putList(prefs, PINS, pins);
-            });
+            labels.add("Put in the dock");
+            actions.add(() -> chooseSlotFor(app, apps, dock));
             labels.add("Hide");
             actions.add(() -> {
                 hidden.add(app.pkg);
                 Prefs.putList(prefs, HIDDEN, hidden);
+                focusNext = neighbour(app.pkg);
             });
         }
         if (!app.pkg.equals(SETTINGS_KEY)) {
@@ -1078,11 +1104,41 @@ public class HomeActivity extends Activity {
                 .show();
     }
 
-    private Runnable swapPins(List<String> pins, int a, int b) {
-        return () -> {
-            Collections.swap(pins, a, b);
-            Prefs.putList(prefs, PINS, pins);
-        };
+    /** The grid tile after this one (or before it, at the end), to keep focus nearby when it goes. */
+    private Object neighbour(String pkg) {
+        for (int i = 0; i < appGrid.getChildCount(); i++) {
+            Object tag = ((ViewGroup) appGrid.getChildAt(i)).getChildAt(0).getTag();
+            if (!pkg.equals(tag)) continue;
+            int next = i + 1 < appGrid.getChildCount() ? i + 1 : i - 1;
+            return next >= 0 ? ((ViewGroup) appGrid.getChildAt(next)).getChildAt(0).getTag() : null;
+        }
+        return null;
+    }
+
+    /** Asks which app goes in this dock slot. */
+    private void chooseForSlot(int slot) {
+        Map<String, App> apps = Apps.load(this);
+        List<String> dock = Dock.load(prefs, apps, Prefs.list(prefs, HIDDEN));
+        Dock.choose(this, apps, dock, Prefs.list(prefs, HIDDEN), slot, pkg -> {
+            focusNext = DOCK_TAG + slot;
+            refresh();
+        });
+    }
+
+    /** Asks which dock slot {@code app} should take. */
+    private void chooseSlotFor(App app, Map<String, App> apps, List<String> dock) {
+        String[] names = new String[Dock.SIZE];
+        for (int i = 0; i < names.length; i++) {
+            App there = apps.get(dock.get(i));
+            names[i] = there != null ? "Replace " + there.label : "Empty place " + (i + 1);
+        }
+        Ui.dialog(this, "Put " + app.label + " in the dock")
+                .setItems(names, (d, which) -> {
+                    Dock.put(prefs, dock, which, app.pkg);
+                    focusNext = DOCK_TAG + which;
+                    refresh();
+                })
+                .show();
     }
 
     private App appInfo(App app) {

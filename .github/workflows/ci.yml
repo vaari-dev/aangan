@@ -1,5 +1,10 @@
-# Every push and pull request: build the app and the website, and check generated files are current.
-# On main: publish the website, and when VERSION_NAME in build.sh has no release yet, release it.
+# Every push and pull request: build the app and the website, check generated files are current,
+# and audit these workflows with zizmor. On main: publish the website, and when VERSION_NAME in
+# build.sh has no release yet, release it.
+#
+# Supply chain: every action is pinned to a full commit (Dependabot proposes updates after a week's
+# cooldown), checkouts don't keep the token, each job gets only the permissions it needs, and the
+# release build fails unless it's signed with the known certificate.
 #
 # Releasing runs in the "release" environment, which waits for an owner's approval and alone holds
 # the signing key (AANGAN_KEYSTORE_B64, AANGAN_KEY_PASS). It publishes the GitHub release, and also
@@ -22,12 +27,15 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
       unreleased: ${{ steps.version.outputs.unreleased }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup
 
       - name: Version and changelog
@@ -51,21 +59,35 @@ jobs:
       - name: Build the website
         run: python3 tools/site.py
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: aangan-${{ steps.version.outputs.version }}-dev
           path: build/aangan.apk
           retention-days: 14
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         if: github.ref == 'refs/heads/main'
         with:
           path: build/site
+
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
+        with:
+          version: 1.31.1
+          advanced-security: false
+          annotations: true
 
   website:
     needs: build
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       pages: write
       id-token: write
@@ -74,12 +96,13 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - id: deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
 
   release:
-    needs: build
+    needs: [build, audit]
     if: github.ref == 'refs/heads/main' && needs.build.outputs.unreleased == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: write
     environment:
@@ -91,7 +114,9 @@ jobs:
       # The release certificate; a build signed with anything else must not be published.
       CERT_SHA256: 7f905b6d3cfbcc92cd2da7203c5b6cf365b65d67cb3d162a4c54d4043caa1484
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup
 
       - name: Build, signed for release
@@ -100,10 +125,12 @@ jobs:
           AANGAN_KEY_PASS: ${{ secrets.AANGAN_KEY_PASS }}
         run: |
           export AANGAN_KEYSTORE="$RUNNER_TEMP/release.jks"
+          # Readable only by this user, and deleted however the step ends.
+          umask 077
+          trap 'rm -f "$AANGAN_KEYSTORE"' EXIT
           echo "$KEYSTORE_B64" | base64 -d > "$AANGAN_KEYSTORE"
           ./build.sh bundle
-          rm "$AANGAN_KEYSTORE"
-          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --print-certs build/aangan.apk \
+          "$ANDROID_HOME/build-tools/$(sed -n 's/^BUILD_TOOLS=//p' build.sh)/apksigner" verify --print-certs build/aangan.apk \
             | grep -q "SHA-256 digest: $CERT_SHA256"
 
       - name: Publish the GitHub release
@@ -113,7 +140,7 @@ jobs:
           {
             python3 tools/release.py notes
             echo
-            echo "**Install or update:** in the *Downloader* app on your TV, enter \`https://github.com/${{ github.repository }}/releases/latest/download/aangan.apk\`. See [how to install](https://vaari-dev.github.io/aangan/install.html)."
+            echo "**Install or update:** in the *Downloader* app on your TV, enter \`https://github.com/$GITHUB_REPOSITORY/releases/latest/download/aangan.apk\`. See [how to install](https://vaari-dev.github.io/aangan/install.html)."
             echo
             echo "Signing certificate SHA-256: \`$CERT_SHA256\`"
           } > notes.md
@@ -122,13 +149,15 @@ jobs:
 
       - name: Is Google Play set up?
         id: play
-        run: echo "configured=${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}" >> "$GITHUB_OUTPUT"
+        env:
+          CONFIGURED: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
+        run: echo "configured=$CONFIGURED" >> "$GITHUB_OUTPUT"
 
       # Until the app's first production release, Play accepts only drafts; then set the
       # PLAY_RELEASE_STATUS variable to "completed" to roll out to testers straight away.
       - name: Upload to Google Play (internal testing)
         if: steps.play.outputs.configured == 'true'
-        uses: r0adkll/upload-google-play@v1
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: dev.vaari.aangan

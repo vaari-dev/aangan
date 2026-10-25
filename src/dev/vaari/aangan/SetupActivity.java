@@ -3,6 +3,7 @@ package dev.vaari.aangan;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Canvas;
 import android.graphics.Paint;
@@ -10,6 +11,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.text.InputType;
+import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -20,18 +22,17 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.Map;
 
 /**
- * Aangan's settings: the city, opening with the Home button, the screensaver, the family's
+ * Aangan's settings: the city, the dock, opening with the Home button, the screensaver, the family's
  * birthdays and anniversaries, and the festival dates. Everything can also be set from a phone by
  * scanning the QR code.
  */
@@ -44,7 +45,6 @@ public class SetupActivity extends Activity {
     private LinearLayout rows;
     private LinearLayout phonePanel;
     private PhoneSetup phone;
-    private final ExecutorService network = Executors.newSingleThreadExecutor();
 
     @Override
     protected void onCreate(Bundle state) {
@@ -94,16 +94,10 @@ public class SetupActivity extends Activity {
         super.onPause();
     }
 
-    @Override
-    protected void onDestroy() {
-        network.shutdownNow();
-        super.onDestroy();
-    }
-
     // ---- views ------------------------------------------------------------------------------
 
     private void heading(String s) {
-        TextView t = ui.text(11, 600, Ui.TERTIARY, s.toUpperCase());
+        TextView t = ui.text(12, 600, Ui.TERTIARY, s.toUpperCase());
         t.setLetterSpacing(0.08f);
         t.setPadding(ui.dp(16), ui.dp(20), 0, ui.dp(6));
         rows.addView(t);
@@ -120,7 +114,13 @@ public class SetupActivity extends Activity {
         row.setOnFocusChangeListener((v, hasFocus) -> v.setBackground(hasFocus ? focused : null));
         row.setOnClickListener(action);
         row.addView(ui.text(16, 500, Ui.LABEL, title), Ui.share(1));
-        row.addView(ui.text(14, 400, Ui.SECONDARY, value));
+        TextView v = ui.text(14, 400, Ui.SECONDARY, value);
+        // One line, leaving the title room: "Netflix, Prime Video, YouTube, YouTube…"
+        v.setMaxLines(1);
+        v.setMaxWidth(ui.dp(300));
+        v.setEllipsize(TextUtils.TruncateAt.END);
+        v.setPadding(ui.dp(16), 0, 0, 0);
+        row.addView(v, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0));
         rows.addView(row);
     }
 
@@ -130,7 +130,8 @@ public class SetupActivity extends Activity {
         Festival.load(this, prefs);
 
         Place place = Place.load(prefs);
-        row("City", place.name, v -> askCity());
+        row("City", place.name, v -> startActivity(new Intent(this, CityActivity.class)));
+        row("Dock", dockNames(), v -> askDock());
         row("Open with the Home button", HomeButton.isOn(this) ? "On" : "Off", v -> HomeButton.askToTurnOn(this));
         row("Screensaver", "Choose", v -> Ui.openSettings(this, Settings.ACTION_DREAM_SETTINGS));
 
@@ -167,16 +168,16 @@ public class SetupActivity extends Activity {
         qrLp.topMargin = ui.dp(16);
         qrLp.bottomMargin = ui.dp(14);
         phonePanel.addView(new QrView(this, QrCode.encode(url)), qrLp);
-        TextView how = ui.text(13, 400, Ui.SECONDARY, "Scan with your phone's camera to set the city, the family's days and festival dates. "
+        TextView how = ui.text(13, 400, Ui.SECONDARY, "Scan with your phone's camera to set the city, the dock, the family's days and festival dates. "
                 + "Your phone needs to be on the same Wi-Fi.");
         how.setGravity(Gravity.CENTER_HORIZONTAL);
         phonePanel.addView(how);
-        TextView link = ui.text(11, 400, Ui.TERTIARY, url.replace("http://", ""));
+        TextView link = ui.text(12, 400, Ui.TERTIARY, url.replace("http://", ""));
         link.setGravity(Gravity.CENTER_HORIZONTAL);
         link.setPadding(0, ui.dp(10), 0, 0);
         phonePanel.addView(link);
         // Browsers warn about any page without HTTPS, and a TV on a home network can't have it.
-        TextView warning = ui.text(11, 400, Ui.TERTIARY, "If your phone says the page isn't secure, choose to continue. "
+        TextView warning = ui.text(12, 400, Ui.TERTIARY, "If your phone says the page isn't secure, choose to continue. "
                 + "It's served by this TV and stays on your Wi-Fi.");
         warning.setGravity(Gravity.CENTER_HORIZONTAL);
         warning.setPadding(0, ui.dp(8), 0, 0);
@@ -189,45 +190,47 @@ public class SetupActivity extends Activity {
         return Ui.dialog(this, title);
     }
 
-    private void askCity() {
-        EditText query = new EditText(this);
-        query.setHint("City name");
-        query.setSingleLine(true);
-        query.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
-        dialog("Choose your city")
-                .setView(padded(query))
-                .setPositiveButton("Search", (d, w) -> searchCity(query.getText().toString()))
-                .setNegativeButton("Cancel", null)
-                .show();
+    private List<String> dock(Map<String, Apps.App> apps) {
+        return Dock.load(prefs, apps, Prefs.list(prefs, HomeActivity.HIDDEN));
     }
 
-    private void searchCity(String query) {
-        if (query.trim().isEmpty()) return;
-        network.execute(() -> {
-            List<Place> found;
-            try {
-                found = Place.search(query);
-            } catch (Exception e) {
-                found = null;
-            }
-            List<Place> places = found;
-            runOnUiThread(() -> {
-                // The search can outlast the screen; a dialog on a closed one would crash.
-                if (isFinishing() || isDestroyed()) return;
-                if (places == null || places.isEmpty()) {
-                    Toast.makeText(this, places == null ? "Couldn't search. Is the TV online?" : "No places called " + query,
-                            Toast.LENGTH_LONG).show();
-                    return;
-                }
-                String[] names = new String[places.size()];
-                for (int i = 0; i < names.length; i++) names[i] = places.get(i).name + "  ·  " + places.get(i).region;
-                dialog("Choose your city").setItems(names, (d, which) -> {
-                    places.get(which).save(prefs);
-                    Weather.clear(prefs);
+    /** "Netflix, YouTube, Prime Video, Empty" */
+    private String dockNames() {
+        Map<String, Apps.App> apps = Apps.load(this);
+        List<String> names = new ArrayList<>();
+        for (String pkg : dock(apps)) names.add(apps.containsKey(pkg) ? apps.get(pkg).label : "Empty");
+        return TextUtils.join(", ", names);
+    }
+
+    /** The dock's four places, to change any of them, or to reset it to popular apps. */
+    private void askDock() {
+        Map<String, Apps.App> apps = Apps.load(this);
+        List<String> dock = dock(apps);
+        String[] items = new String[Dock.SIZE + 1];
+        for (int i = 0; i < Dock.SIZE; i++) {
+            Apps.App app = apps.get(dock.get(i));
+            items[i] = (i + 1) + "   " + (app != null ? app.label : "Empty");
+        }
+        items[Dock.SIZE] = "Reset to popular apps";
+        dialog("The dock").setItems(items, (d, which) -> {
+            if (which < Dock.SIZE) {
+                // Back to the four places after each choice, to change another.
+                Dock.choose(this, apps, dock, Prefs.list(prefs, HomeActivity.HIDDEN), which, pkg -> {
                     showRows();
-                }).show();
-            });
-        });
+                    askDock();
+                });
+            } else {
+                dialog("Reset the dock?")
+                        .setMessage("Aangan will fill it with popular apps you have, such as Netflix and YouTube, "
+                                + "then the rest in alphabetical order.")
+                        .setPositiveButton("Reset", (d2, w) -> {
+                            Dock.reset(prefs);
+                            showRows();
+                        })
+                        .setNegativeButton("Keep mine", null)
+                        .show();
+            }
+        }).show();
     }
 
     /** Adds a day when {@code existing} is null, or edits it. */

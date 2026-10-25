@@ -30,7 +30,7 @@
       <tr><td>Festival dates you moved or hid</td><td>To show the calendar the way your family keeps it.</td></tr>
       <tr><td>Your chosen city: its name, region, coordinates, time zone and country</td><td>To fetch its weather and air quality, and pick the right air-quality scale.</td></tr>
       <tr><td>The last forecast and air-quality readings</td><td>To show something straight away and avoid repeat requests.</td></tr>
-      <tr><td>Your top row and hidden apps, as app package names</td><td>To arrange the home screen your way.</td></tr>
+      <tr><td>The apps in your dock and the apps you hid, as app package names</td><td>To arrange the home screen your way.</td></tr>
       <tr><td>Whether you've seen the welcome, and how many times the tips have shown</td><td>To stop showing them.</td></tr>
     </table></div>
     <p>Aangan reads the list of apps installed on the TV, but only the ones that can be opened from a home screen, and only to show them. That list never leaves the TV.</p>
@@ -41,7 +41,7 @@
       <tr><th>Request</th><th>What's sent</th><th>When</th></tr>
       <tr><td>Weather forecast<br><code>api.open-meteo.com</code></td><td>Your city's latitude and longitude rounded to two decimals (about 1 km) and its time zone</td><td>At most every 30 minutes, and only while the home screen is on screen</td></tr>
       <tr><td>Air quality<br><code>air-quality-api.open-meteo.com</code></td><td>The same rounded coordinates and time zone</td><td>At most every 60 minutes, and only while the home screen is on screen</td></tr>
-      <tr><td>City search<br><code>geocoding-api.open-meteo.com</code></td><td>The words you typed in the search box</td><td>Only when you search for a city</td></tr>
+      <tr><td>City search<br><code>geocoding-api.open-meteo.com</code></td><td>The letters you typed in the search box</td><td>Only while you search for a city, a moment after you stop typing. Choosing a city from the list of large cities sends nothing.</td></tr>
     </table></div>
     <p>The requests identify the app as <code>Aangan</code> and include nothing else: no device ID, advertising ID, account, app list or family data. The code that makes them is in <a href="{{REPO}}/blob/main/src/dev/vaari/aangan/Weather.java"><code>Weather.java</code></a> and <a href="{{REPO}}/blob/main/src/dev/vaari/aangan/Place.java"><code>Place.java</code></a>.</p>
     <div class=note><p>When you open another app from Aangan, that app's own privacy policy applies. Aangan just opens it.</p></div>

@@ -185,7 +185,7 @@ details[open] .chev { transform: rotate(-135deg); margin-top: 4px; }
 
 /* ---- city results ---- */
 .place { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: left; background: transparent; color: var(--ink); border-radius: 0; padding: 14px 16px; font-weight: 400; }
-.place b { display: block; font-weight: 600; }
+.place b { display: block; font-weight: 600; color: var(--ink); }
 .place span { display: block; font-size: 14px; color: var(--muted); }
 .back { color: var(--terra-deep); font-weight: 600; text-decoration: none; }
 
@@ -217,3 +217,15 @@ details[open] .chev { transform: rotate(-135deg); margin-top: 4px; }
 
 footer { color: var(--muted); font-size: 13px; text-align: center; display: grid; gap: 4px; padding-top: 4px; }
 footer img { width: 22px; height: 22px; border-radius: 6px; margin: 0 auto 6px; opacity: .9; }
+
+/* The dock: four numbered places, each a choice of app. */
+.dock { padding: 14px 16px; display: grid; gap: 10px; }
+.dock .slot { display: flex; align-items: center; gap: 12px; }
+.dock .n { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); }
+.dock button { margin-top: 4px; }
+
+/* City suggestions under the search box, and the arrow on each place. */
+.suggest { margin-top: 10px; }
+.chev.go { transform: rotate(-45deg); }
+/* Read by screen readers, not shown. */
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

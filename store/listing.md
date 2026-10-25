@@ -16,8 +16,8 @@ Copy each field into Play Console → Grow → Store presence → Main store lis
 Aangan is a calm, private home screen for Android TV and Google TV. It replaces the stock home screen, with its rows of ads and recommendations, with your apps, the sky outside and the days your family celebrates.
 
 YOUR APPS, AND NOTHING ELSE
-• A row of favourites across the top and every other app in a tidy grid.
-• Hold OK on any app to move it, pin it or hide it.
+• A dock of your four favourite apps, large across the top, and every other app in a tidy grid. You choose the dock, and it stays put.
+• Hold OK on any app to put it in the dock or hide it.
 • No sponsored rows, no autoplaying trailers, nothing promoted.
 
 THE SKY OUTSIDE
@@ -31,7 +31,7 @@ FESTIVALS AND FAMILY DAYS
 • Your family keeps a festival on another day? Move it, or hide one you don't celebrate.
 
 SET UP FROM YOUR PHONE
-• Scan the code in Settings to choose your city and add dates from your phone's browser. The TV serves the page itself, on your Wi-Fi, only while Settings is open.
+• Scan the code in Settings to choose your city, set the dock and add dates from your phone's browser. The TV serves the page itself, on your Wi-Fi, only while Settings is open.
 
 PRIVATE BY DESIGN
 • No ads, analytics, crash reporting or account.

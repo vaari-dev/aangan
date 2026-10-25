@@ -325,11 +325,15 @@ final class Weather {
         return 500;
     }
 
+    /** Open-Meteo's answers are a few tens of kilobytes; anything far bigger is refused. */
+    private static final int MAX_RESPONSE = 1 << 20;
+
     static String get(String url) throws IOException {
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
         conn.setConnectTimeout(10_000);
         conn.setReadTimeout(10_000);
         conn.setUseCaches(false);
+        conn.setInstanceFollowRedirects(false);
         // The default user agent names the TV model and build; send nothing identifying instead.
         conn.setRequestProperty("User-Agent", "Aangan");
         try {
@@ -337,7 +341,10 @@ final class Weather {
             try (InputStream in = conn.getInputStream()) {
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
                 byte[] buf = new byte[8192];
-                for (int n; (n = in.read(buf)) > 0; ) out.write(buf, 0, n);
+                for (int n; (n = in.read(buf)) > 0; ) {
+                    out.write(buf, 0, n);
+                    if (out.size() > MAX_RESPONSE) throw new IOException("response too large");
+                }
                 return out.toString("UTF-8");
             }
         } finally {
