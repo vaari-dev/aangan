@@ -3,10 +3,10 @@ description: JDK 17 and the Android SDK packages build.sh uses.
 runs:
   using: composite
   steps:
-    - uses: actions/setup-java@v4
+    - uses: actions/setup-java@v5
       with:
         distribution: temurin
         java-version: "17"
     - name: Android SDK
       shell: bash
-      run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;34.0.0" "platforms;android-34" > /dev/null
+      run: "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "build-tools;34.0.0"| "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;34.0.0" "platforms;android-34" > /dev/null
