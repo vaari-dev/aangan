@@ -1,0 +1,219 @@
+/* The phone setup page, served by the TV itself (see PhoneSetup.java). No outside requests. */
+@font-face {
+  font-family: Fraunces;
+  src: url(fraunces.woff2) format("woff2");
+  font-weight: 400 600;
+  font-display: swap;
+}
+
+:root {
+  --paper: #f4ede1;
+  --card: #fffcf6;
+  --ink: #2a1d17;
+  --muted: #7d6b5f;
+  --line: #e7dccb;
+  --field: #f8f3ea;
+  --terra: #b4502d;
+  --terra-deep: #96401f;
+  --on-terra: #fff8ef;
+  --haldi: #e8962a;
+  --tile-1: #c8673c;
+  --tile-2: #b04d2c;
+  --tile-3: #963f25;
+  --shadow: 0 1px 2px rgba(74, 40, 22, .06), 0 8px 24px rgba(74, 40, 22, .07);
+  --serif: Fraunces, "Iowan Old Style", Georgia, serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #16110e;
+    --card: #211a15;
+    --ink: #f3ebe0;
+    --muted: #a8978a;
+    --line: #342920;
+    --field: #1a1410;
+    --terra: #d56d45;
+    --terra-deep: #e48a63;
+    --on-terra: #1c120d;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px rgba(0, 0, 0, .25);
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.45 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+main {
+  max-width: 540px;
+  margin: 0 auto;
+  padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 48px max(16px, env(safe-area-inset-left));
+  display: grid;
+  gap: 28px;
+}
+
+/* ---- masthead ---- */
+.mast { display: flex; align-items: center; gap: 12px; }
+.mast img { width: 44px; height: 44px; border-radius: 11px; box-shadow: var(--shadow); }
+.mast b { display: block; font: 600 24px/1 var(--serif); letter-spacing: -.01em; color: var(--terra-deep); }
+.mast span { display: block; margin-top: 3px; font-size: 13px; color: var(--muted); }
+h1 { font: 500 34px/1.08 var(--serif); letter-spacing: -.02em; margin: 6px 0 0; text-wrap: balance; }
+.lede { margin: 8px 0 0; color: var(--muted); max-width: 36ch; }
+
+/* ---- sections ---- */
+section { display: grid; gap: 12px; }
+h2 { font: 500 22px/1.2 var(--serif); margin: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+h2 small { font: 400 13px/1 var(--sans); color: var(--muted); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
+.note { margin: 0; color: var(--muted); font-size: 14px; }
+
+/* ---- the city ---- */
+.city { padding: 18px; display: grid; gap: 14px; }
+.city .label { font-size: 13px; color: var(--muted); }
+.city .name { font: 500 30px/1.05 var(--serif); letter-spacing: -.01em; }
+.city .region { color: var(--muted); font-size: 14px; margin-top: 4px; }
+.search { display: flex; gap: 8px; }
+.search input { flex: 1; min-width: 0; }
+
+/* ---- fields and buttons ---- */
+input, select, button { font: inherit; color: inherit; }
+input[type=text], input[type=search], input[type=date], select {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--field);
+  appearance: none;
+  -webkit-appearance: none;
+}
+select {
+  padding-right: 34px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
+input:focus-visible, select:focus-visible, button:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--haldi);
+  outline-offset: 2px;
+}
+button {
+  min-height: 46px;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--terra);
+  color: var(--on-terra);
+  font-weight: 600;
+  cursor: pointer;
+}
+button:active { transform: translateY(1px); }
+button.ghost { background: transparent; color: var(--terra-deep); border: 1px solid var(--line); }
+button.quiet { background: transparent; color: var(--muted); font-weight: 500; padding-inline: 4px; }
+button.wide { width: 100%; }
+
+/* ---- lists of days ---- */
+.list { list-style: none; margin: 0; padding: 0; }
+.list > li + li { border-top: 1px solid var(--line); }
+details > summary { list-style: none; cursor: pointer; }
+details > summary::-webkit-details-marker { display: none; }
+.item { display: flex; align-items: center; gap: 14px; padding: 14px 16px; }
+.item .text { flex: 1; min-width: 0; }
+.item .title { display: block; font-weight: 600; overflow-wrap: anywhere; }
+.item .sub { display: block; font-size: 14px; color: var(--muted); margin-top: 1px; }
+.item .when { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.item .when.soon { color: var(--terra-deep); font-weight: 600; }
+details[open] > summary .item, details[open] > summary.item { background: var(--field); }
+.chev { width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); margin: -4px 4px 0 0; transition: transform .2s; flex: none; }
+details[open] .chev { transform: rotate(-135deg); margin-top: 4px; }
+
+/* A family day's badge: a house tile from the icon, with the initial. */
+.badge {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  font: 600 19px/1 var(--serif);
+  color: #fff8ef;
+  background: var(--tile-2);
+}
+.badge.t1 { background: var(--tile-1); }
+.badge.t3 { background: var(--tile-3); }
+.badge.ring { background: var(--haldi); color: #3a2208; }
+
+/* A festival's date block. */
+.date { flex: none; width: 42px; text-align: center; }
+.date b { display: block; font: 500 24px/1 var(--serif); font-variant-numeric: lining-nums; }
+.date span { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-top: 3px; }
+.month { padding: 14px 16px 6px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); background: var(--card); }
+.list > li.month + li { border-top: 0; }
+.tag { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; margin: 3px 6px 0 0; background: var(--field); color: var(--muted); border: 1px solid var(--line); }
+.tag.moved { color: var(--terra-deep); }
+.hidden-day .title, .hidden-day .date b { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+
+/* The rest of the year, folded away. */
+.more > summary { padding: 14px 16px; text-align: center; color: var(--terra-deep); font-weight: 600; border-top: 1px solid var(--line); }
+.more[open] > summary { display: none; }
+
+/* ---- forms that open under an item ---- */
+.edit { padding: 4px 16px 16px; display: grid; gap: 10px; background: var(--field); }
+.edit input[type=text], .edit input[type=date], .edit select { background-color: var(--card); }
+.row { display: grid; grid-template-columns: 1fr 1.6fr; gap: 8px; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.actions > button:first-child, .actions > form:first-child, .actions > input[type=date] { flex: 1; min-width: 0; }
+.hint { font-size: 13px; color: var(--muted); margin: 0; }
+
+/* Birthday or anniversary, as a two-way switch. */
+.kind { display: grid; grid-template-columns: 1fr 1fr; padding: 3px; gap: 3px; border-radius: 12px; background: var(--line); }
+.kind input { position: absolute; opacity: 0; pointer-events: none; }
+.kind label { text-align: center; padding: 9px 6px; border-radius: 9px; font-weight: 500; color: var(--muted); cursor: pointer; }
+.kind input:checked + label { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .1); }
+.kind input:focus-visible + label { outline: 2px solid var(--haldi); }
+
+.add > summary { display: flex; align-items: center; gap: 14px; padding: 14px 16px; color: var(--terra-deep); font-weight: 600; }
+.add > summary .badge { background: transparent; border: 1.5px dashed var(--terra); color: var(--terra-deep); font: 400 24px/1 var(--sans); }
+
+/* ---- city results ---- */
+.place { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: left; background: transparent; color: var(--ink); border-radius: 0; padding: 14px 16px; font-weight: 400; }
+.place b { display: block; font-weight: 600; }
+.place span { display: block; font-size: 14px; color: var(--muted); }
+.back { color: var(--terra-deep); font-weight: 600; text-decoration: none; }
+
+/* ---- the confirmation after a change ---- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: var(--paper);
+  padding: 11px 18px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 15px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .25);
+  white-space: nowrap;
+  animation: toast 3.2s ease forwards;
+}
+@keyframes toast {
+  0% { opacity: 0; transform: translate(-50%, 12px); }
+  8%, 80% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, 0); visibility: hidden; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
+  .chev { transition: none; }
+}
+
+footer { color: var(--muted); font-size: 13px; text-align: center; display: grid; gap: 4px; padding-top: 4px; }
+footer img { width: 22px; height: 22px; border-radius: 6px; margin: 0 auto 6px; opacity: .9; }

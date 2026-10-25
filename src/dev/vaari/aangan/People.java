@@ -68,6 +68,13 @@ final class People {
         save(prefs, days);
     }
 
+    /** Replaces the day at {@code index} in calendar order. */
+    static void update(SharedPreferences prefs, int index, Day day) {
+        List<Day> days = load(prefs);
+        if (index >= 0 && index < days.size()) days.set(index, day);
+        save(prefs, days);
+    }
+
     static void remove(SharedPreferences prefs, int index) {
         List<Day> days = load(prefs);
         if (index >= 0 && index < days.size()) days.remove(index);

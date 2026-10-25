@@ -20,8 +20,8 @@ screen, with its rows of ads and recommendations, with something quiet, beautifu
 - **Your apps, and nothing else.** A row of favourites and every other app in a tidy grid. Hold OK on any app to move it, pin it or hide it. The focused app casts a soft light in its own colour.
 - **The sky outside.** The time, the weather and the air quality for your city, always in the corner.
 - **Today, at a glance.** Press Up then OK on the weather: the next hours, high and low, sunrise and sunset, UV, the moon, a 36-hour air-quality trend with your country's safe limit, and the best time to air out the house.
-- **Festivals.** A countdown to the next one, and on the day itself a hand-drawn scene behind your apps.
-- **Your family's days.** Birthdays and anniversaries get balloons, confetti, rings and petals, with a greeting by name.
+- **Festivals.** A countdown to the next one, and on the day itself a hand-drawn scene behind your apps. If your family keeps a festival on another day, move it, or hide one you don't celebrate.
+- **Your family's days.** Birthdays and anniversaries get balloons, confetti, rings and petals, with a greeting by name. Add, edit and remove them on the TV or from your phone.
 - **A quiet screensaver.** A dim clock and the weather, drifting slowly so nothing burns in.
 
 ![Today card](docs/today.jpg)
@@ -35,7 +35,7 @@ while the home screen is on screen.
 |---|---|
 | ![Diwali](docs/diwali.jpg) Diwali: diyas, rangoli and fireworks | ![Holi](docs/holi.jpg) Holi: clouds of gulal |
 | ![Karwa Chauth](docs/karwachauth.jpg) Karwa Chauth: the moon through the chalni | ![Christmas](docs/christmas.jpg) Christmas: lights and snow |
-| ![A birthday](docs/birthday.jpg) A birthday: balloons and confetti | ![Your TV's apps](docs/gtv-apps.jpg) Aangan in the TV's own app list |
+| ![A birthday](docs/birthday.jpg) A birthday: balloons and confetti | ![Festival dates in Settings](docs/settings-festivals.jpg) Festival dates you can move or hide |
 
 There are scenes for Lohri, Makar Sankranti, Basant Panchami, Holi, Navratri, Dussehra, Karwa Chauth, the whole of
 Diwali week, Chhath, Gurpurab, Raksha Bandhan, Janmashtami, Ganesh Chaturthi, Eid, Christmas, New Year, Republic Day
@@ -75,16 +75,23 @@ and Independence Day, and for birthdays and anniversaries.
 ## Set up from your phone
 
 Typing with a TV remote is slow, so Aangan's settings show a QR code. Scan it with your phone's camera, on the same
-Wi-Fi, to choose your city and add birthdays and anniversaries from the phone's browser. The TV itself serves the
-page:
+Wi-Fi, to choose your city, add or edit birthdays and anniversaries, and move or hide festival dates, all from the
+phone's browser. The TV itself serves the page:
 
 - it runs only while the settings screen is open;
 - its address carries a fresh one-time secret;
-- it stays on your home network, and everything is saved on the TV.
+- it stays on your home network, loads nothing from the internet (even its font comes from the TV), and everything is saved on the TV.
 
-| On the TV | On your phone |
-|---|---|
-| ![Settings on the TV](docs/settings.jpg) | <img src="docs/phone.png" alt="Phone setup page" width="300"> |
+![Settings on the TV](docs/settings.jpg)
+
+<p align="center">
+<img src="docs/phone.png" alt="The phone page: your city and the family's days" width="300">&nbsp;&nbsp;
+<img src="docs/phone-festivals.png" alt="The phone page: moving a festival date" width="300">
+</p>
+
+> **"Not secure"?** Some phone browsers warn about any page without HTTPS. A page served by a TV on your home network
+> can't have an HTTPS certificate without a cloud service in the middle, which Aangan avoids on purpose. Choose to
+> continue: the page and what you type never leave your Wi-Fi. Most browsers then remember the choice for the TV's address.
 
 ## Build from source
 
@@ -94,6 +101,9 @@ You need the Android SDK (build-tools 34, platform 34) and JDK 17. There's no Gr
     ./build.sh install    # and installs it over adb (set ANDROID_SERIAL when several devices are connected)
 
 For a release, sign with your own key: `AANGAN_KEYSTORE=… AANGAN_KEY_PASS=… ./build.sh`.
+
+The icon and banner are drawn by `python3 docs/icon.py`, which writes `res/drawable/icon.xml`, `banner.xml` and the
+SVGs in `docs/`.
 
 To preview a festival's scene: `adb shell "am start -n dev.vaari.aangan/.HomeActivity --es festival Diwali"`.
 Press Home to clear it.
@@ -109,10 +119,12 @@ Press Home to clear it.
 - **Scenes:** use the names in `Festive.Theme`, or `PLAIN` for none.
 - **Festival weeks:** days between two entries with the same scene, up to 9 days apart, share it, so the whole of Diwali week and Navratri glow.
 - **Yearly update:** add each year's dates once the calendars are published.
+- **Family changes:** a date moved or hidden on the TV or the phone is stored on the TV, on top of the calendar, so an app update with new dates keeps it.
 
 ## Credits
 
 - **Weather and air quality:** [Open-Meteo](https://open-meteo.com) (CC BY 4.0), with air quality from Copernicus CAMS.
 - **Air-quality scale:** India's CPCB National AQI in India, and the US EPA AQI elsewhere.
+- **Typeface:** the wordmark and the phone page use [Fraunces](https://github.com/undercasetype/Fraunces) by Undercase Type, under the SIL Open Font Licence (`assets/phone/OFL-Fraunces.txt`).
 
 Released under the [MIT licence](LICENSE).

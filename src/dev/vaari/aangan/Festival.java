@@ -3,6 +3,9 @@ package dev.vaari.aangan;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -18,8 +21,8 @@ import java.util.Locale;
 
 /**
  * A festival or a personal day, and the calendar of them. Festivals come from
- * {@code assets/festivals.csv}, built into the app; birthdays and anniversaries from {@link People},
- * stored on the TV. Nothing needs the network.
+ * {@code assets/festivals.csv}, built into the app, with any dates the family has moved or hidden
+ * on top; birthdays and anniversaries from {@link People}, stored on the TV. Nothing needs the network.
  */
 final class Festival {
 
@@ -28,6 +31,9 @@ final class Festival {
     /** Days between two entries with the same scene, up to this far apart, share it. */
     private static final int SEASON_DAYS = 9;
 
+    /** The calendar as built into the app. */
+    private static List<Festival> builtIn;
+    /** The calendar with the family's changes: what the home screen shows. */
     private static List<Festival> festivals;
     private static List<Festival> personal;
 
@@ -38,39 +44,121 @@ final class Festival {
     /** True when the date depends on a moon sighting. */
     final boolean expected;
     final boolean isPersonal;
+    /** The date the calendar gives, before any change; with the name, it identifies a festival day. */
+    final LocalDate original;
+    final boolean hidden;
 
-    private Festival(LocalDate date, String name, String greeting, Festive.Theme theme, boolean expected, boolean isPersonal) {
+    private Festival(LocalDate date, String name, String greeting, Festive.Theme theme, boolean expected,
+                     boolean isPersonal, LocalDate original, boolean hidden) {
         this.date = date;
         this.name = name;
         this.greeting = greeting;
         this.theme = theme;
         this.expected = expected;
         this.isPersonal = isPersonal;
+        this.original = original;
+        this.hidden = hidden;
     }
 
     private Festival on(LocalDate day) {
-        return new Festival(day, name, greeting, theme, expected, isPersonal);
+        return new Festival(day, name, greeting, theme, expected, isPersonal, original, hidden);
+    }
+
+    boolean moved() {
+        return !date.equals(original);
+    }
+
+    /** Identifies a festival day across edits, for the phone page's forms. */
+    String key() {
+        return original + "|" + name;
     }
 
     // ---- loading ----------------------------------------------------------------------------
 
-    /** Reads the festival calendar once, and the family's days afresh, since they can change. */
+    /** Reads the festival calendar once, and the family's changes and days afresh, since they can change. */
     static synchronized void load(Context context, SharedPreferences prefs) {
-        if (festivals == null) {
-            festivals = new ArrayList<>();
+        if (builtIn == null) {
+            builtIn = new ArrayList<>();
             for (String[] f : read(context, "festivals.csv")) {
-                festivals.add(new Festival(LocalDate.parse(f[0]), f[1], f[2], theme(f[3]),
-                        f.length > 4 && f[4].equals("expected"), false));
+                LocalDate date = LocalDate.parse(f[0]);
+                builtIn.add(new Festival(date, f[1], f[2], theme(f[3]),
+                        f.length > 4 && f[4].equals("expected"), false, date, false));
             }
         }
+        JSONObject edits = edits(prefs);
+        List<Festival> applied = new ArrayList<>();
+        for (Festival f : builtIn) {
+            JSONObject e = edits.optJSONObject(f.key());
+            if (e == null) {
+                applied.add(f);
+                continue;
+            }
+            LocalDate date = e.has("date") ? LocalDate.parse(e.optString("date")) : f.date;
+            // A date the family chose is no longer a guess.
+            applied.add(new Festival(date, f.name, f.greeting, f.theme, f.expected && !e.has("date"), false,
+                    f.original, e.optBoolean("hidden")));
+        }
+        Collections.sort(applied, (a, b) -> a.date.compareTo(b.date));
+        festivals = applied;
         personal = new ArrayList<>();
         for (People.Day d : People.load(prefs)) {
             // Stored against 2000, a leap year, so 29 February survives; it is moved to each year as needed.
             personal.add(new Festival(LocalDate.of(2000, d.month, d.day),
                     d.who + (d.birthday ? "'s birthday" : "'s anniversary"),
                     (d.birthday ? "Happy birthday, " : "Happy anniversary, ") + d.who,
-                    d.birthday ? Festive.Theme.BIRTHDAY : Festive.Theme.ANNIVERSARY, false, true));
+                    d.birthday ? Festive.Theme.BIRTHDAY : Festive.Theme.ANNIVERSARY, false, true,
+                    LocalDate.of(2000, d.month, d.day), false));
         }
+    }
+
+    // ---- the family's changes ---------------------------------------------------------------
+
+    /** Changes keyed by {@link #key()}: {"date": "2026-11-09"} to move a day, {"hidden": true} to hide it. */
+    private static JSONObject edits(SharedPreferences prefs) {
+        try {
+            return new JSONObject(prefs.getString("festival_edits", "{}"));
+        } catch (JSONException e) {
+            return new JSONObject();
+        }
+    }
+
+    private static void edit(SharedPreferences prefs, String key, String field, Object value) {
+        JSONObject all = edits(prefs);
+        try {
+            JSONObject e = all.optJSONObject(key);
+            if (e == null) e = new JSONObject();
+            if (value == null) e.remove(field);
+            else e.put(field, value);
+            if (e.length() == 0) all.remove(key);
+            else all.put(key, e);
+        } catch (JSONException ex) {
+            throw new IllegalStateException(ex);
+        }
+        prefs.edit().putString("festival_edits", all.toString()).commit();
+    }
+
+    /** Moves a festival day; moving it back to the calendar's date undoes the change. */
+    static void move(SharedPreferences prefs, Festival f, LocalDate date) {
+        edit(prefs, f.key(), "date", date.equals(f.original) ? null : date.toString());
+    }
+
+    static void hide(SharedPreferences prefs, Festival f, boolean hidden) {
+        edit(prefs, f.key(), "hidden", hidden ? Boolean.TRUE : null);
+    }
+
+    /** Festival days from {@code today} for about a year, hidden ones included, for editing. */
+    static synchronized List<Festival> editable(LocalDate today) {
+        List<Festival> out = new ArrayList<>();
+        for (Festival f : festivals) {
+            if (!f.date.isBefore(today) && f.date.isBefore(today.plusMonths(13))) out.add(f);
+        }
+        return out;
+    }
+
+    /** The festival day with this {@link #key()}, or null. */
+    static synchronized Festival byKey(String key) {
+        for (Festival f : festivals) if (f.key().equals(key)) return f;
+        return null;
     }
 
     /** Non-comment lines of an asset, split on commas. */
@@ -123,10 +211,11 @@ final class Festival {
      */
     static Festival celebrating(LocalDate today) {
         for (Festival p : personalOn(today.getYear())) if (p.date.equals(today)) return p;
-        for (Festival f : festivals) if (f.date.equals(today)) return f;
-        for (int i = 0; i + 1 < festivals.size(); i++) {
-            Festival a = festivals.get(i);
-            Festival b = festivals.get(i + 1);
+        List<Festival> shown = shown();
+        for (Festival f : shown) if (f.date.equals(today)) return f;
+        for (int i = 0; i + 1 < shown.size(); i++) {
+            Festival a = shown.get(i);
+            Festival b = shown.get(i + 1);
             if (a.theme != Festive.Theme.PLAIN && a.theme == b.theme
                     && a.date.isBefore(today) && b.date.isAfter(today)
                     && ChronoUnit.DAYS.between(a.date, b.date) <= SEASON_DAYS) {
@@ -139,7 +228,7 @@ final class Festival {
     /** Up to {@code max} festivals and personal days from today onwards, soonest first. */
     static List<Festival> upcoming(LocalDate today, int max) {
         List<Festival> all = new ArrayList<>();
-        for (Festival f : festivals) if (!f.date.isBefore(today)) all.add(f);
+        for (Festival f : shown()) if (!f.date.isBefore(today)) all.add(f);
         for (int year = today.getYear(); year <= today.getYear() + 1; year++) {
             for (Festival p : personalOn(year)) if (!p.date.isBefore(today)) all.add(p);
         }
@@ -147,6 +236,12 @@ final class Festival {
         Collections.sort(all, (a, b) -> a.date.equals(b.date)
                 ? Boolean.compare(!a.isPersonal, !b.isPersonal) : a.date.compareTo(b.date));
         return all.size() > max ? new ArrayList<>(all.subList(0, max)) : all;
+    }
+
+    private static List<Festival> shown() {
+        List<Festival> out = new ArrayList<>();
+        for (Festival f : festivals) if (!f.hidden) out.add(f);
+        return out;
     }
 
     /** Today's festival, or the next one within the horizon, or null. */

@@ -26,13 +26,16 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Aangan's settings: the city, opening with the Home button, the screensaver, and the family's
- * birthdays and anniversaries. Everything can also be set from a phone by scanning the QR code.
+ * Aangan's settings: the city, opening with the Home button, the screensaver, the family's
+ * birthdays and anniversaries, and the festival dates. Everything can also be set from a phone by
+ * scanning the QR code.
  */
 public class SetupActivity extends Activity {
 
@@ -61,6 +64,9 @@ public class SetupActivity extends Activity {
         left.addView(text(34, 300, LABEL, "Settings"));
         ScrollView scroll = new ScrollView(this);
         scroll.setVerticalScrollBarEnabled(false);
+        // Rows fade out under the title rather than butting against it.
+        scroll.setVerticalFadingEdgeEnabled(true);
+        scroll.setFadingEdgeLength(dp(32));
         rows = new LinearLayout(this);
         rows.setOrientation(LinearLayout.VERTICAL);
         rows.setPadding(0, dp(12), 0, dp(24));
@@ -88,7 +94,7 @@ public class SetupActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        phone = new PhoneSetup(prefs, this::showRows);
+        phone = new PhoneSetup(this, prefs, this::showRows);
         showPhonePanel(phone.start(this));
         showRows();
     }
@@ -148,6 +154,7 @@ public class SetupActivity extends Activity {
     private void showRows() {
         int focus = rows.indexOfChild(getCurrentFocus());
         rows.removeAllViews();
+        Festival.load(this, prefs);
 
         Place place = Place.load(prefs);
         row("City", place.name, v -> askCity());
@@ -160,9 +167,17 @@ public class SetupActivity extends Activity {
             People.Day d = days.get(i);
             int index = i;
             row(d.who, (d.birthday ? "Birthday" : "Anniversary") + "  ·  " + d.day + " " + MONTHS[d.month - 1],
-                    v -> confirmRemove(index, d));
+                    v -> dialog(d.who).setItems(new String[]{"Edit", "Remove"}, (dlg, which) -> {
+                        if (which == 0) askDay(index, d);
+                        else confirmRemove(index, d);
+                    }).show());
         }
-        row("Add one", "", v -> askDay());
+        row("Add one", "", v -> askDay(-1, null));
+
+        heading("Festivals");
+        for (Festival f : Festival.editable(Festival.today())) {
+            row(f.name, f.shortDate() + (f.hidden ? "  ·  Hidden" : f.moved() ? "  ·  Moved" : ""), v -> askFestival(f));
+        }
 
         View target = rows.getChildAt(Math.max(0, Math.min(focus, rows.getChildCount() - 1)));
         if (target == null || !target.isFocusable()) target = rows.getChildAt(0);
@@ -182,13 +197,20 @@ public class SetupActivity extends Activity {
         qrLp.topMargin = dp(16);
         qrLp.bottomMargin = dp(14);
         phonePanel.addView(new QrView(this, QrCode.encode(url)), qrLp);
-        TextView how = text(13, 400, SECONDARY, "Scan with your phone's camera to set the city and add birthdays. "
+        TextView how = text(13, 400, SECONDARY, "Scan with your phone's camera to set the city, the family's days and festival dates. "
                 + "Your phone needs to be on the same Wi-Fi.");
         how.setGravity(Gravity.CENTER_HORIZONTAL);
         phonePanel.addView(how);
         TextView link = text(11, 400, TERTIARY, url.replace("http://", ""));
+        link.setGravity(Gravity.CENTER_HORIZONTAL);
         link.setPadding(0, dp(10), 0, 0);
         phonePanel.addView(link);
+        // Browsers warn about any page without HTTPS, and a TV on a home network can't have it.
+        TextView warning = text(11, 400, TERTIARY, "If your phone says the page isn't secure, choose to continue. "
+                + "It's served by this TV and stays on your Wi-Fi.");
+        warning.setGravity(Gravity.CENTER_HORIZONTAL);
+        warning.setPadding(0, dp(8), 0, 0);
+        phonePanel.addView(warning);
     }
 
     // ---- actions ----------------------------------------------------------------------------
@@ -244,13 +266,15 @@ public class SetupActivity extends Activity {
         });
     }
 
-    private void askDay() {
+    /** Adds a day when {@code index} is -1, or edits the day at {@code index}. */
+    private void askDay(int index, People.Day existing) {
         LinearLayout form = new LinearLayout(this);
         form.setOrientation(LinearLayout.VERTICAL);
         EditText who = new EditText(this);
         who.setHint("Name, e.g. Asha or Asha & Rohan");
         who.setSingleLine(true);
         who.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        if (existing != null) who.setText(existing.who);
         form.addView(who);
 
         RadioGroup kind = new RadioGroup(this);
@@ -263,7 +287,7 @@ public class SetupActivity extends Activity {
         anniversary.setId(View.generateViewId());
         kind.addView(birthday);
         kind.addView(anniversary);
-        kind.check(birthday.getId());
+        kind.check(existing == null || existing.birthday ? birthday.getId() : anniversary.getId());
         form.addView(kind);
 
         LinearLayout date = new LinearLayout(this);
@@ -275,17 +299,23 @@ public class SetupActivity extends Activity {
         month.setMinValue(1);
         month.setMaxValue(12);
         month.setDisplayedValues(MONTHS);
+        if (existing != null) {
+            day.setValue(existing.day);
+            month.setValue(existing.month);
+        }
         date.addView(day);
         date.addView(month);
         form.addView(date);
 
-        dialog("Add a birthday or anniversary")
+        dialog(existing == null ? "Add a birthday or anniversary" : "Edit " + existing.who + "'s day")
                 .setView(padded(form))
-                .setPositiveButton("Add", (d, w) -> {
+                .setPositiveButton(existing == null ? "Add" : "Save", (d, w) -> {
                     String name = who.getText().toString().trim();
                     if (name.isEmpty()) return;
-                    People.add(prefs, new People.Day(month.getValue(), day.getValue(),
-                            kind.getCheckedRadioButtonId() == birthday.getId(), name));
+                    People.Day edited = new People.Day(month.getValue(), day.getValue(),
+                            kind.getCheckedRadioButtonId() == birthday.getId(), name);
+                    if (existing == null) People.add(prefs, edited);
+                    else People.update(prefs, index, edited);
                     showRows();
                 })
                 .setNegativeButton("Cancel", null)
@@ -300,6 +330,53 @@ public class SetupActivity extends Activity {
                 })
                 .setNegativeButton("Keep", null)
                 .show();
+    }
+
+    private void askFestival(Festival f) {
+        String[] actions = f.moved()
+                ? new String[]{"Change the date", f.hidden ? "Show it" : "Hide it", "Back to " + shortDay(f.original)}
+                : new String[]{"Change the date", f.hidden ? "Show it" : "Hide it"};
+        dialog(f.name).setItems(actions, (d, which) -> {
+            if (which == 0) askFestivalDate(f);
+            else if (which == 1) Festival.hide(prefs, f, !f.hidden);
+            else Festival.move(prefs, f, f.original);
+            if (which != 0) showRows();
+        }).show();
+    }
+
+    private void askFestivalDate(Festival f) {
+        LinearLayout date = new LinearLayout(this);
+        date.setGravity(Gravity.CENTER);
+        NumberPicker day = new NumberPicker(this);
+        day.setMinValue(1);
+        day.setMaxValue(31);
+        day.setValue(f.date.getDayOfMonth());
+        NumberPicker month = new NumberPicker(this);
+        month.setMinValue(1);
+        month.setMaxValue(12);
+        month.setDisplayedValues(MONTHS);
+        month.setValue(f.date.getMonthValue());
+        NumberPicker year = new NumberPicker(this);
+        year.setMinValue(f.original.getYear() - 1);
+        year.setMaxValue(f.original.getYear() + 1);
+        year.setValue(f.date.getYear());
+        year.setWrapSelectorWheel(false);
+        date.addView(day);
+        date.addView(month);
+        date.addView(year);
+        dialog("When is " + f.name + "?")
+                .setView(padded(date))
+                .setPositiveButton("Save", (d, w) -> {
+                    YearMonth ym = YearMonth.of(year.getValue(), month.getValue());
+                    Festival.move(prefs, f, ym.atDay(Math.min(day.getValue(), ym.lengthOfMonth())));
+                    showRows();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private static String shortDay(LocalDate date) {
+        return date.getDayOfMonth() + " " + MONTHS[date.getMonthValue() - 1];
     }
 
     private View padded(View content) {
