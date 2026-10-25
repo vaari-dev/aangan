@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.provider.Settings;
 import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityEvent;
+import android.widget.Toast;
 
 /**
  * Makes Aangan the home screen without adb. Most TVs offer no way to change the default home
@@ -63,8 +64,16 @@ public class HomeButton extends AccessibilityService {
                 .show();
     }
 
+    /**
+     * Android's accessibility settings. Sony's Android 9 TVs don't answer the standard action, but
+     * have the page under their own name; on a TV with neither, main Settings and directions.
+     */
     private static void openSettings(Activity activity) {
-        Ui.openSettings(activity, Settings.ACTION_ACCESSIBILITY_SETTINGS);
+        if (!Ui.openSettings(activity, Settings.ACTION_ACCESSIBILITY_SETTINGS,
+                new ComponentName("com.android.tv.settings", "com.sony.dtv.settings.accessibility.AccessibilityActivity"),
+                new ComponentName("com.android.tv.settings", "com.android.tv.settings.accessibility.AccessibilityActivity"))) {
+            Toast.makeText(activity, "Choose Device Preferences, then Accessibility, then Aangan", Toast.LENGTH_LONG).show();
+        }
     }
 
     static boolean isOn(Context context) {

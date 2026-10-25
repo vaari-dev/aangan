@@ -2,6 +2,7 @@ package dev.vaari.aangan;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -133,7 +134,9 @@ public class SetupActivity extends Activity {
         row("City", place.name, v -> startActivity(new Intent(this, CityActivity.class)));
         row("Dock", dockNames(), v -> askDock());
         row("Open with the Home button", HomeButton.isOn(this) ? "On" : "Off", v -> HomeButton.askToTurnOn(this));
-        row("Screensaver", "Choose", v -> Ui.openSettings(this, Settings.ACTION_DREAM_SETTINGS));
+        // Sony's Android 9 TVs keep the screensaver page under their own name.
+        row("Screensaver", "Choose", v -> Ui.openSettings(this, Settings.ACTION_DREAM_SETTINGS,
+                new ComponentName("com.android.tv.settings", "com.sony.dtv.settings.device.display.daydream.DaydreamActivity")));
         String crash = Crash.report(this);
         if (crash != null) row("Aangan closed unexpectedly", Crash.when(crash), v -> showCrash());
 

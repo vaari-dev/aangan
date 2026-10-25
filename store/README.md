@@ -98,10 +98,11 @@ Aangan isn't an accessibility tool (`isAccessibilityTool` isn't set), so Play ne
 - **Prominent disclosure:** shown before Aangan opens Android's accessibility settings, from the welcome
   and from Settings, with **Agree and continue** and **Not now**
   (`HomeButton.askToTurnOn`, screenshot `graphics/disclosure.png`).
-- **Video:** upload `disclosure.mp4` as an unlisted YouTube video and paste the link. It shows the
-  welcome, the disclosure, agreement, and Aangan in Android's accessibility list. (The list shows two
-  "Aangan" entries because a test copy was installed while recording; mention this, or re-record on a
-  TV without the GitHub build.)
+- **Video:** upload `disclosure.mp4` (67 seconds, 1280×720, recorded on a Sony Android 9 TV) as an
+  unlisted YouTube video and paste the link. It shows, on a TV with no other copy of Aangan: the home
+  screen, Aangan's Settings with **Open with the Home button** off, the disclosure, **Agree and
+  continue**, Android's accessibility list with Aangan in it, Android's own "Use Aangan?" warning, and
+  Aangan switched on.
 
 ## 8. Release
 

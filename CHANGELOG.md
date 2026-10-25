@@ -2,7 +2,12 @@
 
 Each version's notes become its GitHub release notes and the website's changelog page.
 
-## 1.3.1
+## 1.3.2
+
+- Fixed: on some Android 9 TVs, **Agree and continue** showed "No application can handle this action" instead of opening the accessibility settings, so Aangan couldn't be set to open with Home from the TV. It now opens the TV's own accessibility page, or tells you where to find it.
+- Fixed: on the same TVs, **Screensaver** in Settings opened the TV's main Settings instead of the screensaver page.
+
+## 1.3.1 · 25 October 2026
 
 - If Aangan ever crashes, it now keeps a short note about what went wrong, on the TV. Settings says so, and the phone page shows the note with a link to report it on GitHub, which you read and send yourself, or delete. Aangan still sends no crash reports: nothing leaves the TV unless you send it.
 

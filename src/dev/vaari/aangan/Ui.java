@@ -3,8 +3,11 @@ package dev.vaari.aangan;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.provider.Settings;
@@ -33,6 +36,9 @@ final class Ui {
     static final int CARD = 0xFF1F2026;
     /** Rain chances and "Rain likely" lines. */
     static final int RAIN = 0xFF64D2FF;
+
+    /** Google's stand-ins for settings pages a TV doesn't have. */
+    private static final String STUBS = "com.google.android.tv.frameworkpackagestubs";
 
     private final Context context;
 
@@ -177,16 +183,31 @@ final class Ui {
         return new AlertDialog.Builder(context, android.R.style.Theme_DeviceDefault_Dialog_Alert).setTitle(title);
     }
 
-    /** Opens a system settings page, or the main Settings if this TV hasn't got that page. */
-    static void openSettings(Activity activity, String action) {
+    /**
+     * Opens a system settings page: by its standard action, or else the first of {@code screens}
+     * this TV has (where makers put the same page under their own name). Failing both, opens the
+     * main Settings and returns false.
+     */
+    static boolean openSettings(Activity activity, String action, ComponentName... screens) {
+        if (open(activity, new Intent(action))) return true;
+        for (ComponentName screen : screens) if (open(activity, new Intent().setComponent(screen))) return true;
+        open(activity, new Intent(Settings.ACTION_SETTINGS));
+        return false;
+    }
+
+    /**
+     * Starts the activity if a real one handles the intent. Some TVs answer settings actions they
+     * lack with a Google stub that only says "No application can handle this action"; that counts
+     * as nothing.
+     */
+    private static boolean open(Activity activity, Intent intent) {
+        ResolveInfo r = activity.getPackageManager().resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY);
+        if (r == null || r.activityInfo.packageName.equals(STUBS)) return false;
         try {
-            activity.startActivity(new Intent(action));
+            activity.startActivity(intent);
+            return true;
         } catch (ActivityNotFoundException | SecurityException e) {
-            try {
-                activity.startActivity(new Intent(Settings.ACTION_SETTINGS));
-            } catch (ActivityNotFoundException | SecurityException ignored) {
-                // A TV with no Settings app at all: there is nowhere to send the viewer.
-            }
+            return false;
         }
     }
 }
