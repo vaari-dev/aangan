@@ -43,7 +43,8 @@ and Independence Day, and for birthdays and anniversaries.
 
 ## Private by design
 
-- No ads, analytics, crash reporting or account.
+- No ads, analytics, crash reporting or account. If Aangan ever crashes, it keeps a short note on the TV, which you
+  can read and choose to report yourself from the phone page. Nothing is sent automatically.
 - No location permission. You choose your city; Gurgaon is the default.
 - The only network use: [Open-Meteo](https://open-meteo.com) weather for your city (two requests, at most every 30–60 minutes, and only while the home screen is on screen), city search when you ask for it, and the phone-setup page below.
 - Birthdays and anniversaries are stored on the TV and nowhere else.

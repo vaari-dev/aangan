@@ -134,6 +134,8 @@ public class SetupActivity extends Activity {
         row("Dock", dockNames(), v -> askDock());
         row("Open with the Home button", HomeButton.isOn(this) ? "On" : "Off", v -> HomeButton.askToTurnOn(this));
         row("Screensaver", "Choose", v -> Ui.openSettings(this, Settings.ACTION_DREAM_SETTINGS));
+        String crash = Crash.report(this);
+        if (crash != null) row("Aangan closed unexpectedly", Crash.when(crash), v -> showCrash());
 
         heading("Birthdays & anniversaries");
         for (People.Day d : People.load(prefs)) {
@@ -188,6 +190,20 @@ public class SetupActivity extends Activity {
 
     private AlertDialog.Builder dialog(String title) {
         return Ui.dialog(this, title);
+    }
+
+    /** The note kept from the last crash: reported from the phone page, where it can be read in full, or deleted. */
+    private void showCrash() {
+        dialog("Aangan closed unexpectedly")
+                .setMessage("It kept a short note about what went wrong, here on the TV, and sent nothing. To report it, "
+                        + "scan the code on the right: the phone page shows the note, and you can read everything before "
+                        + "sending it on GitHub.")
+                .setPositiveButton("Delete", (d, w) -> {
+                    Crash.delete(this);
+                    showRows();
+                })
+                .setNegativeButton("Keep", null)
+                .show();
     }
 
     private List<String> dock(Map<String, Apps.App> apps) {

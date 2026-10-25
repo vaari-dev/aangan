@@ -20,7 +20,9 @@ def version():
 
 
 def tag(name=None):
-    return "v" + (name or version()) + ".0"
+    """The Git tag for a version: "1.3" is v1.3.0, and "1.3.1" is v1.3.1."""
+    name = name or version()
+    return "v" + name + (".0" if name.count(".") == 1 else "")
 
 
 def changelog():

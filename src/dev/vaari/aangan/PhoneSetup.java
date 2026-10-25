@@ -79,6 +79,7 @@ final class PhoneSetup {
         DONE.put("city", "City changed");
         DONE.put("nocity", "Not saved: search for the city again");
         DONE.put("dock", "Dock saved");
+        DONE.put("crash", "Note deleted");
         DONE.put("moved", "Date changed");
         DONE.put("hidden", "Hidden this year");
         DONE.put("shown", "Showing again");
@@ -268,6 +269,10 @@ final class PhoneSetup {
             case "/dock":
                 redirect(out, base, dock(form), "dock");
                 break;
+            case "/crash/delete":
+                Crash.delete(context);
+                redirect(out, base, changed("crash"), null);
+                break;
             case "/festival/move":
             case "/festival/hide":
             case "/festival/show":
@@ -426,6 +431,20 @@ final class PhoneSetup {
                 .append("<form class=search method=post action='").append(base).append("/city'>")
                 .append("<input type=search name=q placeholder='Search for another city' aria-label='City' required ")
                 .append("autocomplete=off enterkeyhint=search><button>Search</button></form></div></section>");
+
+        // A note from the last crash, if there is one.
+        String crash = Crash.report(context);
+        if (crash != null) {
+            h.append("<section id=crash><h2>Aangan closed unexpectedly</h2><div class='card crash'>")
+                    .append("<p>On ").append(esc(Crash.when(crash))).append(", Aangan stopped and restarted. ")
+                    .append("It kept this note on the TV and sent nothing. If you'd like it fixed, report it on GitHub: ")
+                    .append("you'll see everything before sending it, and can add what you were doing.</p>")
+                    .append("<details><summary>Show the note</summary><pre>").append(esc(crash)).append("</pre></details>")
+                    .append("<div class=actions><a class=button href='").append(esc(Crash.issueLink(crash)))
+                    .append("' target=_blank rel=noopener>Report on GitHub</a>")
+                    .append("<form method=post action='").append(base).append("/crash/delete'>")
+                    .append("<button class=quiet>Delete</button></form></div></div></section>");
+        }
 
         // The dock.
         Map<String, Apps.App> apps = Apps.load(context);

@@ -33,7 +33,9 @@
         </intent>
     </queries>
 
+    <!-- Crash keeps a note on the TV if Aangan crashes; nothing is ever sent. -->
     <application
+        android:name=".Crash"
         android:label="Aangan"
         android:icon="@drawable/icon"
         android:banner="@drawable/banner"

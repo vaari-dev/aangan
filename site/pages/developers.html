@@ -50,6 +50,7 @@ cd aangan
       <tr><td><code>PhoneSetup</code>, <code>QrCode</code></td><td>The phone setup page's tiny HTTP server and pages, and the QR encoder.</td></tr>
       <tr><td><code>HomeButton</code></td><td>The accessibility service that answers the Home button.</td></tr>
       <tr><td><code>ClockDream</code></td><td>The screensaver.</td></tr>
+      <tr><td><code>Crash</code></td><td>The app's <code>Application</code>: if Aangan crashes, it writes a short note to <code>files/crash.txt</code> on the TV (versions, TV model, stack trace) and sends nothing. Settings and the phone page offer to report it on GitHub, which the person does themselves, or delete it.</td></tr>
     </table></div>
     <p>Other files: <code>assets/festivals.csv</code> (the calendar), <code>assets/phone/</code> (the phone page's stylesheet, font, logo and the small script that suggests cities as you type), <code>res/drawable/</code> (the icon and banner) and <code>res/xml/home_button.xml</code> (the service's limits).</p>
 
@@ -85,7 +86,7 @@ cd aangan
       <tr><td><code>festival_edits</code></td><td>JSON object keyed <code>"2026-11-08|Diwali"</code>: <code>{date}</code> and/or <code>{hidden}</code></td></tr>
       <tr><td><code>place</code></td><td>The chosen city as JSON</td></tr>
       <tr><td>weather keys</td><td>The last forecast and air readings, with their times</td></tr>
-      <tr><td><code>welcomed</code>, <code>tips</code></td><td>First-run state</td></tr>
+      <tr><td><code>welcomed</code>, <code>tips2</code></td><td>First-run state</td></tr>
     </table></div>
 
     <h2 id=security>Security model</h2>

@@ -229,3 +229,10 @@ footer img { width: 22px; height: 22px; border-radius: 6px; margin: 0 auto 6px; 
 .chev.go { transform: rotate(-45deg); }
 /* Read by screen readers, not shown. */
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* A note from the last crash: what happened, the note itself, and what to do with it. */
+.crash { padding: 16px; display: grid; gap: 12px; }
+.crash p { margin: 0; }
+.crash pre { margin: 10px 0 0; padding: 12px; overflow-x: auto; font-size: 12px; line-height: 1.45; background: var(--field, rgba(0,0,0,.04)); border-radius: 10px; white-space: pre; }
+.crash summary { cursor: pointer; color: var(--muted); }
+a.button { display: inline-flex; align-items: center; justify-content: center; flex: 1; min-height: 46px; padding: 10px 18px; border-radius: 12px; background: var(--terra); color: var(--on-terra); font-weight: 600; text-decoration: none; }

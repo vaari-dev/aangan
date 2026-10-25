@@ -2,7 +2,11 @@
 
 Each version's notes become its GitHub release notes and the website's changelog page.
 
-## 1.3
+## 1.3.1
+
+- If Aangan ever crashes, it now keeps a short note about what went wrong, on the TV. Settings says so, and the phone page shows the note with a link to report it on GitHub, which you read and send yourself, or delete. Aangan still sends no crash reports: nothing leaves the TV unless you send it.
+
+## 1.3 · 25 October 2026
 
 - **The dock.** Four apps you choose, larger than the rest, across the top of the home screen. It starts with the apps from your old top row, and only you change it: it never rearranges itself, and an uninstalled app leaves an empty place rather than shuffling the others. Hold OK on any app to put it in the dock, or set it in Settings or from your phone.
 - **Easier city search.** A screen of its own, with large cities to choose straight away and places appearing as you type. Results show the state and size to tell same-named places apart, leave out airports and neighbourhoods, and older names such as Bombay, Bangalore and Gurgaon find the right city.
