@@ -117,9 +117,9 @@ Aangan isn't an accessibility tool (`isAccessibilityTool` isn't set), so Play ne
 
 ## Notes for review
 
-- Screenshots show third-party apps' tiles (Netflix, YouTube and so on) because they're installed on
-  the TV. Launchers on Play commonly show them, but if a reviewer objects, retake the screenshots
-  with those apps hidden.
+- The Play screenshots come from Google's Google TV emulator on Android 16, the newest version, so the
+  only app tiles in them are Google's own preinstalled apps (YouTube, Live TV, Play Store, Play Games):
+  no other companies' logos. The website's pictures, from a real TV, show more apps.
 - The app sends no data to its developers and has no server. The privacy policy covers the Open-Meteo
   requests, the phone setup page and the accessibility service in detail.
 

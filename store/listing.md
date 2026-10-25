@@ -101,6 +101,6 @@ Weather and air quality by Open-Meteo (CC BY 4.0) and Copernicus CAMS. Festival 
 | App icon, 512 × 512 | `icon-512.png` |
 | Feature graphic, 1024 × 500 | `feature-graphic-1024x500.png` |
 | Android TV banner, 1280 × 720 | `tv-banner-1280x720.png` |
-| Android TV screenshots, 1920 × 1080 | `screenshots/1-home.png` … `8-welcome.png` |
+| Android TV screenshots, 1920 × 1080 | `screenshots/1-home.png` … `8-welcome.png`: home, Today card, Diwali, a birthday, Karwa Chauth, city search, Settings, welcome. Taken on Google TV 16 (Android 16), with only Google's own apps installed. |
 
 All screenshots use sample names (Asha, Kabir, Meera, Dadi), not real people.
