@@ -1,6 +1,9 @@
 package dev.vaari.aangan;
 
 import android.accessibilityservice.AccessibilityService;
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -39,6 +42,35 @@ public class HomeButton extends AccessibilityService {
 
     @Override
     public void onInterrupt() {
+    }
+
+    /**
+     * Says plainly what the service does, and only on agreement opens Android's accessibility
+     * settings to switch it on. Google Play requires this disclosure and consent first.
+     */
+    static void askToTurnOn(Activity activity) {
+        if (isOn(activity)) {
+            openSettings(activity);
+            return;
+        }
+        new AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle("Open Aangan with the Home button")
+                .setMessage("Aangan uses Android's accessibility service for one thing: when you press Home, "
+                        + "or the TV's own home screen appears, it opens Aangan instead.\n\n"
+                        + "It reacts to the Home button only; every other button passes straight through. "
+                        + "It can't see what's on screen or what you watch, and it stores and sends nothing.\n\n"
+                        + "Next, choose Aangan and switch it on. You can switch it off there any time.")
+                .setPositiveButton("Agree and continue", (d, w) -> openSettings(activity))
+                .setNegativeButton("Not now", null)
+                .show();
+    }
+
+    private static void openSettings(Activity activity) {
+        try {
+            activity.startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+        } catch (ActivityNotFoundException | SecurityException e) {
+            activity.startActivity(new Intent(Settings.ACTION_SETTINGS));
+        }
     }
 
     static boolean isOn(Context context) {

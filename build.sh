@@ -20,7 +20,7 @@ BUNDLETOOL_VERSION=1.18.3
 BUNDLETOOL_SHA256=a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29
 LINK=(-I "$JAR" --manifest AndroidManifest.xml
     --min-sdk-version 28 --target-sdk-version 34
-    --version-code 7 --version-name 1.1
+    --version-code 8 --version-name 1.2
     -A assets)
 
 rm -rf build && mkdir -p build/gen build/classes build/dex

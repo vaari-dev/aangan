@@ -1,13 +1,11 @@
 package dev.vaari.aangan;
 
 import android.app.Activity;
-import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
-import android.provider.Settings;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -105,7 +103,7 @@ public class WelcomeActivity extends Activity {
         card("Open with Home", homeOn
                 ? "Done. The Home button now brings you to Aangan."
                 : "Choose Turn on, then Aangan, and switch it on. Android shows its usual warning; Aangan only acts on the Home button.",
-                homeOn ? "On" : "Turn on", homeOn, v -> openAccessibility());
+                homeOn ? "On" : "Turn on", homeOn, v -> HomeButton.askToTurnOn(this));
         card("Your city", "Weather and air quality for " + Place.load(prefs).name + ". Change it if you live elsewhere.",
                 "Change", false, v -> startActivity(new Intent(this, SetupActivity.class)));
         int days = People.load(prefs).size();
@@ -115,14 +113,6 @@ public class WelcomeActivity extends Activity {
                 days > 0 ? "Add more" : "Add", days > 0, v -> startActivity(new Intent(this, SetupActivity.class)));
         View target = cards.getChildAt(index >= 0 ? index : (homeOn ? 1 : 0));
         target.requestFocus();
-    }
-
-    private void openAccessibility() {
-        try {
-            startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
-        } catch (ActivityNotFoundException | SecurityException e) {
-            startActivity(new Intent(Settings.ACTION_SETTINGS));
-        }
     }
 
     private void card(String title, String body, String action, boolean done, View.OnClickListener onClick) {

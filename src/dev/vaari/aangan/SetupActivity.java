@@ -158,7 +158,7 @@ public class SetupActivity extends Activity {
 
         Place place = Place.load(prefs);
         row("City", place.name, v -> askCity());
-        row("Open with the Home button", HomeButton.isOn(this) ? "On" : "Off", v -> open(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+        row("Open with the Home button", HomeButton.isOn(this) ? "On" : "Off", v -> HomeButton.askToTurnOn(this));
         row("Screensaver", "Choose", v -> open(Settings.ACTION_DREAM_SETTINGS));
 
         heading("Birthdays & anniversaries");

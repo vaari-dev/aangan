@@ -9,7 +9,8 @@
     <!-- To find the TV's address on the home network for the phone-setup QR code. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <uses-feature android:name="android.software.leanback" android:required="false" />
+    <!-- A TV app: Google Play offers it to TVs only. -->
+    <uses-feature android:name="android.software.leanback" android:required="true" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
     <!-- Package visibility (Android 11+): only apps that can be launched. -->
