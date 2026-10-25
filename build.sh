@@ -7,11 +7,40 @@
 #   AANGAN_KEYSTORE=~/keys/aangan-release.jks AANGAN_KEY_PASS=... ./build.sh
 set -euo pipefail
 cd "$(dirname "$0")"
+case "${1:-}" in
+"" | install | bundle) ;;
+*) echo "build.sh: unknown command '$1'; use install or bundle." >&2; exit 1 ;;
+esac
 
+# The release version. Raising VERSION_NAME on main publishes it (see .github/workflows/ci.yml);
+# VERSION_CODE must go up with every release, and CHANGELOG.md needs a section for the new name.
+VERSION_CODE=8
+VERSION_NAME=1.2
+# The Android versions built for: Android 9 and up, targeting Android 14's behaviour.
+MIN_SDK=28
+TARGET_SDK=34
+BUILD_TOOLS=34.0.0
+
+# ANDROID_HOME and JAVA_HOME are honoured when set (CI sets both); otherwise the usual local installs.
 SDK="${ANDROID_HOME:-$HOME/.local/share/android}"
-BT="$SDK/build-tools/34.0.0"
-JAR="$SDK/platforms/android-34/android.jar"
-export JAVA_HOME="${JAVA_HOME:-$(ls -d "$HOME"/.local/share/jdk/jdk-17*/Contents/Home | head -1)}"
+BT="$SDK/build-tools/$BUILD_TOOLS"
+JAR="$SDK/platforms/android-$TARGET_SDK/android.jar"
+if [ -z "${JAVA_HOME:-}" ]; then
+    # The first JDK 17 under ~/.local/share/jdk, laid out for macOS (Contents/Home) or Linux.
+    for candidate in "$HOME"/.local/share/jdk/jdk-17*/Contents/Home "$HOME"/.local/share/jdk/jdk-17*; do
+        if [ -x "$candidate/bin/javac" ]; then
+            JAVA_HOME="$candidate"
+            break
+        fi
+    done
+fi
+JAVA_MAJOR="$("${JAVA_HOME:-/nonexistent}/bin/javac" -version 2>&1 | sed -nE 's/^javac ([0-9]+).*/\1/p' || true)"
+if [ -z "$JAVA_MAJOR" ] || [ "$JAVA_MAJOR" -lt 17 ]; then
+    echo "build.sh: no JDK 17 or later found. Set JAVA_HOME to one (it has bin/javac)." >&2
+    echo "          JAVA_HOME is currently '${JAVA_HOME:-}'." >&2
+    exit 1
+fi
+export JAVA_HOME
 export PATH="$JAVA_HOME/bin:$PATH"
 KEYSTORE="${AANGAN_KEYSTORE:-keystore/dev.jks}"
 KEY_PASS="${AANGAN_KEY_PASS:-development}"
@@ -19,8 +48,8 @@ BUNDLETOOL="$SDK/bundletool.jar"
 BUNDLETOOL_VERSION=1.18.3
 BUNDLETOOL_SHA256=a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29
 LINK=(-I "$JAR" --manifest AndroidManifest.xml
-    --min-sdk-version 28 --target-sdk-version 34
-    --version-code 8 --version-name 1.2
+    --min-sdk-version "$MIN_SDK" --target-sdk-version "$TARGET_SDK"
+    --version-code "$VERSION_CODE" --version-name "$VERSION_NAME"
     -A assets)
 
 rm -rf build && mkdir -p build/gen build/classes build/dex
@@ -32,7 +61,7 @@ javac -source 8 -target 8 -Xlint:-options -encoding UTF-8 \
     -bootclasspath "$JAR" -classpath "$BT/core-lambda-stubs.jar" -d build/classes \
     $(find src build/gen -name '*.java')
 
-"$BT/d8" --release --min-api 28 --lib "$JAR" --output build/dex $(find build/classes -name '*.class')
+"$BT/d8" --release --min-api "$MIN_SDK" --lib "$JAR" --output build/dex $(find build/classes -name '*.class')
 (cd build/dex && zip -q ../unsigned.apk classes.dex)
 
 "$BT/zipalign" -f 4 build/unsigned.apk build/aligned.apk
@@ -46,7 +75,8 @@ fi
 "$BT/apksigner" sign --ks "$KEYSTORE" --ks-pass "pass:$KEY_PASS" --out build/aangan.apk build/aligned.apk
 echo "built build/aangan.apk ($(du -h build/aangan.apk | cut -f1))"
 
-if [ "${1:-}" = bundle ]; then
+case "${1:-}" in
+bundle)
     # bundletool, fetched once and checked against the release's published digest.
     if [ ! -f "$BUNDLETOOL" ]; then
         curl -fsSL -o "$BUNDLETOOL.part" \
@@ -68,8 +98,8 @@ if [ "${1:-}" = bundle ]; then
     jarsigner -keystore "$KEYSTORE" -storepass:env KEY_PASS -digestalg SHA-256 -sigalg SHA256withRSA \
         -signedjar build/aangan.aab build/unsigned.aab aangan >/dev/null
     echo "built build/aangan.aab ($(du -h build/aangan.aab | cut -f1))"
-fi
-
-if [ "${1:-}" = install ]; then
+    ;;
+install)
     "$SDK/platform-tools/adb" install -r build/aangan.apk
-fi
+    ;;
+esac

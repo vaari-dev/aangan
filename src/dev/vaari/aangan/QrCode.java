@@ -26,18 +26,14 @@ final class QrCode {
         }
     }
 
-    private QrCode() {}
+    private QrCode() {
+    }
 
     /**
      * Encodes text (UTF-8, byte mode, error correction level M) in the smallest version 1-6 that
      * fits. Throws IllegalArgumentException if it's longer than 106 bytes.
      */
     static boolean[][] encode(String text) {
-        return encode(text, -1);
-    }
-
-    /** As {@link #encode(String)}, but with a fixed mask (0-7), or -1 to choose by penalty score. */
-    static boolean[][] encode(String text, int mask) {
         byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
         int version = 1;
         while (version <= 6 && bytes.length > capacity(version)) version++;
@@ -54,7 +50,7 @@ final class QrCode {
         drawFunctionPatterns(modules, function, version);
         drawCodewords(modules, function, codewords);
 
-        if (mask >= 0) return masked(modules, function, mask);
+        // Each of the eight masks is tried, and the one with the lowest penalty score kept.
         boolean[][] best = null;
         int bestPenalty = Integer.MAX_VALUE;
         for (int m = 0; m < 8; m++) {
@@ -78,7 +74,8 @@ final class QrCode {
         byte[] out = new byte[total];
         int bit = put(out, put(out, 0, 0x4, 4), bytes.length, 8);
         for (byte b : bytes) bit = put(out, bit, b & 0xFF, 8);
-        bit += Math.min(4, total * 8 - bit);  // terminator, then zero bits up to a byte boundary
+        // The terminator, then zero bits up to a byte boundary.
+        bit += Math.min(4, total * 8 - bit);
         for (int i = (bit + 7) / 8, pad = 0xEC; i < total; i++, pad ^= 0xEC ^ 0x11) {
             out[i] = (byte) pad;
         }
@@ -152,7 +149,8 @@ final class QrCode {
                 }
             }
         }
-        drawFormat(m, f, 0);  // reserves the format areas; rewritten once the mask is known
+        // Reserves the format areas; they are rewritten once the mask is known.
+        drawFormat(m, f, 0);
         set(m, f, 8, size - 8, true);
     }
 
@@ -170,7 +168,8 @@ final class QrCode {
     }
 
     private static void drawFormat(boolean[][] m, boolean[][] f, int mask) {
-        int data = mask;  // level M is 0b00 in the top two bits
+        // Level M is 0b00 in the top two bits.
+        int data = mask;
         int rem = data;
         for (int i = 0; i < 10; i++) rem = (rem << 1) ^ (((rem >>> 9) & 1) * 0x537);
         int bits = ((data << 10) | rem) ^ 0x5412;

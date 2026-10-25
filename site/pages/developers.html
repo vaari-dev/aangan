@@ -71,7 +71,7 @@ cd aangan
       <li>Add a value to <code>Festive.Theme</code> with its glow and accent colours.</li>
       <li>Add a <code>case</code> to the drawing switch in <code>Festive</code>, composed from the existing pieces (stars, moon, diyas, lights, toran and so on) or a new drawing method.</li>
       <li>Use the timing helpers: <code>part()</code> for the opening, <code>sway()</code> and <code>flicker()</code> for the loop. Keep the clock, date, weather pill and app tiles clear.</li>
-      <li>Use the scene in <code>festivals.csv</code>, preview it with <code>am start … --es festival</code>, and add it to <code>SCENES</code> in <code>docs/site.py</code>.</li>
+      <li>Use the scene in <code>festivals.csv</code>, preview it with <code>am start … --es festival</code>, and add it to <code>SCENES</code> in <code>tools/site.py</code>.</li>
     </ol>
 
     <h2 id=storage>Stored settings</h2>
@@ -111,8 +111,8 @@ cd aangan
 
     <h2 id=art>Icon and website</h2>
     <ul>
-      <li><code>python3 docs/icon.py</code> draws the icon and banner and writes <code>res/drawable/icon.xml</code>, <code>banner.xml</code> and the SVGs. The wordmark is Fraunces, as a path in <code>docs/wordmark.txt</code>.</li>
-      <li><code>python3 docs/site.py</code> builds this website from <code>docs/site/</code> into <code>docs/</code>, which GitHub Pages serves.</li>
+      <li><code>python3 tools/icon.py</code> draws the icon and banner and writes <code>res/drawable/icon.xml</code>, <code>banner.xml</code> and the SVGs. The wordmark is Fraunces, as a path in <code>tools/wordmark.txt</code>.</li>
+      <li><code>python3 tools/site.py</code> builds this website from <code>site/</code> into <code>build/site/</code>; CI publishes it to GitHub Pages on every push to main.</li>
     </ul>
 
     <h2 id=contributing>Contributing</h2>

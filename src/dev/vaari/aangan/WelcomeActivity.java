@@ -3,10 +3,9 @@ package dev.vaari.aangan;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Typeface;
+import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
-import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -21,28 +20,39 @@ import android.widget.TextView;
  */
 public class WelcomeActivity extends Activity {
 
-    private static final int LABEL = 0xFFF5F5F7;
-    private static final int SECONDARY = 0x99EBEBF5;
+    /** A finished step's tick. */
     private static final int DONE = 0xFF30D158;
+    /** A step still to do. */
+    private static final int TO_DO = 0xFFFFB86B;
+    private static final int CARD_FOCUSED = 0xFF34353F;
+    /** The start button when focused: filled white, with dark text. */
+    private static final int BUTTON_FOCUSED = Ui.LABEL;
+    private static final int BUTTON_FOCUSED_TEXT = 0xFF1C1B1A;
+    private static final String WELCOMED = "welcomed";
 
+    private Ui ui;
     private SharedPreferences prefs;
     private LinearLayout cards;
 
     static boolean needed(SharedPreferences prefs) {
-        return !prefs.getBoolean("welcomed", false);
+        return !prefs.getBoolean(WELCOMED, false);
+    }
+
+    static void markSeen(SharedPreferences prefs) {
+        prefs.edit().putBoolean(WELCOMED, true).apply();
     }
 
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
-        prefs = getSharedPreferences("aangan", MODE_PRIVATE);
+        ui = new Ui(this);
+        prefs = Prefs.of(this);
         // Leaving by any route counts as seen; the "Set up Aangan" tile stays until Home is set up.
-        prefs.edit().putBoolean("welcomed", true).apply();
+        markSeen(prefs);
 
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout root = ui.column();
         root.setGravity(Gravity.CENTER_HORIZONTAL);
-        root.setPadding(dp(48), dp(28), dp(48), dp(20));
+        root.setPadding(ui.dp(48), ui.dp(28), ui.dp(48), ui.dp(20));
         root.setClipChildren(false);
         root.setClipToPadding(false);
 
@@ -50,45 +60,31 @@ public class WelcomeActivity extends Activity {
         art.setImageResource(R.drawable.banner);
         art.setScaleType(ImageView.ScaleType.FIT_CENTER);
         art.setClipToOutline(true);
-        GradientDrawable round = new GradientDrawable();
-        round.setCornerRadius(dp(14));
-        art.setBackground(round);
-        root.addView(art, new LinearLayout.LayoutParams(dp(144), dp(81)));
+        art.setBackground(ui.rounded(Color.TRANSPARENT, 14));
+        root.addView(art, new LinearLayout.LayoutParams(ui.dp(144), ui.dp(81)));
 
-        TextView title = text(32, 300, LABEL, "Welcome to Aangan");
-        LinearLayout.LayoutParams titleLp = wrap();
-        titleLp.topMargin = dp(16);
-        root.addView(title, titleLp);
-        TextView sub = text(15, 400, SECONDARY, "A calm home screen for your TV. Three quick things and you're ready.");
-        LinearLayout.LayoutParams subLp = wrap();
-        subLp.topMargin = dp(8);
-        root.addView(sub, subLp);
+        root.addView(ui.text(32, 300, Ui.LABEL, "Welcome to Aangan"), ui.wrap(16));
+        root.addView(ui.text(15, 400, Ui.SECONDARY, "A calm home screen for your TV. Three quick things and you're ready."),
+                ui.wrap(8));
 
-        cards = new LinearLayout(this);
-        cards.setOrientation(LinearLayout.HORIZONTAL);
+        cards = ui.row();
         cards.setClipChildren(false);
-        LinearLayout.LayoutParams cardsLp = wrap();
-        cardsLp.topMargin = dp(24);
-        root.addView(cards, cardsLp);
+        root.addView(cards, ui.wrap(24));
 
-        TextView start = text(16, 600, LABEL, "Start using Aangan");
+        TextView start = ui.text(16, 600, Ui.LABEL, "Start using Aangan");
         start.setGravity(Gravity.CENTER);
-        start.setPadding(dp(28), dp(12), dp(28), dp(12));
+        start.setPadding(ui.dp(28), ui.dp(12), ui.dp(28), ui.dp(12));
         start.setFocusable(true);
         start.setClickable(true);
-        GradientDrawable pill = new GradientDrawable();
-        pill.setColor(0x26FFFFFF);
-        pill.setCornerRadius(dp(24));
+        GradientDrawable pill = ui.rounded(Ui.FOCUS_FILL, 24);
         start.setBackground(pill);
         // Focus fills the button rather than scaling it, so the label stays crisp.
-        start.setOnFocusChangeListener((v, has) -> {
-            pill.setColor(has ? 0xFFF5F5F7 : 0x26FFFFFF);
-            start.setTextColor(has ? 0xFF1C1B1A : LABEL);
+        start.setOnFocusChangeListener((v, hasFocus) -> {
+            pill.setColor(hasFocus ? BUTTON_FOCUSED : Ui.FOCUS_FILL);
+            start.setTextColor(hasFocus ? BUTTON_FOCUSED_TEXT : Ui.LABEL);
         });
         start.setOnClickListener(v -> finish());
-        LinearLayout.LayoutParams startLp = wrap();
-        startLp.topMargin = dp(24);
-        root.addView(start, startLp);
+        root.addView(start, ui.wrap(24));
 
         setContentView(root);
     }
@@ -116,53 +112,31 @@ public class WelcomeActivity extends Activity {
     }
 
     private void card(String title, String body, String action, boolean done, View.OnClickListener onClick) {
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(22), dp(20), dp(22), dp(20));
+        LinearLayout card = ui.column();
+        card.setPadding(ui.dp(22), ui.dp(20), ui.dp(22), ui.dp(20));
         card.setFocusable(true);
         card.setClickable(true);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xFF1F2026);
-        bg.setCornerRadius(dp(18));
-        bg.setStroke(Math.max(1, dp(0.75f)), 0x1FFFFFFF);
+        GradientDrawable bg = ui.panel(18);
         card.setBackground(bg);
         // Focus brightens the card and outlines it; no scaling, which would blur the text.
-        card.setOnFocusChangeListener((v, has) -> {
-            bg.setColor(has ? 0xFF34353F : 0xFF1F2026);
-            bg.setStroke(dp(has ? 2.5f : 0.75f), has ? 0xF2FFFFFF : 0x1FFFFFFF);
-            v.setElevation(has ? dp(12) : 0);
+        card.setOnFocusChangeListener((v, hasFocus) -> {
+            bg.setColor(hasFocus ? CARD_FOCUSED : Ui.CARD);
+            bg.setStroke(hasFocus ? ui.dp(2.5f) : ui.dp(0.75f), hasFocus ? 0xF2FFFFFF : Ui.HAIRLINE);
+            v.setElevation(hasFocus ? ui.dp(12) : 0);
         });
         card.setOnClickListener(onClick);
 
-        card.addView(text(19, 600, LABEL, title));
-        TextView b = text(13.5f, 400, SECONDARY, body);
-        b.setLineSpacing(dp(2), 1f);
+        card.addView(ui.text(19, 600, Ui.LABEL, title));
+        TextView b = ui.text(13.5f, 400, Ui.SECONDARY, body);
+        b.setLineSpacing(ui.dp(2), 1f);
         LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1);
-        bLp.topMargin = dp(8);
+        bLp.topMargin = ui.dp(8);
         card.addView(b, bLp);
-        TextView a = text(14, 600, done ? DONE : 0xFFFFB86B, done ? "✓  " + action : action + "  ›");
-        card.addView(a);
+        card.addView(ui.text(14, 600, done ? DONE : TO_DO, done ? "✓  " + action : action + "  ›"));
 
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(250), dp(168));
-        lp.leftMargin = dp(10);
-        lp.rightMargin = dp(10);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ui.dp(250), ui.dp(168));
+        lp.leftMargin = ui.dp(10);
+        lp.rightMargin = ui.dp(10);
         cards.addView(card, lp);
-    }
-
-    private int dp(float v) {
-        return Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, getResources().getDisplayMetrics()));
-    }
-
-    private static LinearLayout.LayoutParams wrap() {
-        return new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-    }
-
-    private TextView text(float sp, int weight, int color, String s) {
-        TextView t = new TextView(this);
-        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
-        t.setTypeface(Typeface.create(Typeface.DEFAULT, weight, false));
-        t.setTextColor(color);
-        t.setText(s);
-        return t;
     }
 }

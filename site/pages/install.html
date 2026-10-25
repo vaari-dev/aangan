@@ -6,7 +6,7 @@
 </div>
 <div class="wrap doc">
   <nav class=toc aria-label="On this page"><b>On this page</b>
-    <a href="#downloader">With Downloader</a><a href="#welcome">The welcome</a><a href="#play">Google Play</a><a href="#adb">With a computer</a><a href="#update">Updating</a><a href="#uninstall">Going back</a><a href="#verify">Checking the download</a>
+    <a href="#downloader">With Downloader</a><a href="#welcome">The welcome</a><a href="#play">Google Play</a><a href="#adb">With a computer</a><a href="#update">Updating</a><a href="#uninstall">Going back</a><a href="#other-tvs">Samsung, LG and others</a><a href="#verify">Checking the download</a>
   </nav>
   <div class=prose>
     <h2 id=downloader>With the Downloader app</h2>
@@ -50,6 +50,15 @@ adb shell cmd package set-home-activity dev.vaari.aangan/.HomeActivity</code></p
       <li>Press <kbd>Home</kbd>. The TV's own home screen returns, exactly as it was.</li>
     </ol>
     <p>Uninstalling removes everything Aangan stored, including your family's dates; there's no copy anywhere else.</p>
+
+    <h2 id=other-tvs>Samsung, LG, Roku and Fire TV</h2>
+    <p>Aangan needs Android TV or Google TV. Samsung's TVs run Tizen, LG's run webOS, and Roku runs its own system. None of them can run Android apps, and none lets any app replace the home screen or answer the Home button; the home screen is part of the TV's software. Fire TV runs on Android, but Amazon has blocked other home screens since 2022. The <a href="faq.html#samsung">FAQ explains why in more detail</a>.</p>
+    <p>You can still have Aangan on one of these TVs:</p>
+    <ol>
+      <li>Plug in a Google TV or Android TV streamer, such as Google TV Streamer, Chromecast with Google TV, Xiaomi TV Box or Nvidia Shield.</li>
+      <li>Install Aangan on the streamer as above, and turn on <b>Open with Home</b>.</li>
+      <li>In the TV's settings, turn on HDMI-CEC (Anynet+ on Samsung, SIMPLINK on LG), so the TV's remote works the streamer and switches to it.</li>
+    </ol>
 
     <h2 id=verify>Checking the download</h2>
     <p>Every release is built from the public source and signed with the same key. Its certificate's SHA-256 fingerprint is:</p>

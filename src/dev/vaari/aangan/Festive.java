@@ -3,15 +3,15 @@ package dev.vaari.aangan;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.PorterDuff;
-import android.graphics.PorterDuffColorFilter;
-import android.graphics.Color;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.graphics.RadialGradient;
 import android.graphics.RectF;
 import android.graphics.Shader;
+import android.os.SystemClock;
 import android.view.View;
 
 import java.util.Random;
@@ -49,6 +49,12 @@ final class Festive extends View {
         TRICOLOUR(0xFF5A4A36, 0xFFFFB066),
         BIRTHDAY(0xFF5A2E66, 0xFFFFA3CF),
         ANNIVERSARY(0xFF6A2A40, 0xFFFFB3C1),
+        /**
+         * No scene, just the greeting. It borrows Diwali's warm glow and marigold accent, which are
+         * also the home screen's festive colour: the general "something to celebrate" look. (Written
+         * out rather than referring to DIWALI, since an enum constant can't read another's fields
+         * in its constructor call; tools/site.py also reads these values from this file.)
+         */
         PLAIN(0xFF7A5A2E, 0xFFFFC56B);
 
         /** The background's glow on the day. */
@@ -66,6 +72,8 @@ final class Festive extends View {
     private static final long FRAME_MS = 50;
 
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
+    /** For gradient fills only; its own alpha stays opaque, so the gradient's colours alone set the look. */
+    private final Paint gradient = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
     private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
     private final Paint glowPaint = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.DITHER_FLAG);
@@ -82,7 +90,7 @@ final class Festive extends View {
     private final Runnable frame = new Runnable() {
         @Override
         public void run() {
-            long now = android.os.SystemClock.uptimeMillis();
+            long now = SystemClock.uptimeMillis();
             time += Math.min(0.1f, (now - lastFrame) / 1000f);
             lastFrame = now;
             invalidate();
@@ -128,7 +136,7 @@ final class Festive extends View {
         running = on;
         removeCallbacks(frame);
         if (on) {
-            lastFrame = android.os.SystemClock.uptimeMillis();
+            lastFrame = SystemClock.uptimeMillis();
             post(frame);
         }
     }
@@ -166,10 +174,6 @@ final class Festive extends View {
         return amount * (0.6f * wave(9f, seed * 2.3f) + 0.4f * wave(23.7f, seed * 5.1f));
     }
 
-    private static int alpha(int color, float a) {
-        return (Math.round(clamp(a) * Color.alpha(color)) << 24) | (color & 0xFFFFFF);
-    }
-
     /**
      * A soft pool of light. Drawn from one cached falloff image tinted to the colour, rather than a
      * new gradient each frame, which keeps the looping scenes cheap.
@@ -185,7 +189,7 @@ final class Festive extends View {
     /** A radial falloff matching a linear gradient from full to none, with a little dither noise. */
     private static Bitmap falloff(int size) {
         int[] px = new int[size * size];
-        java.util.Random random = new java.util.Random(2);
+        Random random = new Random(2);
         float half = size / 2f;
         for (int y = 0; y < size; y++) {
             for (int x = 0; x < size; x++) {
@@ -223,11 +227,9 @@ final class Festive extends View {
                 kites(c, w, h);
                 break;
             case BASANT:
-                paint.setAlpha(255);
-        paint.setShader(new LinearGradient(0, h - 150 * u, 0, h, 0x00FFD60A,
-                        alpha(0xFFFFD60A, 0.24f * part(0, 0.5f)), Shader.TileMode.CLAMP));
-                c.drawRect(0, h - 150 * u, w, h, paint);
-                paint.setShader(null);
+                gradient.setShader(new LinearGradient(0, h - 150 * u, 0, h, 0x00FFD60A,
+                        Colors.alpha(0xFFFFD60A, 0.24f * part(0, 0.5f)), Shader.TileMode.CLAMP));
+                c.drawRect(0, h - 150 * u, w, h, gradient);
                 kites(c, w, h);
                 break;
             case KARWA:
@@ -309,15 +311,13 @@ final class Festive extends View {
             path.quadTo(x, y + 13 * k * u, x + 15 * k * u, y - 4 * k * u);
             path.quadTo(x, y - 1 * k * u, x - 15 * k * u, y - 4 * k * u);
             path.close();
-            paint.setAlpha(255);
-        paint.setShader(new LinearGradient(0, y - 4 * k * u, 0, y + 9 * k * u, 0xFFD06A2C, 0xFF5E240E, Shader.TileMode.CLAMP));
-            c.drawPath(path, paint);
-            paint.setShader(null);
+            gradient.setShader(new LinearGradient(0, y - 4 * k * u, 0, y + 9 * k * u, 0xFFD06A2C, 0xFF5E240E, Shader.TileMode.CLAMP));
+            c.drawPath(path, gradient);
             // Painted dots around the bowl, and the lit rim.
             paint.setColor(0xCCFFD27A);
             for (int d = -2; d <= 2; d++) c.drawCircle(x + d * 5 * u, y + 2.2f * u + Math.abs(d) * -1.2f * u, 1.1f * u, paint);
             stroke.setStrokeWidth(1.4f * u);
-            stroke.setColor(alpha(0xFFFFC27A, 0.5f + 0.5f * t));
+            stroke.setColor(Colors.alpha(0xFFFFC27A, 0.5f + 0.5f * t));
             c.drawLine(x - 13 * k * u, y - 3.6f * k * u, x + 13 * k * u, y - 3.6f * k * u, stroke);
 
             float fh = 22 * u * easeOut(t) * (1 + flicker(i, 0.18f));
@@ -329,11 +329,9 @@ final class Festive extends View {
             path.cubicTo(x + 7 * u, base - fh * 0.45f, x + 5.5f * u, base, x, base + u);
             path.cubicTo(x - 5.5f * u, base, x - 7 * u, base - fh * 0.45f, x, base - fh);
             path.close();
-            paint.setAlpha(255);
-        paint.setShader(new RadialGradient(x, base - fh * 0.22f, fh * 0.85f,
+            gradient.setShader(new RadialGradient(x, base - fh * 0.22f, fh * 0.85f,
                     new int[]{0xFFFFFFF4, 0xFFFFDB6E, 0xFFFF8A1F}, new float[]{0f, 0.4f, 1f}, Shader.TileMode.CLAMP));
-            c.drawPath(path, paint);
-            paint.setShader(null);
+            c.drawPath(path, gradient);
         }
     }
 
@@ -353,7 +351,7 @@ final class Festive extends View {
             int petals = 8 + 4 * k;
             float len = r * 0.15f;
             float wid = r * (0.055f - 0.004f * k);
-            paint.setColor(alpha(colors[k], 0.42f * t));
+            paint.setColor(Colors.alpha(colors[k], 0.42f * t));
             for (int i = 0; i < petals; i++) {
                 c.save();
                 c.rotate(360f * i / petals + (k % 2) * 180f / petals);
@@ -361,13 +359,13 @@ final class Festive extends View {
                 c.drawOval(oval, paint);
                 c.restore();
             }
-            paint.setColor(alpha(0xFFFFFFFF, 0.30f * t));
+            paint.setColor(Colors.alpha(0xFFFFFFFF, 0.30f * t));
             for (int i = 0; i < petals; i++) {
                 double a = 2 * Math.PI * (i + 0.5) / petals + (k % 2) * Math.PI / petals;
                 c.drawCircle((float) (Math.cos(a) * ring), (float) (Math.sin(a) * ring), 1.6f * u, paint);
             }
         }
-        paint.setColor(alpha(0xFFFF9F1C, 0.5f * t));
+        paint.setColor(Colors.alpha(0xFFFF9F1C, 0.5f * t));
         c.drawCircle(0, 0, r * 0.1f, paint);
         c.restore();
     }
@@ -395,7 +393,7 @@ final class Festive extends View {
                 float len = r * spread * (0.85f + 0.15f * random.nextFloat());
                 for (int d = 0; d < 4; d++) {
                     float f = 0.4f + 0.2f * d;
-                    paint.setColor(alpha(color, a * (0.3f + 0.23f * d)));
+                    paint.setColor(Colors.alpha(color, a * (0.3f + 0.23f * d)));
                     c.drawCircle(cx + (float) Math.cos(angle) * len * f, cy + (float) Math.sin(angle) * len * f,
                             (0.6f + 0.3f * d) * u, paint);
                 }
@@ -427,7 +425,7 @@ final class Festive extends View {
             float a = 0.25f + 0.55f * random.nextFloat();
             float t = easeOut(part(k * 0.07f + 0.05f, 0.6f));
             if (t <= 0) continue;
-            paint.setColor(alpha(colors[k], a * t));
+            paint.setColor(Colors.alpha(colors[k], a * t));
             c.drawCircle(w * clouds[k][0] + (float) Math.cos(angle) * dist * t,
                     h * clouds[k][1] + (float) Math.sin(angle) * dist * t, size, paint);
         }
@@ -453,20 +451,17 @@ final class Festive extends View {
             path.cubicTo(fx + fw * 0.9f, base - fh * 0.5f, fx + fw, base, fx, base);
             path.cubicTo(fx - fw, base, fx - fw * 0.9f, base - fh * 0.5f, fx, base - fh);
             path.close();
-            paint.setAlpha(255);
-        paint.setShader(new LinearGradient(0, base, 0, base - fh, 0xCCFF5A00, 0x00FFD36B, Shader.TileMode.CLAMP));
-            c.drawPath(path, paint);
-            paint.setShader(null);
+            gradient.setShader(new LinearGradient(0, base, 0, base - fh, 0xCCFF5A00, 0x00FFD36B, Shader.TileMode.CLAMP));
+            c.drawPath(path, gradient);
         }
+        // Two logs, crossed.
         paint.setColor(0xFF2E1C10);
-        c.save();
-        c.rotate(-10, x, h - 8 * u);
-        c.drawRoundRect(new RectF(x - 70 * u, h - 14 * u, x + 70 * u, h - 2 * u), 6 * u, 6 * u, paint);
-        c.restore();
-        c.save();
-        c.rotate(10, x, h - 8 * u);
-        c.drawRoundRect(new RectF(x - 70 * u, h - 14 * u, x + 70 * u, h - 2 * u), 6 * u, 6 * u, paint);
-        c.restore();
+        for (int tilt : new int[]{-10, 10}) {
+            c.save();
+            c.rotate(tilt, x, h - 8 * u);
+            c.drawRoundRect(x - 70 * u, h - 14 * u, x + 70 * u, h - 2 * u, 6 * u, 6 * u, paint);
+            c.restore();
+        }
 
         Random random = new Random(9);
         for (int i = 0; i < 70; i++) {
@@ -478,7 +473,7 @@ final class Festive extends View {
             float climb = ((h - 30 * u - sy) + (time - introStart) * 38 * u * (0.6f + (i % 5) * 0.15f)) % (300 * u);
             float y = h - 30 * u - climb;
             st *= 1 - climb / (300 * u);
-            paint.setColor(alpha(random.nextBoolean() ? 0xFFFFC46B : 0xFFFF8A3D, (0.35f + 0.6f * random.nextFloat()) * st));
+            paint.setColor(Colors.alpha(random.nextBoolean() ? 0xFFFFC46B : 0xFFFF8A3D, (0.35f + 0.6f * random.nextFloat()) * st));
             c.drawCircle(sx, y, (0.8f + 1.4f * random.nextFloat()) * u, paint);
         }
     }
@@ -506,8 +501,8 @@ final class Festive extends View {
             // The string sags away towards the rooftops and fades out before it reaches the tiles.
             stroke.setStrokeWidth(0.7f * u);
             stroke.setAlpha(255);
-        stroke.setShader(new LinearGradient(kx, ky, kx - 90 * u, ky + 120 * u,
-                    alpha(0xFFFFFFFF, 0.4f * t), 0x00FFFFFF, Shader.TileMode.CLAMP));
+            stroke.setShader(new LinearGradient(kx, ky, kx - 90 * u, ky + 120 * u,
+                    Colors.alpha(0xFFFFFFFF, 0.4f * t), 0x00FFFFFF, Shader.TileMode.CLAMP));
             path.reset();
             path.moveTo(kx, ky + 0.2f * s);
             path.quadTo(kx - 30 * u, ky + 90 * u, kx - 110 * u, ky + 140 * u);
@@ -523,24 +518,24 @@ final class Festive extends View {
             path.lineTo(0, s);
             path.lineTo(-0.85f * s, 0);
             path.close();
-            paint.setColor(alpha(colors[i][0], t));
+            paint.setColor(Colors.alpha(colors[i][0], t));
             c.drawPath(path, paint);
             path.reset();
             path.moveTo(0, -s);
             path.lineTo(0.85f * s, 0);
             path.lineTo(0, s);
             path.close();
-            paint.setColor(alpha(colors[i][1], 0.9f * t));
+            paint.setColor(Colors.alpha(colors[i][1], 0.9f * t));
             c.drawPath(path, paint);
             path.reset();
             path.moveTo(0, s);
             path.lineTo(-0.28f * s, 1.38f * s);
             path.lineTo(0.28f * s, 1.38f * s);
             path.close();
-            paint.setColor(alpha(colors[i][1], t));
+            paint.setColor(Colors.alpha(colors[i][1], t));
             c.drawPath(path, paint);
             stroke.setStrokeWidth(0.9f * u);
-            stroke.setColor(alpha(0xFF000000, 0.35f * t));
+            stroke.setColor(Colors.alpha(0xFF000000, 0.35f * t));
             c.drawLine(0, -s, 0, s, stroke);
             path.reset();
             path.moveTo(-0.85f * s, 0);
@@ -558,7 +553,7 @@ final class Festive extends View {
             float x = random.nextFloat() * w;
             float y = random.nextFloat() * h * 0.62f;
             float t = part(random.nextFloat() * 0.6f, 0.3f) * (0.65f + 0.35f * wave(1 + (i % 3), i));
-            paint.setColor(alpha(0xFFFFFFFF, (0.25f + 0.5f * random.nextFloat()) * t));
+            paint.setColor(Colors.alpha(0xFFFFFFFF, (0.25f + 0.5f * random.nextFloat()) * t));
             c.drawCircle(x, y, (0.5f + 1.0f * random.nextFloat()) * u, paint);
         }
     }
@@ -568,12 +563,10 @@ final class Festive extends View {
         float t = easeOut(part(0, 0.75f));
         float cy = finalY + 70 * u * (1 - t);
         glow(c, cx, cy, r * 5f, 0xFFFFF2D0, 0.38f * t * (0.9f + 0.1f * wave(0.8f, 0)));
-        paint.setAlpha(255);
-        paint.setShader(new RadialGradient(cx - r * 0.3f, cy - r * 0.3f, r * 1.3f, alpha(0xFFFFFFF6, t),
-                alpha(0xFFF3E6C4, t), Shader.TileMode.CLAMP));
-        c.drawCircle(cx, cy, r, paint);
-        paint.setShader(null);
-        paint.setColor(alpha(0xFFB9A57A, 0.10f * t));
+        gradient.setShader(new RadialGradient(cx - r * 0.3f, cy - r * 0.3f, r * 1.3f, Colors.alpha(0xFFFFFFF6, t),
+                Colors.alpha(0xFFF3E6C4, t), Shader.TileMode.CLAMP));
+        c.drawCircle(cx, cy, r, gradient);
+        paint.setColor(Colors.alpha(0xFFB9A57A, 0.10f * t));
         float[][] craters = {{-0.35f, -0.2f, 0.18f}, {0.25f, 0.1f, 0.24f}, {-0.1f, 0.42f, 0.12f}, {0.38f, -0.38f, 0.1f}};
         for (float[] cr : craters) c.drawCircle(cx + cr[0] * r, cy + cr[1] * r, cr[2] * r, paint);
         if (!chalni) return;
@@ -587,21 +580,21 @@ final class Festive extends View {
         path.addCircle(cx, finalY, ring * 0.92f, Path.Direction.CW);
         c.clipPath(path);
         stroke.setStrokeWidth(0.5f * u);
-        stroke.setColor(alpha(0xFFE3B04B, 0.16f * ct));
+        stroke.setColor(Colors.alpha(0xFFE3B04B, 0.16f * ct));
         for (float d = -ring; d <= ring; d += 4.5f * u) {
             c.drawLine(cx + d, finalY - ring, cx + d, finalY + ring, stroke);
             c.drawLine(cx - ring, finalY + d, cx + ring, finalY + d, stroke);
         }
         c.restore();
         stroke.setStrokeWidth(3.2f * u);
-        stroke.setColor(alpha(0xFFE3B04B, ct));
+        stroke.setColor(Colors.alpha(0xFFE3B04B, ct));
         c.drawCircle(cx, finalY, ring, stroke);
         stroke.setStrokeWidth(1f * u);
-        stroke.setColor(alpha(0xFFE3B04B, 0.6f * ct));
+        stroke.setColor(Colors.alpha(0xFFE3B04B, 0.6f * ct));
         c.drawCircle(cx, finalY, ring * 0.92f, stroke);
         for (int i = 0; i < 16; i++) {
             double a = 2 * Math.PI * i / 16;
-            paint.setColor(alpha(i % 2 == 0 ? 0xFFFF5A5F : 0xFFFFE08A, ct));
+            paint.setColor(Colors.alpha(i % 2 == 0 ? 0xFFFF5A5F : 0xFFFFE08A, ct));
             c.drawCircle(cx + (float) Math.cos(a) * ring, finalY + (float) Math.sin(a) * ring, 2.3f * u, paint);
         }
     }
@@ -615,7 +608,7 @@ final class Festive extends View {
         Path bite = new Path();
         bite.addCircle(cx + r * 0.38f, cy - r * 0.18f, r * 0.86f, Path.Direction.CW);
         outer.op(bite, Path.Op.DIFFERENCE);
-        paint.setColor(alpha(color, t));
+        paint.setColor(Colors.alpha(color, t));
         c.drawPath(outer, paint);
         if (!star) return;
         float sx = cx + r * 1.05f;
@@ -660,7 +653,7 @@ final class Festive extends View {
             tx /= len;
             ty /= len;
             float barb = 36 * u * (float) Math.pow(Math.sin(Math.PI * s), 0.6) * (0.5f + 0.5f * s);
-            stroke.setColor(alpha(s > 0.6f ? 0xFF6FBF3A : 0xFF3F8F5A, 0.55f * t));
+            stroke.setColor(Colors.alpha(s > 0.6f ? 0xFF6FBF3A : 0xFF3F8F5A, 0.55f * t));
             for (int side = -1; side <= 1; side += 2) {
                 float nx = -ty * side;
                 float ny = tx * side;
@@ -668,7 +661,7 @@ final class Festive extends View {
             }
         }
         stroke.setStrokeWidth(1.4f * u);
-        stroke.setColor(alpha(0xFFE8D9A8, 0.7f * t));
+        stroke.setColor(Colors.alpha(0xFFE8D9A8, 0.7f * t));
         path.reset();
         path.moveTo(bx, by);
         path.quadTo(ctrlX, ctrlY, tipX, tipY);
@@ -680,7 +673,7 @@ final class Festive extends View {
         c.translate(tipX, tipY);
         c.rotate(angle);
         stroke.setStrokeWidth(0.7f * u);
-        stroke.setColor(alpha(0xFF7FC24A, 0.5f * t));
+        stroke.setColor(Colors.alpha(0xFF7FC24A, 0.5f * t));
         for (int i = 0; i < 28; i++) {
             double a = 2 * Math.PI * i / 28;
             c.drawLine((float) Math.cos(a) * 24 * u, (float) Math.sin(a) * 19 * u,
@@ -690,7 +683,7 @@ final class Festive extends View {
         int[] colors = {0xFFB8862B, 0xFF4CAF50, 0xFF1FB5A8, 0xFF1A3FA8, 0xFF0B1A4A};
         RectF oval = new RectF();
         for (int i = 0; i < rings.length; i++) {
-            paint.setColor(alpha(colors[i], 0.9f * t));
+            paint.setColor(Colors.alpha(colors[i], 0.9f * t));
             float rw = rings[i][0] * u;
             float rh = rings[i][1] * u;
             float shift = -i * 1.6f * u;
@@ -710,18 +703,16 @@ final class Festive extends View {
         float y = h - 34 * u;
         c.save();
         c.rotate(-7, x, y);
-        paint.setAlpha(255);
-        paint.setShader(new LinearGradient(0, y - 4 * u, 0, y + 4 * u, alpha(0xFFD9B26A, t), alpha(0xFF8A6430, t), Shader.TileMode.CLAMP));
-        c.drawRoundRect(new RectF(x, y - 4 * u, x + len, y + 4 * u), 4 * u, 4 * u, paint);
-        paint.setShader(null);
-        paint.setColor(alpha(0xFF3A2410, t));
+        gradient.setShader(new LinearGradient(0, y - 4 * u, 0, y + 4 * u, Colors.alpha(0xFFD9B26A, t), Colors.alpha(0xFF8A6430, t), Shader.TileMode.CLAMP));
+        c.drawRoundRect(x, y - 4 * u, x + len, y + 4 * u, 4 * u, 4 * u, gradient);
+        paint.setColor(Colors.alpha(0xFF3A2410, t));
         for (int i = 0; i < 7; i++) c.drawCircle(x + len * (0.42f + i * 0.07f), y, 1.4f * u, paint);
-        paint.setColor(alpha(0xFFD7263D, t));
+        paint.setColor(Colors.alpha(0xFFD7263D, t));
         for (float f : new float[]{0.08f, 0.3f, 0.95f}) {
             c.drawRect(x + len * f, y - 4.2f * u, x + len * f + 3 * u, y + 4.2f * u, paint);
         }
         stroke.setStrokeWidth(1.2f * u);
-        stroke.setColor(alpha(0xFFFFC233, t));
+        stroke.setColor(Colors.alpha(0xFFFFC233, t));
         c.drawLine(x + len * 0.3f + 1.5f * u, y + 4 * u, x + len * 0.3f - 4 * u, y + 22 * u, stroke);
         c.drawLine(x + len * 0.3f + 1.5f * u, y + 4 * u, x + len * 0.3f + 4 * u, y + 21 * u, stroke);
         c.restore();
@@ -788,10 +779,8 @@ final class Festive extends View {
             double a = 2 * Math.PI * i / 10;
             c.drawCircle((float) Math.cos(a) * 10 * u, (float) Math.sin(a) * 10 * u, 1.5f * u, paint);
         }
-        paint.setAlpha(255);
-        paint.setShader(new RadialGradient(-2 * u, -2 * u, 9 * u, 0xFFFFFFFF, 0xFFF2C14E, Shader.TileMode.CLAMP));
-        c.drawCircle(0, 0, 6.5f * u, paint);
-        paint.setShader(null);
+        gradient.setShader(new RadialGradient(-2 * u, -2 * u, 9 * u, 0xFFFFFFFF, 0xFFF2C14E, Shader.TileMode.CLAMP));
+        c.drawCircle(0, 0, 6.5f * u, gradient);
         c.restore();
     }
 
@@ -843,10 +832,8 @@ final class Festive extends View {
             double a = Math.PI * i / 5;
             c.drawCircle(x + (float) Math.cos(a) * r * 0.62f, y + (float) Math.sin(a) * r * 0.62f, r * 0.42f, paint);
         }
-        paint.setAlpha(255);
-        paint.setShader(new RadialGradient(x - r * 0.15f, y - r * 0.15f, r * 0.8f, inner, outer, Shader.TileMode.CLAMP));
-        c.drawCircle(x, y, r * 0.66f, paint);
-        paint.setShader(null);
+        gradient.setShader(new RadialGradient(x - r * 0.15f, y - r * 0.15f, r * 0.8f, inner, outer, Shader.TileMode.CLAMP));
+        c.drawCircle(x, y, r * 0.66f, gradient);
         paint.setColor(0x26000000);
         for (int i = 0; i < 8; i++) {
             double a = Math.PI * i / 4 + 0.3;
@@ -863,10 +850,8 @@ final class Festive extends View {
         path.quadTo(x + wid, y + len * 0.45f, x, y + len);
         path.quadTo(x - wid, y + len * 0.45f, x, y);
         path.close();
-        paint.setAlpha(255);
-        paint.setShader(new LinearGradient(x, y, x, y + len, 0xFF4CAF50, 0xFF1E6B2A, Shader.TileMode.CLAMP));
-        c.drawPath(path, paint);
-        paint.setShader(null);
+        gradient.setShader(new LinearGradient(x, y, x, y + len, 0xFF4CAF50, 0xFF1E6B2A, Shader.TileMode.CLAMP));
+        c.drawPath(path, gradient);
         stroke.setStrokeWidth(0.6f * u);
         stroke.setColor(0x669BD39F);
         c.drawLine(x, y + len * 0.1f, x, y + len * 0.9f, stroke);
@@ -884,13 +869,11 @@ final class Festive extends View {
         float cy = horizon + 6 * u - 34 * u * (1 - t);
         c.save();
         c.clipRect(0, 0, w, horizon);
-        paint.setAlpha(255);
-        paint.setShader(new LinearGradient(0, cy - r, 0, cy + r, alpha(0xFFFFD27A, t), alpha(0xFFFF5E3A, t), Shader.TileMode.CLAMP));
-        c.drawCircle(w / 2, cy, r, paint);
-        paint.setShader(null);
+        gradient.setShader(new LinearGradient(0, cy - r, 0, cy + r, Colors.alpha(0xFFFFD27A, t), Colors.alpha(0xFFFF5E3A, t), Shader.TileMode.CLAMP));
+        c.drawCircle(w / 2, cy, r, gradient);
         c.restore();
         stroke.setStrokeWidth(0.8f * u);
-        stroke.setColor(alpha(0xFFFFB066, 0.3f * t));
+        stroke.setColor(Colors.alpha(0xFFFFB066, 0.3f * t));
         c.drawLine(0, horizon, w, horizon, stroke);
         Random random = new Random(4);
         stroke.setStrokeWidth(1.7f * u);
@@ -898,7 +881,7 @@ final class Festive extends View {
             float y = horizon + 5 * u + k * 4.4f * u;
             float half = 70 * u * (1 - k / 16f) * (0.55f + 0.45f * random.nextFloat()) * t * (1 + 0.15f * wave(2f, k));
             float jitter = (random.nextFloat() - 0.5f) * 14 * u + 5 * u * wave(1.3f, k * 0.7f);
-            stroke.setColor(alpha(0xFFFFB066, 0.75f * (1 - k / 14f) * t));
+            stroke.setColor(Colors.alpha(0xFFFFB066, 0.75f * (1 - k / 14f) * t));
             c.drawLine(w / 2 - half + jitter, y, w / 2 + half + jitter, y, stroke);
         }
     }
@@ -929,7 +912,7 @@ final class Festive extends View {
                 int color = colors[index % colors.length];
                 if (on) glow(c, x, y, 14 * u, color, glowAlpha * (0.55f + 0.45f * wave(3f, -index * 0.6f)));
                 paint.setColor(on ? color : 0x40FFFFFF);
-                c.drawOval(new RectF(x - 2.6f * u, y - 3.8f * u, x + 2.6f * u, y + 3.8f * u), paint);
+                c.drawOval(x - 2.6f * u, y - 3.8f * u, x + 2.6f * u, y + 3.8f * u, paint);
             }
         }
     }
@@ -942,7 +925,7 @@ final class Festive extends View {
             float x = random.nextFloat() * w;
             float speed = 0.5f + random.nextFloat();
             float y = (random.nextFloat() * h + time * 16 * u * speed) % h - fall * speed;
-            paint.setColor(alpha(0xFFFFFFFF, 0.2f + 0.35f * random.nextFloat()));
+            paint.setColor(Colors.alpha(0xFFFFFFFF, 0.2f + 0.35f * random.nextFloat()));
             c.drawCircle(x, y, (0.6f + 1.6f * random.nextFloat()) * u, paint);
         }
         stroke.setStrokeWidth(0.9f * u);
@@ -977,7 +960,7 @@ final class Festive extends View {
         c.save();
         c.rotate(swing, x, 0);
         stroke.setStrokeWidth(0.8f * u);
-        stroke.setColor(alpha(0xFFD9A441, 0.7f * t));
+        stroke.setColor(Colors.alpha(0xFFD9A441, 0.7f * t));
         c.drawLine(x, 0, x, length, stroke);
         float top = length;
         glow(c, x, top + 20 * s, 50 * s, 0xFFFFC46B, 0.35f * t);
@@ -986,7 +969,7 @@ final class Festive extends View {
         path.moveTo(x - 6 * s, top + 6 * s);
         path.quadTo(x, top - 3 * s, x + 6 * s, top + 6 * s);
         path.close();
-        paint.setColor(alpha(0xFFD9A441, t));
+        paint.setColor(Colors.alpha(0xFFD9A441, t));
         c.drawPath(path, paint);
 
         path.reset();
@@ -997,12 +980,10 @@ final class Festive extends View {
         path.lineTo(x + 10 * s, top + 18 * s);
         path.lineTo(x + 7 * s, top + 6 * s);
         path.close();
-        paint.setAlpha(255);
-        paint.setShader(new RadialGradient(x, top + 19 * s, 14 * s, alpha(0xFFFFF0C4, t), alpha(0xFFE08A1E, t), Shader.TileMode.CLAMP));
-        c.drawPath(path, paint);
-        paint.setShader(null);
+        gradient.setShader(new RadialGradient(x, top + 19 * s, 14 * s, Colors.alpha(0xFFFFF0C4, t), Colors.alpha(0xFFE08A1E, t), Shader.TileMode.CLAMP));
+        c.drawPath(path, gradient);
         stroke.setStrokeWidth(1.1f * u);
-        stroke.setColor(alpha(0xFFD9A441, t));
+        stroke.setColor(Colors.alpha(0xFFD9A441, t));
         c.drawPath(path, stroke);
         c.drawLine(x, top + 6 * s, x, top + 32 * s, stroke);
         c.drawLine(x - 10 * s, top + 18 * s, x + 10 * s, top + 18 * s, stroke);
@@ -1042,11 +1023,9 @@ final class Festive extends View {
             }
             c.drawPath(path, stroke);
             int color = colors[i];
-            paint.setAlpha(255);
-        paint.setShader(new RadialGradient(x - r * 0.35f, y - r * 0.4f, r * 1.4f,
-                    blend(color, 0xFFFFFFFF, 0.45f), color, Shader.TileMode.CLAMP));
-            c.drawOval(new RectF(x - r * 0.86f, y - r, x + r * 0.86f, y + r), paint);
-            paint.setShader(null);
+            gradient.setShader(new RadialGradient(x - r * 0.35f, y - r * 0.4f, r * 1.4f,
+                    Colors.blend(color, 0xFFFFFFFF, 0.45f), color, Shader.TileMode.CLAMP));
+            c.drawOval(x - r * 0.86f, y - r, x + r * 0.86f, y + r, gradient);
             paint.setColor(color);
             path.reset();
             path.moveTo(x, y + r * 0.95f);
@@ -1055,7 +1034,7 @@ final class Festive extends View {
             path.close();
             c.drawPath(path, paint);
             paint.setColor(0x66FFFFFF);
-            c.drawOval(new RectF(x - r * 0.5f, y - r * 0.72f, x - r * 0.22f, y - r * 0.28f), paint);
+            c.drawOval(x - r * 0.5f, y - r * 0.72f, x - r * 0.22f, y - r * 0.28f, paint);
         }
     }
 
@@ -1072,7 +1051,7 @@ final class Festive extends View {
             float pw = (2 + 3 * random.nextFloat()) * u;
             // Keep the clock, date and weather clear.
             if (y < h * 0.23f && (x < w * 0.45f || x > w * 0.64f)) continue;
-            paint.setColor(alpha(colors[random.nextInt(colors.length)], 0.45f + 0.4f * random.nextFloat()));
+            paint.setColor(Colors.alpha(colors[random.nextInt(colors.length)], 0.45f + 0.4f * random.nextFloat()));
             c.save();
             c.rotate(a + time * 70 * speed, x, y);
             c.drawRect(x - pw, y - pw * 0.4f, x + pw, y + pw * 0.4f, paint);
@@ -1124,7 +1103,7 @@ final class Festive extends View {
             float s = hearts[i][2] * u * (1 + 0.14f * (float) Math.pow(Math.max(0, wave(3f, i)), 8));
             float x = w * hearts[i][0];
             float y = h * hearts[i][1] + 60 * u * (1 - t) + 4 * u * wave(0.8f, i);
-            paint.setColor(alpha(i % 2 == 0 ? 0xFFFF6B8B : 0xFFFFB3C1, 0.8f * t));
+            paint.setColor(Colors.alpha(i % 2 == 0 ? 0xFFFF6B8B : 0xFFFFB3C1, 0.8f * t));
             path.reset();
             path.moveTo(x, y + s);
             path.cubicTo(x - 1.25f * s, y + 0.15f * s, x - 0.65f * s, y - 0.95f * s, x, y - 0.35f * s);
@@ -1143,18 +1122,12 @@ final class Festive extends View {
             float y = h - random.nextFloat() * 70 * u - 60 * u * (1 - t) * random.nextFloat();
             float a = random.nextFloat() * 360;
             float pl = (5 + 4 * random.nextFloat()) * u;
-            paint.setColor(alpha(random.nextBoolean() ? 0xFFE63950 : 0xFFFF8FA3, (0.55f + 0.35f * random.nextFloat()) * t));
+            paint.setColor(Colors.alpha(random.nextBoolean() ? 0xFFE63950 : 0xFFFF8FA3, (0.55f + 0.35f * random.nextFloat()) * t));
             c.save();
             c.rotate(a, x, y);
-            c.drawOval(new RectF(x - pl * 0.6f, y - pl, x + pl * 0.6f, y + pl), paint);
+            c.drawOval(x - pl * 0.6f, y - pl, x + pl * 0.6f, y + pl, paint);
             c.restore();
         }
-    }
-
-    private static int blend(int a, int b, float f) {
-        return Color.rgb(Math.round(Color.red(a) + (Color.red(b) - Color.red(a)) * f),
-                Math.round(Color.green(a) + (Color.green(b) - Color.green(a)) * f),
-                Math.round(Color.blue(a) + (Color.blue(b) - Color.blue(a)) * f));
     }
 
     // ---- national days ----------------------------------------------------------------------
@@ -1169,7 +1142,7 @@ final class Festive extends View {
         stroke.setStrokeWidth(15 * u);
         stroke.setStrokeCap(Paint.Cap.BUTT);
         for (int k = 0; k < 3; k++) {
-            stroke.setColor(alpha(colors[k], k == 1 ? 0.18f : 0.32f));
+            stroke.setColor(Colors.alpha(colors[k], k == 1 ? 0.18f : 0.32f));
             path.reset();
             for (int i = 0; i <= 60; i++) {
                 float x = w * i / 60f;
@@ -1190,7 +1163,7 @@ final class Festive extends View {
         c.save();
         c.rotate(-360 * (1 - ct) + time * 20, cx, cy);
         stroke.setStrokeWidth(1.4f * u);
-        stroke.setColor(alpha(0xFF6F8BE8, ct));
+        stroke.setColor(Colors.alpha(0xFF6F8BE8, ct));
         c.drawCircle(cx, cy, r, stroke);
         stroke.setStrokeWidth(0.7f * u);
         for (int i = 0; i < 24; i++) {

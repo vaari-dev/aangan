@@ -21,8 +21,8 @@ final class WeatherGlyph extends View {
         stroke.setStyle(Paint.Style.STROKE);
         stroke.setStrokeCap(Paint.Cap.ROUND);
         stroke.setStrokeJoin(Paint.Join.ROUND);
-        stroke.setColor(0xFFF5F5F7);
-        fill.setColor(0xFFF5F5F7);
+        stroke.setColor(Ui.LABEL);
+        fill.setColor(Ui.LABEL);
     }
 
     void setGlyph(Weather.Glyph glyph) {

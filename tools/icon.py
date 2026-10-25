@@ -1,0 +1,188 @@
+#!/usr/bin/env python3
+"""Draws Aangan's icon and TV banner. From the repository root:
+
+    python3 tools/icon.py
+
+It writes the icon as docs/icon.svg (for the website and README) and assets/phone/mark.svg (for the
+phone setup page), the banner as docs/banner.svg, and both as the Android vector drawables
+res/drawable/icon.xml and banner.xml.
+
+The mark is the nine: eight houses around a sunlit courtyard, which is also a grid of apps with one
+in focus. tools/wordmark.txt holds "Aangan" set in Fraunces (SIL Open Font Licence) at opsz 72,
+wght 520, SOFT 50, as one SVG path in font units (first line: advance, units per em, cap height).
+
+Each drawing is a list of shapes, (kind, paint, path), where kind is "fill" (paint is a colour),
+"linear" (paint is x1, y1, x2, y2, stops) or "radial" (paint is cx, cy, r, stops), and stops are
+(offset, colour) pairs. Colours are "#RRGGBB" or "#AARRGGBB".
+"""
+import os
+import re
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# The plaster of the courtyard walls, top to bottom, and the ink of the name.
+CHALK = ("#F4EDE1", "#EBE1D0")
+INK = "#A9492A"
+# The houses' terracotta, lit from the top left.
+TONES = ["#C8673C", "#BC5832", "#B04D2C", "#A4472A", "#963F25"]
+
+ICON_TEXT = "Aangan's icon: eight houses around a sunlit courtyard, which is also a grid of apps with one in focus."
+BANNER_TEXT = ("Aangan's TV banner: the icon's nine, and the name set in Fraunces (SIL Open Font Licence), "
+               "drawn as paths.")
+
+
+# ---- colours and paths ----------------------------------------------------------------------
+
+def argb(colour):
+    """"#RRGGBB" as opaque "#FFRRGGBB"; "#AARRGGBB" unchanged."""
+    return colour if len(colour) == 9 else "#FF" + colour[1:]
+
+
+def opacity(colour):
+    """The alpha of "#AARRGGBB" from 0 to 1; "#RRGGBB" is opaque."""
+    return int(colour[1:3], 16) / 255 if len(colour) == 9 else 1
+
+
+def rounded_rect(x, y, w, h, r):
+    return (f"M{x + r:.2f},{y:.2f}H{x + w - r:.2f}A{r:.2f},{r:.2f} 0 0 1 {x + w:.2f},{y + r:.2f}"
+            f"V{y + h - r:.2f}A{r:.2f},{r:.2f} 0 0 1 {x + w - r:.2f},{y + h:.2f}"
+            f"H{x + r:.2f}A{r:.2f},{r:.2f} 0 0 1 {x:.2f},{y + h - r:.2f}"
+            f"V{y + r:.2f}A{r:.2f},{r:.2f} 0 0 1 {x + r:.2f},{y:.2f}Z")
+
+
+def circle(cx, cy, r):
+    return f"M{cx - r:.2f},{cy:.2f}a{r:.2f},{r:.2f} 0 1,0 {2 * r:.2f},0a{r:.2f},{r:.2f} 0 1,0 {-2 * r:.2f},0Z"
+
+
+def scale_path(d, s, dx, dy):
+    """An SVG path of absolute M, L, H, V, Q, C and Z commands, scaled by s and moved by (dx, dy)."""
+    number = r"-?\d+\.?\d*(?:e-?\d+)?"
+    out = []
+    for cmd, args in re.findall(r"([MLHVQCZ])([^MLHVQCZ]*)", d):
+        values = [float(n) for n in re.findall(number, args)]
+        if cmd == "H":
+            values = [x * s + dx for x in values]
+        elif cmd == "V":
+            values = [y * s + dy for y in values]
+        else:
+            # Coordinate pairs: x at even positions, y at odd.
+            values = [v * s + (dx if i % 2 == 0 else dy) for i, v in enumerate(values)]
+        out.append(cmd + " ".join(f"{v:.2f}" for v in values))
+    return "".join(out)
+
+
+# ---- the drawings ---------------------------------------------------------------------------
+
+def background(w, h):
+    return ("linear", (0, 0, 0, h, [(0, argb(CHALK[0])), (1, argb(CHALK[1]))]), f"M0,0H{w}V{h}H0Z")
+
+
+def mark(ox, oy, s):
+    """The nine: eight houses around a lit courtyard. The grid is 62 units at s=1, top-left at (ox, oy)."""
+    cx, cy = ox + 31 * s, oy + 31 * s
+    # The courtyard's glow spills a little onto the floor between the houses, under them.
+    shapes = [("radial", (cx, cy, 20 * s, [(0.45, "#73F6B544"), (1, "#00F6B544")]), circle(cx, cy, 20 * s))]
+    for row in range(3):
+        for col in range(3):
+            if row == 1 and col == 1:
+                continue
+            shapes.append(("fill", TONES[row + col], rounded_rect(ox + col * 22 * s, oy + row * 22 * s, 18 * s, 18 * s, 4.5 * s)))
+    shapes.append(("radial", (cx, cy, 11 * s, [(0, "#FFFFD27A"), (1, "#FFE8962A")]), circle(cx, cy, 10.5 * s)))
+    return shapes
+
+
+# ---- writing SVG and Android vector drawables -----------------------------------------------
+
+def svg_stops(stops):
+    return "".join(f'<stop offset="{o}" stop-color="#{c[-6:]}" stop-opacity="{opacity(c):.2f}"/>' for o, c in stops)
+
+
+def svg(w, h, shapes, clip=None):
+    defs = ""
+    body = ""
+    for i, (kind, paint, d) in enumerate(shapes):
+        if kind == "fill":
+            body += f'<path fill="{paint}" d="{d}"/>'
+            continue
+        if kind == "linear":
+            x1, y1, x2, y2, stops = paint
+            defs += (f'<linearGradient id="g{i}" gradientUnits="userSpaceOnUse" x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}">'
+                     + svg_stops(stops) + "</linearGradient>")
+        else:
+            cx, cy, r, stops = paint
+            defs += (f'<radialGradient id="g{i}" gradientUnits="userSpaceOnUse" cx="{cx:.2f}" cy="{cy:.2f}" r="{r:.2f}">'
+                     + svg_stops(stops) + "</radialGradient>")
+        body += f'<path fill="url(#g{i})" d="{d}"/>'
+    if clip:
+        defs += f'<clipPath id="c"><path d="{clip}"/></clipPath>'
+        body = f'<g clip-path="url(#c)">{body}</g>'
+    return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}"><defs>{defs}</defs>{body}</svg>\n'
+
+
+def vector_drawable(w, h, width_dp, height_dp, shapes, comment, clip=None):
+    out = ['<?xml version="1.0" encoding="utf-8"?>',
+           f"<!-- {comment}",
+           "     Generated by tools/icon.py; edit that, not this. -->",
+           '<vector xmlns:android="http://schemas.android.com/apk/res/android"',
+           '    xmlns:aapt="http://schemas.android.com/aapt"',
+           f'    android:width="{width_dp}dp"',
+           f'    android:height="{height_dp}dp"',
+           f'    android:viewportWidth="{w}"',
+           f'    android:viewportHeight="{h}">',
+           "    <group>"]
+    if clip:
+        out.append(f'        <clip-path android:pathData="{clip}" />')
+    for kind, paint, d in shapes:
+        if kind == "fill":
+            out.append(f'        <path android:fillColor="{argb(paint)}" android:pathData="{d}" />')
+            continue
+        if kind == "linear":
+            x1, y1, x2, y2, stops = paint
+            gradient = f'android:type="linear" android:startX="{x1}" android:startY="{y1}" android:endX="{x2}" android:endY="{y2}"'
+        else:
+            cx, cy, r, stops = paint
+            gradient = f'android:type="radial" android:centerX="{cx:.2f}" android:centerY="{cy:.2f}" android:gradientRadius="{r:.2f}"'
+        out.append(f'        <path android:pathData="{d}">')
+        out.append('            <aapt:attr name="android:fillColor">')
+        out.append(f"                <gradient {gradient}>")
+        out.extend(f'                    <item android:offset="{o}" android:color="{argb(c)}" />' for o, c in stops)
+        out.append("                </gradient>")
+        out.append("            </aapt:attr>")
+        out.append("        </path>")
+    out += ["    </group>", "</vector>", ""]
+    return "\n".join(out)
+
+
+def write(path, text):
+    with open(os.path.join(REPO_ROOT, path), "w", encoding="utf-8") as f:
+        f.write(text)
+
+
+def main():
+    with open(os.path.join(REPO_ROOT, "tools", "wordmark.txt"), encoding="utf-8") as f:
+        metrics, word = f.read().split("\n")[:2]
+    cap = int(metrics.split()[2])
+
+    # The icon: 100x100, rounded like the TV's own tiles.
+    icon = [background(100, 100)] + mark(19, 19, 1)
+    icon_clip = rounded_rect(0, 0, 100, 100, 22)
+
+    # The banner: 160x90, the mark at the left and the name beside it, centred on the mark.
+    mark_scale = 36 / 62
+    word_scale = 0.01356
+    mark_x, mark_y = 11.5, 27
+    word_x = mark_x + 62 * mark_scale + 9
+    baseline = 45 + cap * word_scale / 2
+    banner = ([background(160, 90)] + mark(mark_x, mark_y, mark_scale)
+              + [("fill", INK, scale_path(word, word_scale, word_x, baseline))])
+
+    icon_svg = svg(100, 100, icon, icon_clip)
+    write("docs/icon.svg", icon_svg)
+    write("assets/phone/mark.svg", icon_svg)
+    write("docs/banner.svg", svg(160, 90, banner))
+    write("res/drawable/icon.xml", vector_drawable(100, 100, 96, 96, icon, ICON_TEXT, icon_clip))
+    write("res/drawable/banner.xml", vector_drawable(160, 90, 320, 180, banner, BANNER_TEXT))
+
+
+if __name__ == "__main__":
+    main()

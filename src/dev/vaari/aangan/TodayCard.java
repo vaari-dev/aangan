@@ -8,9 +8,7 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
 import android.graphics.Shader;
-import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
-import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -30,18 +28,21 @@ final class TodayCard {
 
     static final int WIDTH = 700;
 
-    private static final int LABEL = 0xFFF5F5F7;
-    private static final int SECONDARY = 0x99EBEBF5;
-    private static final int TERTIARY = 0x4DEBEBF5;
-    private static final int HAIRLINE = 0x1FFFFFFF;
-    private static final int RAIN = 0xFF64D2FF;
+    /** The Today card's own surface: a touch lighter than the home screen behind it. */
+    private static final int[] SURFACE = {0xFF26272E, 0xFF1A1B20};
+    /** How many hours the forecast strip shows, the current one included. */
+    private static final int STRIP_HOURS = 6;
+    /** Rain chances below this, in percent, are noise. */
+    private static final int RAIN_SHOWN = 20;
+    /** How many festivals and family days the card lists. */
+    private static final int COMING = 4;
 
     private final Context context;
-    private final float density;
+    private final Ui ui;
 
     private TodayCard(Context context) {
         this.context = context;
-        this.density = context.getResources().getDisplayMetrics().density;
+        this.ui = new Ui(context);
     }
 
     static View build(Context context, Weather w) {
@@ -49,99 +50,60 @@ final class TodayCard {
     }
 
     private int dp(float v) {
-        return Math.round(v * density);
-    }
-
-    private TextView text(float sp, int weight, int color) {
-        TextView t = new TextView(context);
-        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
-        t.setTypeface(Typeface.create(Typeface.DEFAULT, weight, false));
-        t.setTextColor(color);
-        t.setIncludeFontPadding(false);
-        t.setSingleLine(true);
-        return t;
+        return ui.dp(v);
     }
 
     private TextView text(float sp, int weight, int color, String s) {
-        TextView t = text(sp, weight, color);
-        t.setText(s);
-        return t;
-    }
-
-    private static LinearLayout.LayoutParams wrap() {
-        return new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-    }
-
-    private LinearLayout.LayoutParams wrap(int top) {
-        LinearLayout.LayoutParams lp = wrap();
-        lp.topMargin = dp(top);
-        return lp;
-    }
-
-    private LinearLayout row() {
-        LinearLayout row = new LinearLayout(context);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        return row;
-    }
-
-    private LinearLayout column() {
-        LinearLayout col = new LinearLayout(context);
-        col.setOrientation(LinearLayout.VERTICAL);
-        return col;
+        return ui.line(sp, weight, color, s);
     }
 
     private View hairline() {
         View v = new View(context);
-        v.setBackgroundColor(HAIRLINE);
+        v.setBackgroundColor(Ui.HAIRLINE);
         return v;
     }
 
     // ---- layout -----------------------------------------------------------------------------
 
     private View card(Weather w) {
-        LinearLayout card = column();
+        LinearLayout card = ui.column();
         card.setPadding(dp(26), dp(22), dp(26), dp(20));
-        GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{0xFF26272E, 0xFF1A1B20});
+        GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, SURFACE);
         bg.setCornerRadius(dp(22));
-        bg.setStroke(Math.max(1, dp(0.75f)), HAIRLINE);
+        bg.setStroke(ui.hairline(), Ui.HAIRLINE);
         card.setBackground(bg);
         card.setElevation(dp(24));
 
-        LinearLayout title = row();
+        LinearLayout title = ui.row();
         title.setGravity(Gravity.BOTTOM);
-        title.addView(text(17, 600, LABEL, "Today in " + w.place.name));
+        title.addView(text(17, 600, Ui.LABEL, "Today in " + w.place.name));
         View spacer = new View(context);
         title.addView(spacer, new LinearLayout.LayoutParams(0, 1, 1));
         if (w.hasWeather()) {
-            title.addView(text(11, 400, TERTIARY, "Updated " + Weather.clockAt(Math.max(w.weatherAt, w.airAt))));
+            title.addView(text(11, 400, Ui.TERTIARY, "Updated " + Weather.clockAt(Math.max(w.weatherAt, w.airAt))));
         }
-        card.addView(title, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        card.addView(title, Ui.fill());
 
-        LinearLayout columns = row();
-        LinearLayout.LayoutParams columnsLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        columnsLp.topMargin = dp(18);
-        card.addView(columns, columnsLp);
+        LinearLayout columns = ui.row();
+        card.addView(columns, ui.fill(18));
 
-        columns.addView(sky(w), new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-        LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(Math.max(1, dp(0.75f)), ViewGroup.LayoutParams.MATCH_PARENT);
+        columns.addView(sky(w), Ui.share(1));
+        LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(ui.hairline(), ViewGroup.LayoutParams.MATCH_PARENT);
         dividerLp.leftMargin = dp(24);
         dividerLp.rightMargin = dp(24);
         columns.addView(hairline(), dividerLp);
-        columns.addView(air(w), new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        columns.addView(air(w), Ui.share(1));
 
-        List<Festival> coming = Festival.upcoming(Festival.today(), 4);
+        List<Festival> coming = Festival.upcoming(Festival.today(), COMING);
         if (!coming.isEmpty()) {
-            LinearLayout.LayoutParams ruleLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, dp(0.75f)));
+            LinearLayout.LayoutParams ruleLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ui.hairline());
             ruleLp.topMargin = dp(20);
             card.addView(hairline(), ruleLp);
-            LinearLayout.LayoutParams festLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            festLp.topMargin = dp(16);
-            card.addView(festivals(coming), festLp);
+            card.addView(festivals(coming), ui.fill(16));
         }
 
-        TextView footer = text(9.5f, 400, TERTIARY, "Open-Meteo · Copernicus CAMS · Back to close");
-        LinearLayout.LayoutParams footerLp = wrap(18);
+        TextView footer = text(9.5f, 400, Ui.TERTIARY, "Open-Meteo · Copernicus CAMS · Back to close");
+        LinearLayout.LayoutParams footerLp = ui.wrap(18);
         footerLp.gravity = Gravity.CENTER_HORIZONTAL;
         card.addView(footer, footerLp);
         return card;
@@ -149,180 +111,169 @@ final class TodayCard {
 
     /** Now, the next five hours, then sunrise, sunset, daylight, UV and the moon. */
     private View sky(Weather w) {
-        LinearLayout col = column();
+        LinearLayout col = ui.column();
         if (!w.hasWeather()) {
-            col.addView(text(13, 400, SECONDARY, "No weather yet"));
+            col.addView(text(13, 400, Ui.SECONDARY, "No weather yet"));
             return col;
         }
 
-        LinearLayout hero = row();
+        LinearLayout hero = ui.row();
         hero.setGravity(Gravity.CENTER_VERTICAL);
         WeatherGlyph glyph = new WeatherGlyph(context);
         glyph.setGlyph(w.glyph());
         hero.addView(glyph, new LinearLayout.LayoutParams(dp(40), dp(40)));
-        TextView temp = text(44, 300, LABEL, Weather.degrees(w.temp));
+        TextView temp = text(44, 300, Ui.LABEL, Weather.degrees(w.temp));
         temp.setFontFeatureSettings("tnum");
-        LinearLayout.LayoutParams tempLp = wrap();
+        LinearLayout.LayoutParams tempLp = Ui.wrap();
         tempLp.leftMargin = dp(12);
         hero.addView(temp, tempLp);
-        LinearLayout lines = column();
-        lines.addView(text(15, 500, LABEL, w.condition()));
+        LinearLayout lines = ui.column();
+        lines.addView(text(15, 500, Ui.LABEL, w.condition()));
         StringBuilder range = new StringBuilder();
         if (!Double.isNaN(w.high)) range.append("H ").append(Weather.degrees(w.high)).append("  L ").append(Weather.degrees(w.low)).append("  ·  ");
         range.append("Feels ").append(Weather.degrees(w.feels));
-        lines.addView(text(12.5f, 400, SECONDARY, range.toString()), wrap(4));
-        LinearLayout.LayoutParams linesLp = wrap();
+        lines.addView(text(12.5f, 400, Ui.SECONDARY, range.toString()), ui.wrap(4));
+        LinearLayout.LayoutParams linesLp = Ui.wrap();
         linesLp.leftMargin = dp(14);
         hero.addView(lines, linesLp);
         col.addView(hero);
 
         String rain = w.rainSoon();
-        if (rain != null) col.addView(text(12.5f, 500, RAIN, rain), wrap(10));
+        if (rain != null) col.addView(text(12.5f, 500, Ui.RAIN, rain), ui.wrap(10));
 
-        if (w.hasForecast()) col.addView(hours(w), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        col.addView(facts(w), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        if (w.hasForecast()) col.addView(hours(w), Ui.fill());
+        col.addView(facts(w), Ui.fill());
         return col;
     }
 
     private View hours(Weather w) {
-        LinearLayout strip = row();
+        LinearLayout strip = ui.row();
         strip.setPadding(0, dp(18), 0, 0);
         int now = Weather.indexAt(w.hourTime, Weather.isoNow());
         if (now < 0) return strip;
-        for (int i = now; i < Math.min(w.hourTime.length, now + 6); i++) {
-            LinearLayout cell = column();
+        for (int i = now; i < Math.min(w.hourTime.length, now + STRIP_HOURS); i++) {
+            LinearLayout cell = ui.column();
             cell.setGravity(Gravity.CENTER_HORIZONTAL);
-            String when = i == now ? "Now" : Weather.clock(w.hourTime[i].substring(11, 16), false);
-            cell.addView(text(11, i == now ? 600 : 400, i == now ? LABEL : SECONDARY, when));
+            String when = i == now ? "Now" : Weather.hour(w.hourTime[i]);
+            cell.addView(text(11, i == now ? 600 : 400, i == now ? Ui.LABEL : Ui.SECONDARY, when));
             WeatherGlyph g = new WeatherGlyph(context);
             g.setGlyph(w.hourGlyph(i));
             LinearLayout.LayoutParams gLp = new LinearLayout.LayoutParams(dp(20), dp(20));
             gLp.topMargin = dp(8);
             cell.addView(g, gLp);
-            TextView t = text(14, 500, LABEL, Double.isNaN(w.hourTemp[i]) ? "–" : Weather.degrees(w.hourTemp[i]));
+            TextView t = text(14, 500, Ui.LABEL, Double.isNaN(w.hourTemp[i]) ? "–" : Weather.degrees(w.hourTemp[i]));
             t.setFontFeatureSettings("tnum");
-            cell.addView(t, wrap(8));
-            // Rain chances below 20% are noise; the row keeps its height either way.
-            TextView pop = text(10.5f, 500, RAIN, w.hourRain[i] + "%");
-            pop.setVisibility(w.hourRain[i] >= 20 ? View.VISIBLE : View.INVISIBLE);
-            cell.addView(pop, wrap(4));
-            strip.addView(cell, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+            cell.addView(t, ui.wrap(8));
+            // Small rain chances are hidden, but the row keeps its height either way.
+            TextView pop = text(10.5f, 500, Ui.RAIN, w.hourRain[i] + "%");
+            pop.setVisibility(w.hourRain[i] >= RAIN_SHOWN ? View.VISIBLE : View.INVISIBLE);
+            cell.addView(pop, ui.wrap(4));
+            strip.addView(cell, Ui.share(1));
         }
         return strip;
     }
 
     private View facts(Weather w) {
-        LinearLayout grid = column();
+        LinearLayout grid = ui.column();
         grid.setPadding(0, dp(16), 0, 0);
-        LinearLayout top = row();
-        if (w.sunrise != null) top.addView(fact("Sunrise", Weather.clock(w.sunrise, true), null), cellLp());
-        if (w.sunset != null) top.addView(fact("Sunset", Weather.clock(w.sunset, true), null), cellLp());
+        LinearLayout top = ui.row();
+        if (w.sunrise != null) top.addView(fact("Sunrise", Weather.clock(w.sunrise, true), null), Ui.share(1));
+        if (w.sunset != null) top.addView(fact("Sunset", Weather.clock(w.sunset, true), null), Ui.share(1));
         String daylight = w.daylight();
-        if (daylight != null) top.addView(fact("Daylight", daylight, null), cellLp());
+        if (daylight != null) top.addView(fact("Daylight", daylight, null), Ui.share(1));
         grid.addView(top);
 
-        LinearLayout bottom = row();
+        LinearLayout bottom = ui.row();
         bottom.setPadding(0, dp(12), 0, 0);
-        if (!Double.isNaN(w.uvMax)) bottom.addView(fact("UV peak", Weather.uvLabel(w.uvMax), null), cellLp());
+        if (!Double.isNaN(w.uvMax)) bottom.addView(fact("UV peak", Weather.uvLabel(w.uvMax), null), Ui.share(1));
         double age = Weather.moonAge(System.currentTimeMillis());
         MoonGlyph moon = new MoonGlyph(context, age);
-        LinearLayout.LayoutParams moonCellLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 2);
-        bottom.addView(fact("Moon", Weather.moonName(age), moon), moonCellLp);
+        bottom.addView(fact("Moon", Weather.moonName(age), moon), Ui.share(2));
         grid.addView(bottom);
         return grid;
     }
 
-    /** The next four festivals; anything within a week is picked out in marigold. */
+    /** The next few festivals and family days; anything coming soon is picked out in marigold. */
     private View festivals(List<Festival> coming) {
-        LinearLayout col = column();
-        TextView heading = text(9.5f, 600, TERTIARY, "COMING UP");
+        LinearLayout col = ui.column();
+        TextView heading = text(9.5f, 600, Ui.TERTIARY, "COMING UP");
         heading.setLetterSpacing(0.06f);
         col.addView(heading);
-        LinearLayout row = row();
+        LinearLayout row = ui.row();
         LocalDate today = Festival.today();
         for (Festival f : coming) {
-            LinearLayout cell = column();
-            boolean soon = f.daysFrom(today) < 7;
-            cell.addView(text(13, 500, soon ? HomeActivity.FESTIVE : LABEL, f.name));
+            LinearLayout cell = ui.column();
             long days = f.daysFrom(today);
-            String when = days == 0 ? "Today" : days == 1 ? "Tomorrow" : "In " + days + " days";
-            cell.addView(text(11, 400, SECONDARY, f.shortDate() + "  ·  " + when), wrap(5));
-            row.addView(cell, cellLp());
+            cell.addView(text(13, 500, Dates.soon(days) ? HomeActivity.FESTIVE : Ui.LABEL, f.name));
+            cell.addView(text(11, 400, Ui.SECONDARY, f.shortDate() + "  ·  " + Dates.until(days, true)), ui.wrap(5));
+            row.addView(cell, Ui.share(1));
         }
-        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        rowLp.topMargin = dp(8);
-        col.addView(row, rowLp);
+        col.addView(row, ui.fill(8));
         return col;
     }
 
-    private static LinearLayout.LayoutParams cellLp() {
-        return new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1);
-    }
-
     private View fact(String label, String value, View icon) {
-        LinearLayout col = column();
-        TextView l = text(9.5f, 600, TERTIARY, label.toUpperCase());
+        LinearLayout col = ui.column();
+        TextView l = text(9.5f, 600, Ui.TERTIARY, label.toUpperCase());
         l.setLetterSpacing(0.06f);
         col.addView(l);
-        LinearLayout valueRow = row();
+        LinearLayout valueRow = ui.row();
         valueRow.setGravity(Gravity.CENTER_VERTICAL);
         if (icon != null) {
             LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(dp(13), dp(13));
             iconLp.rightMargin = dp(6);
             valueRow.addView(icon, iconLp);
         }
-        valueRow.addView(text(13, 500, LABEL, value));
-        col.addView(valueRow, wrap(5));
+        valueRow.addView(text(13, 500, Ui.LABEL, value));
+        col.addView(valueRow, ui.wrap(5));
         return col;
     }
 
     /** Index and category, the PM2.5 trend, CPCB's advice and the cleanest hour ahead. */
     private View air(Weather w) {
-        LinearLayout col = column();
+        LinearLayout col = ui.column();
         if (!w.hasAir()) {
-            col.addView(text(13, 400, SECONDARY, "No air quality yet"));
+            col.addView(text(13, 400, Ui.SECONDARY, "No air quality yet"));
             return col;
         }
 
-        LinearLayout head = row();
+        LinearLayout head = ui.row();
         head.setGravity(Gravity.CENTER_VERTICAL);
         View dot = new View(context);
-        GradientDrawable dotShape = new GradientDrawable();
-        dotShape.setShape(GradientDrawable.OVAL);
-        dotShape.setColor(w.aqiColor());
-        dot.setBackground(dotShape);
+        dot.setBackground(Ui.dot(w.aqiColor()));
         head.addView(dot, new LinearLayout.LayoutParams(dp(10), dp(10)));
-        TextView index = text(26, 400, LABEL, "AQI " + w.aqi);
+        TextView index = text(26, 400, Ui.LABEL, "AQI " + w.aqi);
         index.setFontFeatureSettings("tnum");
-        LinearLayout.LayoutParams indexLp = wrap();
+        LinearLayout.LayoutParams indexLp = Ui.wrap();
         indexLp.leftMargin = dp(10);
         head.addView(index, indexLp);
-        LinearLayout.LayoutParams catLp = wrap();
+        LinearLayout.LayoutParams catLp = Ui.wrap();
         catLp.leftMargin = dp(10);
         head.addView(text(15, 600, w.aqiColor(), w.aqiCategory()), catLp);
         col.addView(head);
 
-        col.addView(text(11.5f, 400, SECONDARY,
-                "24-hour average  ·  PM2.5 " + Math.round(w.pm25) + "  ·  PM10 " + Math.round(w.pm10) + " µg/m³"), wrap(8));
+        col.addView(text(11.5f, 400, Ui.SECONDARY,
+                "24-hour average  ·  PM2.5 " + Math.round(w.pm25) + "  ·  PM10 " + Math.round(w.pm10) + " µg/m³"), ui.wrap(8));
 
-        if (w.airTime.length > 0) {
+        if (w.hasAirSeries()) {
             LinearLayout.LayoutParams trendLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(92));
             trendLp.topMargin = dp(14);
             col.addView(new AirTrend(context, w), trendLp);
         }
 
-        TextView advice = text(12, 400, SECONDARY, w.aqiAdvice());
+        TextView advice = text(12, 400, Ui.SECONDARY, w.aqiAdvice());
         advice.setSingleLine(false);
         advice.setLineSpacing(dp(2), 1f);
-        col.addView(advice, wrap(12));
+        col.addView(advice, ui.wrap(12));
 
-        String[] clean = w.cleanestHour();
-        if (clean != null) {
-            // Above 90 µg/m³ even the best hour is unhealthy, so there is nothing to recommend.
-            String line = Integer.parseInt(clean[1]) > 90
-                    ? "No clean-air window in the next 18 hours"
-                    : "Best time to air out: " + (clean[0].equals("Now") ? "now" : clean[0]) + "  ·  PM2.5 " + clean[1];
-            col.addView(text(12, 500, LABEL, line), wrap(10));
+        int clean = w.cleanestHour();
+        if (clean >= 0) {
+            long pm = Math.round(w.airPm25[clean]);
+            // When even the best hour is heavy, there is nothing to recommend.
+            String line = pm > Weather.HEAVY_PM25
+                    ? "No clean-air window in the next " + Weather.CLEAN_AIR_HOURS + " hours"
+                    : "Best time to air out: " + w.airHour(clean) + "  ·  PM2.5 " + pm;
+            col.addView(text(12, 500, Ui.LABEL, line), ui.wrap(10));
         }
         return col;
     }
@@ -343,7 +294,7 @@ final class TodayCard {
         private final Paint guide = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint label = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint dot = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final float d;
+        private final float density;
         private final Weather weather;
         private final double limit;
 
@@ -351,7 +302,7 @@ final class TodayCard {
             super(context);
             weather = w;
             limit = w.pm25Limit();
-            d = context.getResources().getDisplayMetrics().density;
+            density = context.getResources().getDisplayMetrics().density;
             int nowIndex = Weather.indexAt(w.airTime, Weather.isoNow());
             int from = Math.max(0, nowIndex - 24);
             int to = Math.min(w.airTime.length - 1, nowIndex + 12);
@@ -361,21 +312,21 @@ final class TodayCard {
             now = nowIndex - from;
 
             line.setStyle(Paint.Style.STROKE);
-            line.setStrokeWidth(2 * d);
+            line.setStrokeWidth(2 * density);
             line.setStrokeCap(Paint.Cap.ROUND);
             guide.setStyle(Paint.Style.STROKE);
-            guide.setStrokeWidth(Math.max(1, 0.75f * d));
+            guide.setStrokeWidth(Math.max(1, 0.75f * density));
             guide.setColor(0x33FFFFFF);
-            guide.setPathEffect(new DashPathEffect(new float[]{2 * d, 3 * d}, 0));
+            guide.setPathEffect(new DashPathEffect(new float[]{2 * density, 3 * density}, 0));
             label.setTextSize(9.5f * context.getResources().getDisplayMetrics().scaledDensity);
-            label.setColor(TERTIARY);
+            label.setColor(Ui.TERTIARY);
         }
 
         @Override
         protected void onDraw(Canvas c) {
             if (count < 2 || now < 0) return;
-            float labelH = 14 * d;
-            float top = 4 * d;
+            float labelH = 14 * density;
+            float top = 4 * density;
             float bottom = getHeight() - labelH;
             float w = getWidth();
             double max = limit * 1.2;
@@ -385,7 +336,7 @@ final class TodayCard {
             float limitY = y(limit, max, top, bottom);
             c.drawLine(0, limitY, w, limitY, guide);
             label.setTextAlign(Paint.Align.RIGHT);
-            c.drawText("Safe limit " + Math.round(limit), w, limitY + 11 * d, label);
+            c.drawText("Safe limit " + Math.round(limit), w, limitY + 11 * density, label);
 
             // A soft wash under the past readings, in today's colour.
             Path area = new Path();
@@ -409,11 +360,11 @@ final class TodayCard {
                 area.close();
                 int tint = weather.pm25Color(Double.isNaN(values[now]) ? limit : values[now]);
                 fill.setShader(new LinearGradient(0, top, 0, bottom,
-                        (0x38 << 24) | (tint & 0xFFFFFF), tint & 0xFFFFFF, Shader.TileMode.CLAMP));
+                        Colors.alpha(tint, 0x38 / 255f), tint & 0xFFFFFF, Shader.TileMode.CLAMP));
                 c.drawPath(area, fill);
             }
 
-            DashPathEffect dashes = new DashPathEffect(new float[]{3 * d, 4 * d}, 0);
+            DashPathEffect dashes = new DashPathEffect(new float[]{3 * density, 4 * density}, 0);
             for (int i = 0; i + 1 < count; i++) {
                 if (Double.isNaN(values[i]) || Double.isNaN(values[i + 1])) continue;
                 boolean future = i >= now;
@@ -429,12 +380,12 @@ final class TodayCard {
             if (!Double.isNaN(values[now])) {
                 float nowY = y(values[now], max, top, bottom);
                 dot.setColor(0xFF1C1D22);
-                c.drawCircle(nowX, nowY, 5 * d, dot);
+                c.drawCircle(nowX, nowY, 5 * density, dot);
                 dot.setColor(weather.pm25Color(values[now]));
-                c.drawCircle(nowX, nowY, 3.5f * d, dot);
+                c.drawCircle(nowX, nowY, 3.5f * density, dot);
             }
 
-            float baseline = getHeight() - 2 * d;
+            float baseline = getHeight() - 2 * density;
             label.setTextAlign(Paint.Align.LEFT);
             c.drawText("24h ago", 0, baseline, label);
             label.setTextAlign(Paint.Align.CENTER);

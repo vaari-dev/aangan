@@ -1,3 +1,4 @@
 build/
 # The signing key stays off any repository.
 keystore/
+__pycache__/

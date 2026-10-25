@@ -11,18 +11,20 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
-import java.time.Year;
+import java.time.MonthDay;
 import java.time.format.TextStyle;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * A festival or a personal day, and the calendar of them. Festivals come from
  * {@code assets/festivals.csv}, built into the app, with any dates the family has moved or hidden
  * on top; birthdays and anniversaries from {@link People}, stored on the TV. Nothing needs the network.
+ *
+ * The calendar is read on the main thread and on the phone page's thread. Each load builds new
+ * lists and publishes them whole, so a reader always sees one complete calendar.
  */
 final class Festival {
 
@@ -30,12 +32,18 @@ final class Festival {
     private static final int HORIZON_DAYS = 30;
     /** Days between two entries with the same scene, up to this far apart, share it. */
     private static final int SEASON_DAYS = 9;
+    /** How far ahead Settings and the phone page list festivals for editing. */
+    private static final int EDIT_MONTHS = 13;
+    /** A festival can move this far either side of the calendar's date, so a slip of the thumb can't lose it. */
+    static final int MOVE_DAYS = 366;
+    private static final String EDITS = "festival_edits";
 
     /** The calendar as built into the app. */
-    private static List<Festival> builtIn;
+    private static volatile List<Festival> builtIn;
     /** The calendar with the family's changes: what the home screen shows. */
-    private static List<Festival> festivals;
-    private static List<Festival> personal;
+    private static volatile List<Festival> festivals = Collections.emptyList();
+    /** Birthdays and anniversaries, dated in 2000, a leap year, so 29 February survives. */
+    private static volatile List<Festival> personal = Collections.emptyList();
 
     final LocalDate date;
     final String name;
@@ -43,25 +51,25 @@ final class Festival {
     final Festive.Theme theme;
     /** True when the date depends on a moon sighting. */
     final boolean expected;
-    final boolean isPersonal;
+    final boolean personalDay;
     /** The date the calendar gives, before any change; with the name, it identifies a festival day. */
     final LocalDate original;
     final boolean hidden;
 
     private Festival(LocalDate date, String name, String greeting, Festive.Theme theme, boolean expected,
-                     boolean isPersonal, LocalDate original, boolean hidden) {
+                     boolean personalDay, LocalDate original, boolean hidden) {
         this.date = date;
         this.name = name;
         this.greeting = greeting;
         this.theme = theme;
         this.expected = expected;
-        this.isPersonal = isPersonal;
+        this.personalDay = personalDay;
         this.original = original;
         this.hidden = hidden;
     }
 
     private Festival on(LocalDate day) {
-        return new Festival(day, name, greeting, theme, expected, isPersonal, original, hidden);
+        return new Festival(day, name, greeting, theme, expected, personalDay, original, hidden);
     }
 
     boolean moved() {
@@ -78,14 +86,15 @@ final class Festival {
     /** Reads the festival calendar once, and the family's changes and days afresh, since they can change. */
     static synchronized void load(Context context, SharedPreferences prefs) {
         if (builtIn == null) {
-            builtIn = new ArrayList<>();
+            List<Festival> calendar = new ArrayList<>();
             for (String[] f : read(context, "festivals.csv")) {
                 LocalDate date = LocalDate.parse(f[0]);
-                builtIn.add(new Festival(date, f[1], f[2], theme(f[3]),
+                calendar.add(new Festival(date, f[1], f[2], theme(f[3]),
                         f.length > 4 && f[4].equals("expected"), false, date, false));
             }
+            builtIn = calendar;
         }
-        JSONObject edits = edits(prefs);
+        JSONObject edits = Prefs.object(prefs, EDITS);
         List<Festival> applied = new ArrayList<>();
         for (Festival f : builtIn) {
             JSONObject e = edits.optJSONObject(f.key());
@@ -99,31 +108,24 @@ final class Festival {
                     f.original, e.optBoolean("hidden")));
         }
         Collections.sort(applied, (a, b) -> a.date.compareTo(b.date));
-        festivals = applied;
-        personal = new ArrayList<>();
+
+        List<Festival> days = new ArrayList<>();
         for (People.Day d : People.load(prefs)) {
-            // Stored against 2000, a leap year, so 29 February survives; it is moved to each year as needed.
-            personal.add(new Festival(LocalDate.of(2000, d.month, d.day),
+            LocalDate date = d.in(2000);
+            days.add(new Festival(date,
                     d.who + (d.birthday ? "'s birthday" : "'s anniversary"),
                     (d.birthday ? "Happy birthday, " : "Happy anniversary, ") + d.who,
-                    d.birthday ? Festive.Theme.BIRTHDAY : Festive.Theme.ANNIVERSARY, false, true,
-                    LocalDate.of(2000, d.month, d.day), false));
+                    d.birthday ? Festive.Theme.BIRTHDAY : Festive.Theme.ANNIVERSARY, false, true, date, false));
         }
+        festivals = Collections.unmodifiableList(applied);
+        personal = Collections.unmodifiableList(days);
     }
 
     // ---- the family's changes ---------------------------------------------------------------
 
     /** Changes keyed by {@link #key()}: {"date": "2026-11-09"} to move a day, {"hidden": true} to hide it. */
-    private static JSONObject edits(SharedPreferences prefs) {
-        try {
-            return new JSONObject(prefs.getString("festival_edits", "{}"));
-        } catch (JSONException e) {
-            return new JSONObject();
-        }
-    }
-
     private static void edit(SharedPreferences prefs, String key, String field, Object value) {
-        JSONObject all = edits(prefs);
+        JSONObject all = Prefs.object(prefs, EDITS);
         try {
             JSONObject e = all.optJSONObject(key);
             if (e == null) e = new JSONObject();
@@ -134,34 +136,58 @@ final class Festival {
         } catch (JSONException ex) {
             throw new IllegalStateException(ex);
         }
-        prefs.edit().putString("festival_edits", all.toString()).commit();
+        prefs.edit().putString(EDITS, all.toString()).apply();
     }
 
-    /** Moves a festival day; moving it back to the calendar's date undoes the change. */
+    /** True if {@code date} is within {@link #MOVE_DAYS} of the calendar's date. */
+    boolean canMoveTo(LocalDate date) {
+        return Math.abs(ChronoUnit.DAYS.between(original, date)) <= MOVE_DAYS;
+    }
+
+    /** The nearest date to {@code date} that the festival can move to. */
+    LocalDate clampMove(LocalDate date) {
+        LocalDate earliest = original.minusDays(MOVE_DAYS);
+        LocalDate latest = original.plusDays(MOVE_DAYS);
+        return date.isBefore(earliest) ? earliest : date.isAfter(latest) ? latest : date;
+    }
+
+    /** Moves a festival day, within {@link #MOVE_DAYS}; moving it back to the calendar's date undoes the change. */
     static void move(SharedPreferences prefs, Festival f, LocalDate date) {
-        edit(prefs, f.key(), "date", date.equals(f.original) ? null : date.toString());
+        LocalDate to = f.clampMove(date);
+        edit(prefs, f.key(), "date", to.equals(f.original) ? null : to.toString());
     }
 
     static void hide(SharedPreferences prefs, Festival f, boolean hidden) {
         edit(prefs, f.key(), "hidden", hidden ? Boolean.TRUE : null);
     }
 
-    /** Festival days from {@code today} for about a year, hidden ones included, for editing. */
-    static synchronized List<Festival> editable(LocalDate today) {
+    /**
+     * Festival days from {@code today} for about a year, hidden ones included, for editing. A day
+     * moved out of the window is still listed while its calendar date is in it, so it can be moved back.
+     */
+    static List<Festival> editable(LocalDate today) {
+        LocalDate end = today.plusMonths(EDIT_MONTHS);
         List<Festival> out = new ArrayList<>();
         for (Festival f : festivals) {
-            if (!f.date.isBefore(today) && f.date.isBefore(today.plusMonths(13))) out.add(f);
+            if (within(f.date, today, end) || within(f.original, today, end)) out.add(f);
         }
         return out;
     }
 
+    private static boolean within(LocalDate date, LocalDate from, LocalDate until) {
+        return !date.isBefore(from) && date.isBefore(until);
+    }
+
     /** The festival day with this {@link #key()}, or null. */
-    static synchronized Festival byKey(String key) {
+    static Festival byKey(String key) {
         for (Festival f : festivals) if (f.key().equals(key)) return f;
         return null;
     }
 
-    /** Non-comment lines of an asset, split on commas. */
+    /**
+     * Non-comment lines of an asset, split on commas. A field in double quotes may contain commas,
+     * and "" inside it stands for one quote mark, as in Python's csv module (which the website uses).
+     */
     private static List<String[]> read(Context context, String asset) {
         List<String[]> rows = new ArrayList<>();
         try (BufferedReader in = new BufferedReader(new InputStreamReader(
@@ -169,13 +195,42 @@ final class Festival {
             for (String line; (line = in.readLine()) != null; ) {
                 line = line.trim();
                 if (line.isEmpty() || line.startsWith("#")) continue;
-                String[] fields = line.split("\\s*,\\s*");
+                String[] fields = csvFields(line);
                 if (fields.length >= 4) rows.add(fields);
             }
         } catch (IOException e) {
             throw new IllegalStateException("festivals.csv is missing from the build", e);
         }
         return rows;
+    }
+
+    /** One CSV line's fields, each trimmed. A quote mark only opens a quoted field at its very start. */
+    private static String[] csvFields(String line) {
+        List<String> fields = new ArrayList<>();
+        StringBuilder field = new StringBuilder();
+        boolean quoted = false;
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (quoted) {
+                if (c != '"') {
+                    field.append(c);
+                } else if (i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                    field.append('"');
+                    i++;
+                } else {
+                    quoted = false;
+                }
+            } else if (c == '"' && field.length() == 0) {
+                quoted = true;
+            } else if (c == ',') {
+                fields.add(field.toString().trim());
+                field.setLength(0);
+            } else {
+                field.append(c);
+            }
+        }
+        fields.add(field.toString().trim());
+        return fields.toArray(new String[0]);
     }
 
     private static Festive.Theme theme(String name) {
@@ -195,13 +250,7 @@ final class Festival {
     /** The personal days as they fall in {@code year} (29 February becomes the 28th in other years). */
     private static List<Festival> personalOn(int year) {
         List<Festival> out = new ArrayList<>();
-        for (Festival p : personal) {
-            if (p.date.getMonthValue() == 2 && p.date.getDayOfMonth() == 29 && !Year.isLeap(year)) {
-                out.add(p.on(LocalDate.of(year, 2, 28)));
-            } else {
-                out.add(p.on(p.date.withYear(year)));
-            }
-        }
+        for (Festival p : personal) out.add(p.on(MonthDay.from(p.date).atYear(year)));
         return out;
     }
 
@@ -234,7 +283,7 @@ final class Festival {
         }
         // Personal days sort ahead of a festival on the same date.
         Collections.sort(all, (a, b) -> a.date.equals(b.date)
-                ? Boolean.compare(!a.isPersonal, !b.isPersonal) : a.date.compareTo(b.date));
+                ? Boolean.compare(!a.personalDay, !b.personalDay) : a.date.compareTo(b.date));
         return all.size() > max ? new ArrayList<>(all.subList(0, max)) : all;
     }
 
@@ -272,14 +321,13 @@ final class Festival {
         long days = daysFrom(today);
         if (days == 0) return greeting;
         if (days == 1) return name + " tomorrow";
-        if (days < 7) return name + " on " + date.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
+        if (Dates.soon(days)) return name + " on " + Dates.weekday(date.getDayOfWeek(), TextStyle.FULL);
         return name + " in " + days + " days";
     }
 
     /** "Thu 29 Oct", with a note for moon-dependent dates. */
     String shortDate() {
-        String day = date.getDayOfWeek().getDisplayName(TextStyle.SHORT, Locale.ENGLISH);
-        String month = date.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH);
-        return day + " " + date.getDayOfMonth() + " " + month + (expected ? " (expected)" : "");
+        return Dates.weekday(date.getDayOfWeek(), TextStyle.SHORT) + " " + Dates.dayMonth(date)
+                + (expected ? " (expected)" : "");
     }
 }

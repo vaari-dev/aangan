@@ -1,0 +1,137 @@
+# Every push and pull request: build the app and the website, and check generated files are current.
+# On main: publish the website, and when VERSION_NAME in build.sh has no release yet, release it.
+#
+# Releasing runs in the "release" environment, which waits for an owner's approval and alone holds
+# the signing key (AANGAN_KEYSTORE_B64, AANGAN_KEY_PASS). It publishes the GitHub release, and also
+# uploads to Google Play's internal track once a PLAY_SERVICE_ACCOUNT_JSON secret exists.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      unreleased: ${{ steps.version.outputs.unreleased }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+      - name: Version and changelog
+        id: version
+        run: |
+          echo "version=$(python3 tools/release.py version)" >> "$GITHUB_OUTPUT"
+          echo "tag=$(python3 tools/release.py tag)" >> "$GITHUB_OUTPUT"
+          python3 tools/release.py notes > /dev/null   # fails if CHANGELOG.md lacks this version
+          if git ls-remote --exit-code --tags origin "refs/tags/$(python3 tools/release.py tag)" > /dev/null; then
+            echo "unreleased=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "unreleased=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build the app (development key)
+        run: ./build.sh bundle
+
+      - name: Check the icon's generated files are current
+        run: python3 tools/icon.py && git diff --exit-code
+
+      - name: Build the website
+        run: python3 tools/site.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aangan-${{ steps.version.outputs.version }}-dev
+          path: build/aangan.apk
+          retention-days: 14
+
+      - uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          path: build/site
+
+  website:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
+
+  release:
+    needs: build
+    if: github.ref == 'refs/heads/main' && needs.build.outputs.unreleased == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    environment:
+      name: release
+      url: https://github.com/${{ github.repository }}/releases/tag/${{ needs.build.outputs.tag }}
+    env:
+      TAG: ${{ needs.build.outputs.tag }}
+      VERSION: ${{ needs.build.outputs.version }}
+      # The release certificate; a build signed with anything else must not be published.
+      CERT_SHA256: 7f905b6d3cfbcc92cd2da7203c5b6cf365b65d67cb3d162a4c54d4043caa1484
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+      - name: Build, signed for release
+        env:
+          KEYSTORE_B64: ${{ secrets.AANGAN_KEYSTORE_B64 }}
+          AANGAN_KEY_PASS: ${{ secrets.AANGAN_KEY_PASS }}
+        run: |
+          export AANGAN_KEYSTORE="$RUNNER_TEMP/release.jks"
+          echo "$KEYSTORE_B64" | base64 -d > "$AANGAN_KEYSTORE"
+          ./build.sh bundle
+          rm "$AANGAN_KEYSTORE"
+          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --print-certs build/aangan.apk \
+            | grep -q "SHA-256 digest: $CERT_SHA256"
+
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            python3 tools/release.py notes
+            echo
+            echo "**Install or update:** in the *Downloader* app on your TV, enter \`https://github.com/${{ github.repository }}/releases/latest/download/aangan.apk\`. See [how to install](https://vaari-dev.github.io/aangan/install.html)."
+            echo
+            echo "Signing certificate SHA-256: \`$CERT_SHA256\`"
+          } > notes.md
+          gh release create "$TAG" build/aangan.apk build/aangan.aab \
+            --title "Aangan $VERSION" --notes-file notes.md --target "$GITHUB_SHA"
+
+      - name: Is Google Play set up?
+        id: play
+        run: echo "configured=${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}" >> "$GITHUB_OUTPUT"
+
+      # Until the app's first production release, Play accepts only drafts; then set the
+      # PLAY_RELEASE_STATUS variable to "completed" to roll out to testers straight away.
+      - name: Upload to Google Play (internal testing)
+        if: steps.play.outputs.configured == 'true'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: dev.vaari.aangan
+          releaseFiles: build/aangan.aab
+          track: internal
+          status: ${{ vars.PLAY_RELEASE_STATUS || 'draft' }}

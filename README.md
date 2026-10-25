@@ -51,6 +51,12 @@ and Independence Day, and for birthdays and anniversaries.
 
 ## Install on any TV, without developer mode
 
+Aangan runs on Android TV and Google TV: Sony, TCL, Hisense, Philips, Xiaomi, Chromecast with Google TV and others.
+It can't run on Samsung (Tizen), LG (webOS) or Roku, which don't run Android apps and don't let any app replace the
+home screen or take the Home button. Fire TV blocks other home screens too. On those TVs, plug in a Google TV or Android TV
+streamer and install Aangan there; see [why, and how](https://vaari-dev.github.io/aangan/faq.html#samsung).
+
+
 1. On the TV, install **Downloader** (by AFTVnews) from the Google Play Store.
 2. Open Downloader and enter:
 
@@ -99,11 +105,19 @@ You need the Android SDK (build-tools 34, platform 34) and JDK 17. There's no Gr
 
     ./build.sh            # builds build/aangan.apk, signed with a local development key
     ./build.sh install    # and installs it over adb (set ANDROID_SERIAL when several devices are connected)
+    ./build.sh bundle     # also builds build/aangan.aab for Google Play
 
-For a release, sign with your own key: `AANGAN_KEYSTORE=… AANGAN_KEY_PASS=… ./build.sh`.
+    python3 tools/icon.py # redraws the icon and banner: res/drawable/ and the SVGs in docs/
+    python3 tools/site.py # builds the website from site/ into build/site/
 
-The icon and banner are drawn by `python3 docs/icon.py`, which writes `res/drawable/icon.xml`, `banner.xml` and the
-SVGs in `docs/`.
+### Releasing
+
+1. Raise `VERSION_NAME` and `VERSION_CODE` at the top of `build.sh`, and add a section for the new version to
+   [`CHANGELOG.md`](CHANGELOG.md).
+2. Push to `main`. CI builds and checks every commit, and publishes the website.
+3. Seeing a version with no release yet, CI waits for an owner to approve the `release` environment. Then it builds
+   with the release key, checks the certificate, publishes the GitHub release with the changelog as its notes, and,
+   once Google Play is set up, uploads the bundle to Play's internal track. See [`store/README.md`](store/README.md).
 
 To preview a festival's scene: `adb shell "am start -n dev.vaari.aangan/.HomeActivity --es festival Diwali"`.
 Press Home to clear it.

@@ -7,11 +7,11 @@
 }
 
 :root {
-  --paper: #f4ede1;
+  --paper: #f5eee2;
   --card: #fffcf6;
   --ink: #2a1d17;
   --muted: #7d6b5f;
-  --line: #e7dccb;
+  --line: #e4d8c6;
   --field: #f8f3ea;
   --terra: #b4502d;
   --terra-deep: #96401f;
@@ -28,11 +28,11 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #16110e;
+    --paper: #14100d;
     --card: #211a15;
     --ink: #f3ebe0;
     --muted: #a8978a;
-    --line: #342920;
+    --line: #33281f;
     --field: #1a1410;
     --terra: #d56d45;
     --terra-deep: #e48a63;

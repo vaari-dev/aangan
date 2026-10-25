@@ -1,42 +1,4 @@
-<!doctype html>
-<html lang=en>
-<head>
-<meta charset=utf-8>
-<meta name=viewport content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv=Content-Security-Policy content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
-<meta name=referrer content=no-referrer>
-<title>Privacy policy · Aangan</title>
-<meta name=description content="Aangan&#x27;s privacy policy: no ads, tracking, analytics or accounts. Exactly what the TV launcher stores, what it sends to Open-Meteo for the forecast, and how the phone setup page and Home-button service work.">
-<meta name=robots content="index, follow, max-image-preview:large, max-snippet:-1">
-<link rel=canonical href="https://vaari-dev.github.io/aangan/privacy.html">
-<link rel=icon href="icon.svg" type="image/svg+xml">
-<link rel=apple-touch-icon href="icon.png">
-<link rel=sitemap type="application/xml" href="sitemap.xml">
-<link rel=stylesheet href="assets/site.css">
-<meta name=theme-color content="#f5eee2" media="(prefers-color-scheme: light)">
-<meta name=theme-color content="#14100d" media="(prefers-color-scheme: dark)">
-<meta property=og:type content=website>
-<meta property=og:site_name content=Aangan>
-<meta property=og:locale content=en_IN>
-<meta property=og:title content="Privacy policy · Aangan">
-<meta property=og:description content="Aangan&#x27;s privacy policy: no ads, tracking, analytics or accounts. Exactly what the TV launcher stores, what it sends to Open-Meteo for the forecast, and how the phone setup page and Home-button service work.">
-<meta property=og:url content="https://vaari-dev.github.io/aangan/privacy.html">
-<meta property=og:image content="https://vaari-dev.github.io/aangan/social.png">
-<meta property=og:image:width content=1280>
-<meta property=og:image:height content=640>
-<meta property=og:image:alt content="Aangan: a calm, private home screen for Android TV and Google TV">
-<meta name=twitter:card content=summary_large_image>
-<meta name=application-name content=Aangan>
-<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://vaari-dev.github.io/aangan/#org","name":"Vaari","url":"https://github.com/vaari-dev","logo":"https://vaari-dev.github.io/aangan/icon.png"},{"@type":"WebSite","@id":"https://vaari-dev.github.io/aangan/#site","name":"Aangan","url":"https://vaari-dev.github.io/aangan/","inLanguage":"en-IN","publisher":{"@id":"https://vaari-dev.github.io/aangan/#org"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Aangan","item":"https://vaari-dev.github.io/aangan/"},{"@type":"ListItem","position":2,"name":"Privacy policy","item":"https://vaari-dev.github.io/aangan/privacy.html"}]}]}</script>
-</head>
-<body>
-<a class=skip href="#main">Skip to content</a>
-<header class=mast><div class=wrap>
-<a class=brand href="./"><img src="icon.svg" alt="" width=32 height=32>Aangan</a>
-<nav class=nav aria-label=Site><a href='./'>Home</a><a href='guide.html'>Guide</a><a href='privacy.html' aria-current=page>Privacy</a><a href='festivals.html'>Festivals</a><a href='faq.html'>FAQ</a><a href='developers.html'>Developers</a><a class=cta href='install.html'>Install</a></nav>
-<details class=menu><summary>Menu</summary><nav class=nav aria-label=Site><a href='./'>Home</a><a href='guide.html'>Guide</a><a href='privacy.html' aria-current=page>Privacy</a><a href='festivals.html'>Festivals</a><a href='faq.html'>FAQ</a><a href='developers.html'>Developers</a><a class=cta href='install.html'>Install</a></nav></details>
-</div></header>
-<main id=main>
+<!-- {"title": "Privacy policy", "description": "Aangan's privacy policy: no ads, tracking, analytics or accounts. Exactly what the TV launcher stores, what it sends to Open-Meteo for the forecast, and how the phone setup page and Home-button service work."} -->
 <div class="wrap page-head">
   <p class=eyebrow>Privacy policy</p>
   <h1>We don't collect anything. Here's exactly what the app does.</h1>
@@ -54,7 +16,7 @@
       <li><b>Your settings stay on your TV</b>, including your family's names and dates. They are excluded from Android's cloud backup.</li>
       <li><b>The app talks to one outside service:</b> Open-Meteo, for the forecast and air quality of the city you chose, and for city search when you search.</li>
       <li><b>No location permission.</b> Aangan uses the city you choose, never your TV's location.</li>
-      <li><b>The source code is public</b>, so all of this can be checked: <a href="https://github.com/vaari-dev/aangan">github.com/vaari-dev/aangan</a>.</li>
+      <li><b>The source code is public</b>, so all of this can be checked: <a href="{{REPO}}">github.com/vaari-dev/aangan</a>.</li>
     </ul>
 
     <h2 id=who>Who we are</h2>
@@ -81,7 +43,7 @@
       <tr><td>Air quality<br><code>air-quality-api.open-meteo.com</code></td><td>The same rounded coordinates and time zone</td><td>At most every 60 minutes, and only while the home screen is on screen</td></tr>
       <tr><td>City search<br><code>geocoding-api.open-meteo.com</code></td><td>The words you typed in the search box</td><td>Only when you search for a city</td></tr>
     </table></div>
-    <p>The requests identify the app as <code>Aangan</code> and include nothing else: no device ID, advertising ID, account, app list or family data. The code that makes them is in <a href="https://github.com/vaari-dev/aangan/blob/main/src/dev/vaari/aangan/Weather.java"><code>Weather.java</code></a> and <a href="https://github.com/vaari-dev/aangan/blob/main/src/dev/vaari/aangan/Place.java"><code>Place.java</code></a>.</p>
+    <p>The requests identify the app as <code>Aangan</code> and include nothing else: no device ID, advertising ID, account, app list or family data. The code that makes them is in <a href="{{REPO}}/blob/main/src/dev/vaari/aangan/Weather.java"><code>Weather.java</code></a> and <a href="{{REPO}}/blob/main/src/dev/vaari/aangan/Place.java"><code>Place.java</code></a>.</p>
     <div class=note><p>When you open another app from Aangan, that app's own privacy policy applies. Aangan just opens it.</p></div>
 
     <h2 id=permissions>Permissions</h2>
@@ -100,7 +62,7 @@
       <li><b>Nothing on screen.</b> It can't read the contents of any window (<code>canRetrieveWindowContent="false"</code>), so it can't see what you watch, type or open.</li>
       <li><b>Nothing kept or sent.</b> It stores nothing and sends nothing anywhere.</li>
     </ul>
-    <p>It acts only on this fixed rule, never on its own initiative, and Aangan works without it. You can switch it off any time in your TV's accessibility settings. Its configuration is in <a href="https://github.com/vaari-dev/aangan/blob/main/res/xml/home_button.xml"><code>home_button.xml</code></a> and its code in <a href="https://github.com/vaari-dev/aangan/blob/main/src/dev/vaari/aangan/HomeButton.java"><code>HomeButton.java</code></a>.</p>
+    <p>It acts only on this fixed rule, never on its own initiative, and Aangan works without it. You can switch it off any time in your TV's accessibility settings. Its configuration is in <a href="{{REPO}}/blob/main/res/xml/home_button.xml"><code>home_button.xml</code></a> and its code in <a href="{{REPO}}/blob/main/src/dev/vaari/aangan/HomeButton.java"><code>HomeButton.java</code></a>.</p>
 
     <h2 id=phone>The phone setup page</h2>
     <p>While Aangan's Settings screen is open, the TV serves a small web page on your home network so you can change settings from your phone. It's the only time Aangan accepts a connection.</p>
@@ -136,22 +98,9 @@
     <p>This site has no scripts, cookies, analytics or embedded content, and loads nothing from other servers. It's hosted by <a href="https://pages.github.com">GitHub Pages</a>, which, like any web host, may log your IP address and browser details for security and operations; see <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub's privacy statement</a>. Downloads from the Releases page are served by GitHub too.</p>
 
     <h2 id=changes>Changes to this policy</h2>
-    <p>If what Aangan does with data changes, this policy will change first, with a new effective date, and the change will be listed in the <a href="changelog.html">changelog</a>. Every past version is in the <a href="https://github.com/vaari-dev/aangan/commits/main/docs/site/privacy.html">history of this page</a>.</p>
+    <p>If what Aangan does with data changes, this policy will change first, with a new effective date, and the change will be listed in the <a href="changelog.html">changelog</a>. Every past version is in the <a href="{{REPO}}/commits/main/site/pages/privacy.html">history of this page</a>.</p>
 
     <h2 id=contact>Contact</h2>
-    <p>Questions about privacy are welcome. Open an issue at <a href="https://github.com/vaari-dev/aangan/issues">github.com/vaari-dev/aangan/issues</a>. To report a security problem privately, use <a href="https://github.com/vaari-dev/aangan/security/advisories/new">GitHub's private vulnerability reporting</a>.</p>
+    <p>Questions about privacy are welcome. Open an issue at <a href="{{REPO}}/issues">github.com/vaari-dev/aangan/issues</a>. To report a security problem privately, use <a href="{{REPO}}/security/advisories/new">GitHub's private vulnerability reporting</a>.</p>
   </div>
 </div>
-
-</main>
-<footer class=foot><div class=wrap>
-<div><a class=brand href="./"><img src="icon.svg" alt="" width=32 height=32>Aangan</a>
-<p>A calm, private home screen for Android TV and Google TV. Free and open source, made in Gurgaon.</p>
-<p>This website has no scripts, cookies or analytics, and loads nothing from anywhere else.</p></div>
-<div><b>Use</b><a href="install.html">Install</a><a href="guide.html">Guide</a><a href="festivals.html">Festival calendar</a><a href="faq.html">FAQ</a></div>
-<div><b>Trust</b><a href="privacy.html">Privacy policy</a><a href="terms.html">Terms of use</a><a href="developers.html#security">Security model</a><a href="privacy.html#network">What leaves your TV</a></div>
-<div><b>Project</b><a href="https://github.com/vaari-dev/aangan">Source code</a><a href="https://github.com/vaari-dev/aangan/releases">Releases</a><a href="changelog.html">Changelog</a><a href="https://github.com/vaari-dev/aangan/issues">Report a problem</a></div>
-<div class=base>Released under the MIT licence. Weather and air quality by Open-Meteo (CC BY 4.0) and Copernicus CAMS. Android TV and Google TV are trademarks of Google LLC; other apps' names and logos in screenshots belong to their owners.</div>
-</div></footer>
-</body>
-</html>

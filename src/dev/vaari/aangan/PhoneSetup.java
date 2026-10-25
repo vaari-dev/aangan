@@ -23,7 +23,6 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.LocalDate;
-import java.time.Year;
 import java.time.format.DateTimeParseException;
 import java.time.format.TextStyle;
 import java.time.temporal.ChronoUnit;
@@ -41,8 +40,19 @@ import java.util.Map;
 final class PhoneSetup {
 
     private static final int PORT = 8737;
-    private static final String[] MONTHS = {"January", "February", "March", "April", "May", "June", "July",
-            "August", "September", "October", "November", "December"};
+    /** The secret in the page's address: ten characters, avoiding ones easily misread (l, o, 0, 1). */
+    private static final String SECRET_ALPHABET = "abcdefghijkmnpqrstuvwxyz23456789";
+    private static final int SECRET_LENGTH = 10;
+    /** A request's form data is read up to this many characters; the page's forms are far smaller. */
+    private static final int MAX_BODY = 8192;
+    private static final int TIMEOUT_MS = 10_000;
+    /** The family's longest name, as the form allows. */
+    private static final int MAX_NAME = 40;
+    /** Days ahead within which the page says "in 9 days"; it lists the whole year, so this reaches further than the home screen. */
+    private static final int WHEN_DAYS = 60;
+    /** The festival list shows this many months in full; the rest of the year is behind a tap. */
+    private static final int OPEN_MONTHS = 3;
+    private static final String[] MONTHS = Dates.months(TextStyle.FULL);
     /** What the page says after each kind of change. */
     private static final Map<String, String> DONE = new HashMap<>();
 
@@ -55,6 +65,8 @@ final class PhoneSetup {
         DONE.put("hidden", "Hidden this year");
         DONE.put("shown", "Showing again");
         DONE.put("restored", "Back to the calendar's date");
+        DONE.put("invalid", "Not saved: check the name and date");
+        DONE.put("gone", "Not saved: that day was changed on the TV");
     }
 
     private final Context context;
@@ -69,14 +81,13 @@ final class PhoneSetup {
         this.prefs = prefs;
         this.onChange = onChange;
         SecureRandom random = new SecureRandom();
-        String alphabet = "abcdefghijkmnpqrstuvwxyz23456789";
         StringBuilder s = new StringBuilder();
-        for (int i = 0; i < 10; i++) s.append(alphabet.charAt(random.nextInt(alphabet.length())));
+        for (int i = 0; i < SECRET_LENGTH; i++) s.append(SECRET_ALPHABET.charAt(random.nextInt(SECRET_ALPHABET.length())));
         secret = s.toString();
     }
 
     /** Starts serving and returns the page's address, or null when the TV has no network. */
-    String start(Context context) {
+    String start() {
         String ip = localAddress(context);
         if (ip == null) return null;
         try {
@@ -85,9 +96,12 @@ final class PhoneSetup {
             try {
                 server.bind(new InetSocketAddress(PORT));
             } catch (IOException taken) {
+                // Something else has the usual port: let the system pick one.
+                server.close();
                 server = new ServerSocket(0);
             }
         } catch (IOException e) {
+            stop();
             return null;
         }
         Thread thread = new Thread(this::serve, "phone-setup");
@@ -121,10 +135,10 @@ final class PhoneSetup {
         ServerSocket s = server;
         while (s != null && !s.isClosed()) {
             try (Socket socket = s.accept()) {
-                socket.setSoTimeout(10_000);
+                socket.setSoTimeout(TIMEOUT_MS);
                 handle(socket);
-            } catch (IOException e) {
-                // A closed server ends the loop; a broken connection is just dropped.
+            } catch (IOException | RuntimeException e) {
+                // A closed server ends the loop; a broken or malformed request is just dropped.
             }
         }
     }
@@ -139,7 +153,7 @@ final class PhoneSetup {
         for (String line; (line = in.readLine()) != null && !line.isEmpty(); ) {
             if (line.toLowerCase().startsWith("content-length:")) length = Integer.parseInt(line.substring(15).trim());
         }
-        char[] body = new char[Math.min(length, 8192)];
+        char[] body = new char[Math.max(0, Math.min(length, MAX_BODY))];
         for (int read = 0; read < body.length; ) {
             int n = in.read(body, read, body.length - read);
             if (n < 0) break;
@@ -184,26 +198,19 @@ final class PhoneSetup {
         switch (route) {
             case "/add": {
                 People.Day day = day(form);
-                if (day != null) {
-                    People.add(prefs, day);
-                    changed();
-                }
-                redirect(out, base, "added", "family");
+                if (day != null) People.add(prefs, day);
+                redirect(out, base, day == null ? "invalid" : changed("added"), "family");
                 break;
             }
             case "/edit": {
                 People.Day day = day(form);
-                if (day != null) {
-                    People.update(prefs, parseInt(form.get("i")), day);
-                    changed();
-                }
-                redirect(out, base, "saved", "family");
+                String result = day == null ? "invalid"
+                        : People.update(prefs, form.getOrDefault("d", ""), day) ? changed("saved") : "gone";
+                redirect(out, base, result, "family");
                 break;
             }
             case "/remove":
-                People.remove(prefs, parseInt(form.get("i")));
-                changed();
-                redirect(out, base, "removed", "family");
+                redirect(out, base, People.remove(prefs, form.getOrDefault("d", "")) ? changed("removed") : "gone", "family");
                 break;
             case "/city":
                 respond(out, "200 OK", cityResults(base, form.getOrDefault("q", "")));
@@ -238,8 +245,7 @@ final class PhoneSetup {
             case "/festival/move":
                 try {
                     LocalDate date = LocalDate.parse(form.getOrDefault("date", ""));
-                    // Within a year of the calendar's date, so a slip of the thumb can't lose it.
-                    if (Math.abs(ChronoUnit.DAYS.between(f.original, date)) > 366) return null;
+                    if (!f.canMoveTo(date)) return null;
                     Festival.move(prefs, f, date);
                 } catch (DateTimeParseException e) {
                     return null;
@@ -262,15 +268,18 @@ final class PhoneSetup {
         String who = form.getOrDefault("who", "").trim();
         int month = parseInt(form.get("month"));
         int day = parseInt(form.get("day"));
-        if (who.isEmpty() || who.length() > 40 || month < 1 || month > 12 || day < 1
-                || day > LocalDate.of(2000, month, 1).lengthOfMonth()) {
-            return null;
-        }
+        if (who.isEmpty() || who.length() > MAX_NAME || !People.Day.valid(month, day)) return null;
         return new People.Day(month, day, !"anniversary".equals(form.get("kind")), who);
     }
 
     private void changed() {
         main.post(onChange);
+    }
+
+    /** Tells the TV something changed, and passes on what the page should say about it. */
+    private String changed(String done) {
+        changed();
+        return done;
     }
 
     private static int parseInt(String s) {
@@ -347,7 +356,7 @@ final class PhoneSetup {
         h.append("</h2><ul class='card list'>");
         for (int i = 0; i < days.size(); i++) {
             People.Day d = days.get(i);
-            long until = ChronoUnit.DAYS.between(today, nextOccurrence(d, today));
+            long until = ChronoUnit.DAYS.between(today, d.next(today));
             String tone = d.birthday ? new String[]{"t1", "", "t3"}[i % 3] : "ring";
             h.append("<li><details><summary class=item>")
                     .append("<span class='badge ").append(tone).append("' aria-hidden=true>")
@@ -358,7 +367,7 @@ final class PhoneSetup {
                     .append(when(until))
                     .append("<span class=chev aria-hidden=true></span></summary>")
                     .append("<form class=edit method=post action='").append(base).append("/edit'>")
-                    .append("<input type=hidden name=i value=").append(i).append('>')
+                    .append(hidden("d", d.key()))
                     .append(dayFields("e" + i, d))
                     .append("<div class=actions><button>Save</button>")
                     .append("<button class=quiet formaction='").append(base).append("/remove' formnovalidate>Remove</button>")
@@ -380,25 +389,25 @@ final class PhoneSetup {
         for (int i = 0; i < coming.size(); i++) {
             Festival f = coming.get(i);
             // The next three months in full; the rest of the year behind a tap.
-            if (!folded && f.date.isAfter(today.plusMonths(3))) {
+            if (!folded && f.date.isAfter(today.plusMonths(OPEN_MONTHS))) {
                 folded = true;
                 h.append("<li><details class=more><summary>Show ").append(coming.size() - i)
-                        .append(" more, to ").append(coming.get(coming.size() - 1).date.getMonth()
-                                .getDisplayName(TextStyle.FULL, Locale.ENGLISH)).append("</summary><ul class=list>");
+                        .append(" more, to ").append(Dates.month(coming.get(coming.size() - 1).date.getMonth(), TextStyle.FULL))
+                        .append("</summary><ul class=list>");
             }
-            String m = f.date.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH) + " " + f.date.getYear();
+            String m = Dates.month(f.date.getMonth(), TextStyle.FULL) + " " + f.date.getYear();
             if (!m.equals(month)) {
                 h.append("<li class=month>").append(m).append("</li>");
                 month = m;
             }
             h.append("<li").append(f.hidden ? " class=hidden-day" : "").append("><details><summary class=item>")
                     .append("<span class=date><b>").append(f.date.getDayOfMonth()).append("</b><span>")
-                    .append(f.date.getDayOfWeek().getDisplayName(TextStyle.SHORT, Locale.ENGLISH)).append("</span></span>")
+                    .append(Dates.weekday(f.date.getDayOfWeek(), TextStyle.SHORT)).append("</span></span>")
                     .append("<span class=text><span class=title>").append(esc(f.name)).append("</span>");
             if (f.hidden || f.moved() || f.expected) {
                 h.append("<span class=sub>");
                 if (f.hidden) h.append("<span class=tag>Hidden</span>");
-                if (f.moved()) h.append("<span class='tag moved'>Moved from ").append(shortDate(f.original)).append("</span>");
+                if (f.moved()) h.append("<span class='tag moved'>Moved from ").append(Dates.dayMonth(f.original)).append("</span>");
                 else if (f.expected) h.append("<span class=tag>Expected</span>");
                 h.append("</span>");
             }
@@ -407,8 +416,8 @@ final class PhoneSetup {
                     .append("<form class=actions method=post action='").append(base).append("/festival/move'>")
                     .append(hidden("k", f.key()))
                     .append("<input type=date name=date aria-label='New date' required value=").append(f.date)
-                    .append(" min=").append(f.original.minusYears(1).plusDays(1))
-                    .append(" max=").append(f.original.plusYears(1).minusDays(1)).append(">")
+                    .append(" min=").append(f.clampMove(LocalDate.MIN))
+                    .append(" max=").append(f.clampMove(LocalDate.MAX)).append(">")
                     .append("<button>Move</button></form><div class=actions>")
                     .append("<form method=post action='").append(base).append(f.hidden ? "/festival/show'>" : "/festival/hide'>")
                     .append(hidden("k", f.key())).append("<button class=ghost>")
@@ -416,7 +425,7 @@ final class PhoneSetup {
             if (f.moved()) {
                 h.append("<form method=post action='").append(base).append("/festival/restore'>")
                         .append(hidden("k", f.key())).append("<button class=quiet>Back to ")
-                        .append(shortDate(f.original)).append("</button></form>");
+                        .append(Dates.dayMonth(f.original)).append("</button></form>");
             }
             h.append("</div>");
             if (f.expected && !f.moved()) {
@@ -434,7 +443,7 @@ final class PhoneSetup {
     private static String dayFields(String id, People.Day d) {
         boolean birthday = d == null || d.birthday;
         StringBuilder h = new StringBuilder()
-                .append("<input type=text name=who required maxlength=40 autocomplete=off autocapitalize=words ")
+                .append("<input type=text name=who required maxlength=").append(MAX_NAME).append(" autocomplete=off autocapitalize=words ")
                 .append("aria-label=Name placeholder='Name, e.g. Asha or Asha &amp; Rohan'")
                 .append(d != null ? " value='" + esc(d.who) + "'" : "").append('>')
                 .append("<div class=kind role=radiogroup aria-label='Kind of day'>")
@@ -479,28 +488,15 @@ final class PhoneSetup {
         return page(base, "Choose your city", h.toString(), null);
     }
 
-    private static LocalDate nextOccurrence(People.Day d, LocalDate today) {
-        for (int year = today.getYear(); ; year++) {
-            int day = d.month == 2 && d.day == 29 && !Year.isLeap(year) ? 28 : d.day;
-            LocalDate date = LocalDate.of(year, d.month, day);
-            if (!date.isBefore(today)) return date;
-        }
-    }
-
-    /** "Today", "Tomorrow" or "in 9 days", for anything within two months; otherwise nothing. */
+    /** "Today", "Tomorrow" or "in 9 days", for anything within {@link #WHEN_DAYS}; otherwise nothing. */
     private static String when(long days) {
-        if (days > 60) return "";
-        String text = days == 0 ? "Today" : days == 1 ? "Tomorrow" : "in " + days + " days";
-        return "<span class='when" + (days <= 7 ? " soon" : "") + "'>" + text + "</span>";
+        if (days > WHEN_DAYS) return "";
+        return "<span class='when" + (Dates.soon(days) ? " soon" : "") + "'>" + Dates.until(days, false) + "</span>";
     }
 
     private static String initial(String who) {
         String s = who.trim();
         return s.isEmpty() ? "?" : s.substring(0, s.offsetByCodePoints(0, 1)).toUpperCase(Locale.ROOT);
-    }
-
-    private static String shortDate(LocalDate date) {
-        return date.getDayOfMonth() + " " + date.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH);
     }
 
     private static String hidden(String name, String value) {
@@ -515,8 +511,8 @@ final class PhoneSetup {
         String tv = Settings.Global.getString(context.getContentResolver(), "device_name");
         return "<!doctype html><html lang=en><head><meta charset=utf-8>"
                 + "<meta name=viewport content='width=device-width,initial-scale=1,viewport-fit=cover'>"
-                + "<meta name=theme-color content='#f4ede1' media='(prefers-color-scheme: light)'>"
-                + "<meta name=theme-color content='#16110e' media='(prefers-color-scheme: dark)'>"
+                + "<meta name=theme-color content='#f5eee2' media='(prefers-color-scheme: light)'>"
+                + "<meta name=theme-color content='#14100d' media='(prefers-color-scheme: dark)'>"
                 + "<title>" + esc(title) + "</title>"
                 + "<link rel=icon href='" + base + "/mark.svg'><link rel=stylesheet href='" + base + "/page.css'>"
                 + "</head><body><main><header class=mast><img src='" + base + "/mark.svg' alt=''><div><b>Aangan</b>"

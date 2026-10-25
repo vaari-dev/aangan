@@ -32,12 +32,12 @@ final class Backdrop {
 
         // A cool glow from above the top-left corner, tinted by the sky outside.
         p.setShader(new RadialGradient(w * 0.15f, h * -0.10f, 620 * density,
-                withAlpha(glow, 0.35f), Color.TRANSPARENT, Shader.TileMode.CLAMP));
+                Colors.alpha(glow, 0.35f), Color.TRANSPARENT, Shader.TileMode.CLAMP));
         c.drawRect(0, 0, w, h, p);
 
         // A warm counter-glow from below the bottom-right corner.
         p.setShader(new RadialGradient(w * 0.95f, h * 1.05f, 520 * density,
-                withAlpha(0xFF3B2A4F, 0.28f), Color.TRANSPARENT, Shader.TileMode.CLAMP));
+                Colors.alpha(0xFF3B2A4F, 0.28f), Color.TRANSPARENT, Shader.TileMode.CLAMP));
         c.drawRect(0, 0, w, h, p);
 
         p.setShader(new RadialGradient(w / 2f, h / 2f, (float) Math.hypot(w, h) / 2f,
@@ -48,10 +48,6 @@ final class Backdrop {
         p.setShader(new BitmapShader(grain(), Shader.TileMode.REPEAT, Shader.TileMode.REPEAT));
         c.drawRect(0, 0, w, h, p);
         return bmp;
-    }
-
-    private static int withAlpha(int color, float alpha) {
-        return (Math.round(alpha * 255) << 24) | (color & 0x00FFFFFF);
     }
 
     /** A 96px tile of faint monochrome noise, about ±1.5% brightness. */

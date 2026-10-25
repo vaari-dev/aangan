@@ -2,7 +2,6 @@ package dev.vaari.aangan;
 
 import android.app.Activity;
 import android.app.ActivityOptions;
-import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -22,7 +21,6 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Shader;
-import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
@@ -50,6 +48,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -80,6 +79,10 @@ public class HomeActivity extends Activity {
     };
     private static final String SETTINGS_KEY = "__settings__";
     private static final String AANGAN_KEY = "__aangan__";
+    // Preference keys: pinned and hidden apps (package names), and how many visits have shown the tips.
+    private static final String PINS = "pins";
+    private static final String HIDDEN = "hidden";
+    private static final String TIPS = "tips";
 
     // Layout, in dp. Six 16:9 tiles with 20dp gaps span 868dp, centred on the 960dp canvas.
     private static final int COLUMNS = 6;
@@ -95,12 +98,21 @@ public class HomeActivity extends Activity {
     private static final int RADIUS = 8;
     private static final int SHADOW_BLUR = 20;
     private static final int SHADOW_DROP = 10;
+    /** Room below the last row, so it can scroll up to {@link #LOWEST_ROW}. */
+    private static final int BOTTOM_ROOM = 220;
+    private static final int PILL_H = 40;
+    private static final int TIP_MARGIN = 22;
 
     // The ambient light's strength behind the top row, the grid, and apps with no strong colour.
     private static final float GLOW_PINNED = 0.24f;
     private static final float GLOW_GRID = 0.16f;
     private static final float GLOW_NEUTRAL = 0.10f;
     private static final int NEUTRAL = 0xFFB4C3E6;
+    // An app's colour is sampled from its banner drawn this small, in this many hue buckets; icons smaller still.
+    private static final int BRAND_W = 32;
+    private static final int BRAND_H = 18;
+    private static final int HUES = 24;
+    private static final int ICON_SAMPLE = 16;
 
     // Motion.
     private static final float FOCUS_SCALE = 1.15f;
@@ -110,13 +122,25 @@ public class HomeActivity extends Activity {
     private static final long FOCUS_IN_MS = 180;
     private static final long FOCUS_OUT_MS = 220;
     private static final long LABEL_MS = 150;
+    private static final long PRESS_MS = 90;
+    private static final long RELEASE_MS = 120;
+    private static final long TIP_DELAY_MS = 1200;
+    private static final long TIP_FADE_MS = 600;
+    private static final long TODAY_FADE_MS = 220;
+    private static final long TODAY_RISE_MS = 280;
+    private static final long TODAY_CLOSE_MS = 160;
+    /** The dimming behind the Today card. */
+    private static final int SCRIM = 0xB3000000;
 
     // Colour.
-    private static final int LABEL = 0xFFF5F5F7;
-    private static final int SECONDARY = 0x99EBEBF5;
-    private static final int TERTIARY = 0x4DEBEBF5;
     /** Festivals: a warm marigold, for festivals coming up soon. */
-    static final int FESTIVE = 0xFFFFC56B;
+    static final int FESTIVE = Festive.Theme.PLAIN.accent;
+    /** The weather pill: frosted glass, brighter when focused. */
+    private static final int[] GLASS = {0x17FFFFFF, 0x0DFFFFFF};
+    private static final int[] GLASS_FOCUSED = {0x33FFFFFF, 0x1FFFFFFF};
+    private static final int GLASS_EDGE_FOCUSED = 0x59FFFFFF;
+    /** Tiles without a banner get a colour from their icon, or this if it has none. */
+    private static final int TILE_FALLBACK = 0xFF2A2D34;
     /** A festival's opening plays again only after this long away from the home screen. */
     private static final long FESTIVE_REPLAY_MS = 3 * 60 * 60_000L;
 
@@ -134,6 +158,7 @@ public class HomeActivity extends Activity {
         Drawable icon;
     }
 
+    private Ui ui;
     private SharedPreferences prefs;
     private FrameLayout root;
     private Ambient ambient;
@@ -186,11 +211,10 @@ public class HomeActivity extends Activity {
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
-        prefs = getSharedPreferences("aangan", MODE_PRIVATE);
+        ui = new Ui(this);
+        prefs = Prefs.of(this);
         Festival.load(this, prefs);
-        if (!prefs.contains("pins")) {
-            prefs.edit().putString("pins", TextUtils.join(",", DEFAULT_PINS)).apply();
-        }
+        if (!prefs.contains(PINS)) Prefs.putList(prefs, PINS, Arrays.asList(DEFAULT_PINS));
         weather = Weather.load(prefs);
         shadow = shadowBitmap();
         buildFrame();
@@ -239,15 +263,15 @@ public class HomeActivity extends Activity {
                 startActivity(new Intent(this, WelcomeActivity.class));
                 return;
             }
-            prefs.edit().putBoolean("welcomed", true).apply();
+            WelcomeActivity.markSeen(prefs);
         }
-        int shown = prefs.getInt("tips", 0);
+        int shown = prefs.getInt(TIPS, 0);
         if (shown >= TIP_VISITS) {
             tip.setVisibility(View.GONE);
             return;
         }
-        prefs.edit().putInt("tips", shown + 1).apply();
-        tip.animate().alpha(1f).setStartDelay(1200).setDuration(600).start();
+        prefs.edit().putInt(TIPS, shown + 1).apply();
+        tip.animate().alpha(1f).setStartDelay(TIP_DELAY_MS).setDuration(TIP_FADE_MS).start();
     }
 
     /** Pressing Home while already home returns to the top row. */
@@ -267,24 +291,10 @@ public class HomeActivity extends Activity {
         else goToTop();
     }
 
-    // ---- type and units ---------------------------------------------------------------------
+    // ---- units -------------------------------------------------------------------------------
 
     private int dp(float v) {
-        return Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, getResources().getDisplayMetrics()));
-    }
-
-    private static Typeface font(int weight) {
-        return Typeface.create(Typeface.DEFAULT, weight, false);
-    }
-
-    private TextView text(float sp, int weight, int color) {
-        TextView t = new TextView(this);
-        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
-        t.setTypeface(font(weight));
-        t.setTextColor(color);
-        t.setIncludeFontPadding(false);
-        t.setSingleLine(true);
-        return t;
+        return ui.dp(v);
     }
 
     // ---- layout -----------------------------------------------------------------------------
@@ -307,20 +317,17 @@ public class HomeActivity extends Activity {
                 header.setAlpha(1f - Math.min(1f, y / (float) dp(ROW_PITCH))));
 
         int side = (getResources().getDisplayMetrics().widthPixels - dp(COLUMNS * TILE_W + (COLUMNS - 1) * GAP)) / 2;
-        LinearLayout content = new LinearLayout(this);
-        content.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout content = ui.column();
         content.setClipChildren(false);
         content.setClipToPadding(false);
-        content.setPadding(side, dp(TOP), side, dp(220));
+        content.setPadding(side, dp(TOP), side, dp(BOTTOM_ROOM));
         scroll.addView(content, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         header = buildHeader();
         content.addView(header, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(HEADER_H)));
 
         pinnedGrid = newGrid();
-        LinearLayout.LayoutParams pinnedLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        pinnedLp.topMargin = dp(FIRST_ROW - TOP - HEADER_H);
-        content.addView(pinnedGrid, pinnedLp);
+        content.addView(pinnedGrid, ui.wrap(FIRST_ROW - TOP - HEADER_H));
 
         appGrid = newGrid();
         content.addView(appGrid);
@@ -333,12 +340,12 @@ public class HomeActivity extends Activity {
         root.addView(ambient, new FrameLayout.LayoutParams(dp(Ambient.WIDTH), dp(Ambient.HEIGHT)));
         root.addView(scroll, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         // One-time tips along the bottom edge, for the first few visits.
-        tip = text(13, 400, SECONDARY);
-        tip.setText("Press  ▲  then OK for today's weather and air     ·     Hold OK on an app to move or hide it");
+        tip = ui.line(13, 400, Ui.SECONDARY,
+                "Press  ▲  then OK for today's weather and air     ·     Hold OK on an app to move or hide it");
         tip.setAlpha(0f);
         FrameLayout.LayoutParams tipLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-        tipLp.bottomMargin = dp(22);
+        tipLp.bottomMargin = dp(TIP_MARGIN);
         root.addView(tip, tipLp);
         setContentView(root);
         paintBackdrop(glowColor());
@@ -357,62 +364,39 @@ public class HomeActivity extends Activity {
         // The weather pill grows when focused; let it draw past its container's edges.
         frame.setClipChildren(false);
 
-        LinearLayout clock = new LinearLayout(this);
-        clock.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout clock = ui.column();
 
-        LinearLayout timeRow = new LinearLayout(this);
-        timeRow.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout timeRow = ui.row();
         timeRow.setBaselineAligned(true);
-        TextClock time = new TextClock(this);
-        time.setFormat12Hour("h:mm");
-        time.setFormat24Hour("H:mm");
-        time.setTextSize(TypedValue.COMPLEX_UNIT_SP, 48);
-        time.setTypeface(font(300));
-        time.setTextColor(LABEL);
-        time.setLetterSpacing(-0.02f);
-        time.setFontFeatureSettings("tnum");
-        time.setIncludeFontPadding(false);
-        timeRow.addView(time);
+        timeRow.addView(ui.clock(48, 300, Ui.LABEL));
         TextClock meridiem = new TextClock(this);
         meridiem.setFormat12Hour("a");
         meridiem.setFormat24Hour("");
         meridiem.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-        meridiem.setTypeface(font(500));
-        meridiem.setTextColor(SECONDARY);
+        meridiem.setTypeface(Ui.font(500));
+        meridiem.setTextColor(Ui.SECONDARY);
         meridiem.setAllCaps(true);
-        LinearLayout.LayoutParams meridiemLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        LinearLayout.LayoutParams meridiemLp = Ui.wrap();
         meridiemLp.leftMargin = dp(5);
         timeRow.addView(meridiem, meridiemLp);
         clock.addView(timeRow);
 
-        TextClock date = new TextClock(this);
-        date.setFormat12Hour("EEEE, d MMMM");
-        date.setFormat24Hour("EEEE, d MMMM");
-        date.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-        date.setTypeface(font(400));
-        date.setTextColor(SECONDARY);
         // The next festival rides on the date line: "Sunday, 25 October  ·  Diwali in 14 days".
-        LinearLayout dateRow = new LinearLayout(this);
-        dateRow.setOrientation(LinearLayout.HORIZONTAL);
-        dateRow.addView(date);
-        festivalView = text(15, 500, FESTIVE);
+        LinearLayout dateRow = ui.row();
+        dateRow.addView(ui.date(15, 400, Ui.SECONDARY));
+        festivalView = ui.line(15, 500, FESTIVE);
         dateRow.addView(festivalView);
-        LinearLayout.LayoutParams dateLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        dateLp.topMargin = dp(4);
-        clock.addView(dateRow, dateLp);
+        clock.addView(dateRow, ui.wrap(4));
         frame.addView(clock, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.START | Gravity.TOP));
 
-        LinearLayout right = new LinearLayout(this);
+        LinearLayout right = ui.column();
         right.setClipChildren(false);
-        right.setOrientation(LinearLayout.VERTICAL);
         right.setGravity(Gravity.END);
         pill = buildPill();
-        right.addView(pill, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(40)));
+        right.addView(pill, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(PILL_H)));
         // Open-Meteo data is CC BY 4.0; air quality comes from Copernicus CAMS.
-        credit = text(9, 400, TERTIARY);
-        credit.setText("Open-Meteo · Copernicus CAMS");
-        LinearLayout.LayoutParams creditLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        creditLp.topMargin = dp(7);
+        credit = ui.line(9, 400, Ui.TERTIARY, "Open-Meteo · Copernicus CAMS");
+        LinearLayout.LayoutParams creditLp = ui.wrap(7);
         creditLp.rightMargin = dp(14);
         right.addView(credit, creditLp);
         FrameLayout.LayoutParams rightLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.END | Gravity.TOP);
@@ -422,18 +406,11 @@ public class HomeActivity extends Activity {
     }
 
     private View buildPill() {
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout row = ui.row();
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(dp(16), 0, dp(16), 0);
-        glass = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{0x17FFFFFF, 0x0DFFFFFF});
-        glass.setCornerRadius(dp(20));
-        glass.setStroke(Math.max(1, dp(0.75f)), 0x1FFFFFFF);
-        glassFocused = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{0x33FFFFFF, 0x1FFFFFFF});
-        glassFocused.setCornerRadius(dp(20));
-        glassFocused.setStroke(Math.max(1, dp(0.75f)), 0x59FFFFFF);
+        glass = glass(GLASS, Ui.HAIRLINE);
+        glassFocused = glass(GLASS_FOCUSED, GLASS_EDGE_FOCUSED);
         row.setBackground(glass);
 
         // Up from the top row reaches the pill; OK opens the day's forecast and air.
@@ -457,47 +434,49 @@ public class HomeActivity extends Activity {
         glyph = new WeatherGlyph(this);
         row.addView(glyph, new LinearLayout.LayoutParams(dp(22), dp(22)));
 
-        tempView = text(22, 500, LABEL);
+        tempView = ui.line(22, 500, Ui.LABEL);
         tempView.setFontFeatureSettings("tnum");
-        LinearLayout.LayoutParams tempLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        tempLp.leftMargin = dp(8);
-        row.addView(tempView, tempLp);
+        row.addView(tempView, leftOf(8));
 
-        LinearLayout lines = new LinearLayout(this);
-        lines.setOrientation(LinearLayout.VERTICAL);
-        conditionView = text(12, 500, 0xD9F5F5F7);
-        feelsView = text(11.5f, 400, SECONDARY);
+        LinearLayout lines = ui.column();
+        conditionView = ui.line(12, 500, 0xD9F5F5F7);
+        feelsView = ui.line(11.5f, 400, Ui.SECONDARY);
         lines.addView(conditionView);
-        LinearLayout.LayoutParams feelsLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        feelsLp.topMargin = dp(2);
-        lines.addView(feelsView, feelsLp);
-        LinearLayout.LayoutParams linesLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        linesLp.leftMargin = dp(10);
-        row.addView(lines, linesLp);
+        lines.addView(feelsView, ui.wrap(2));
+        row.addView(lines, leftOf(10));
 
-        LinearLayout aqi = new LinearLayout(this);
-        aqi.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout aqi = ui.row();
         aqi.setGravity(Gravity.CENTER_VERTICAL);
         View divider = new View(this);
-        divider.setBackgroundColor(0x1FFFFFFF);
-        LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(Math.max(1, dp(0.75f)), dp(20));
+        divider.setBackgroundColor(Ui.HAIRLINE);
+        LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(ui.hairline(), dp(20));
         dividerLp.leftMargin = dp(14);
         dividerLp.rightMargin = dp(14);
         aqi.addView(divider, dividerLp);
         aqiDot = new View(this);
         aqi.addView(aqiDot, new LinearLayout.LayoutParams(dp(8), dp(8)));
-        aqiView = text(15, 500, LABEL);
+        aqiView = ui.line(15, 500, Ui.LABEL);
         aqiView.setFontFeatureSettings("tnum");
-        LinearLayout.LayoutParams aqiLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        aqiLp.leftMargin = dp(6);
-        aqi.addView(aqiView, aqiLp);
-        aqiCategoryView = text(12, 500, LABEL);
-        LinearLayout.LayoutParams catLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        catLp.leftMargin = dp(6);
-        aqi.addView(aqiCategoryView, catLp);
+        aqi.addView(aqiView, leftOf(6));
+        aqiCategoryView = ui.line(12, 500, Ui.LABEL);
+        aqi.addView(aqiCategoryView, leftOf(6));
         aqiGroup = aqi;
         row.addView(aqi);
         return row;
+    }
+
+    private GradientDrawable glass(int[] colors, int edge) {
+        GradientDrawable d = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors);
+        d.setCornerRadius(dp(20));
+        d.setStroke(ui.hairline(), edge);
+        return d;
+    }
+
+    /** Wrapped, {@code left} dp after the view before it in a row. */
+    private LinearLayout.LayoutParams leftOf(int left) {
+        LinearLayout.LayoutParams lp = Ui.wrap();
+        lp.leftMargin = dp(left);
+        return lp;
     }
 
     private GridLayout newGrid() {
@@ -533,15 +512,12 @@ public class HomeActivity extends Activity {
             // An imminent shower matters more than the feels-like temperature.
             String rain = weather.rainSoon();
             feelsView.setText(rain != null ? rain : "Feels " + Weather.degrees(weather.feels));
-            feelsView.setTextColor(rain != null ? 0xFF64D2FF : SECONDARY);
+            feelsView.setTextColor(rain != null ? Ui.RAIN : Ui.SECONDARY);
         }
 
         aqiGroup.setVisibility(weather.hasAir() ? View.VISIBLE : View.GONE);
         if (weather.hasAir()) {
-            GradientDrawable dot = new GradientDrawable();
-            dot.setShape(GradientDrawable.OVAL);
-            dot.setColor(weather.aqiColor());
-            aqiDot.setBackground(dot);
+            aqiDot.setBackground(Ui.dot(weather.aqiColor()));
             aqiView.setText("AQI " + weather.aqi);
             aqiCategoryView.setText(weather.aqiCategory());
             aqiCategoryView.setTextColor(weather.aqiColor());
@@ -566,10 +542,11 @@ public class HomeActivity extends Activity {
      */
     private void showFestival() {
         Festival festival = celebrating();
-        Festive.Theme theme = festival == null ? null : festival.theme;
+        // A PLAIN festival has a greeting but no scene, so it shows as no scene at all.
+        Festive.Theme theme = festival == null || festival.theme == Festive.Theme.PLAIN ? null : festival.theme;
         long now = System.currentTimeMillis();
         boolean replay = theme != festive.theme() || now - festivePlayedAt > FESTIVE_REPLAY_MS;
-        if (theme == festive.theme() && !replay) return;
+        if (!replay) return;
         festive.show(theme, replay);
         if (replay) festivePlayedAt = now;
         showWeather();
@@ -586,25 +563,32 @@ public class HomeActivity extends Activity {
         long now = System.currentTimeMillis();
         // A cache from before the forecast card existed has no hourly data, so it counts as due.
         boolean wantWeather = now - weather.weatherAt > Weather.WEATHER_TTL || !weather.hasForecast();
-        boolean wantAir = now - weather.airAt > Weather.AIR_TTL || weather.airTime.length == 0;
+        boolean wantAir = now - weather.airAt > Weather.AIR_TTL || !weather.hasAirSeries();
         if (fetching || now < retryAt || (!wantWeather && !wantAir)) return;
 
         fetching = true;
+        // The fetch fills this object; onResume may swap in a fresh one meanwhile (say, for a new city).
+        Weather target = weather;
         network.execute(() -> {
             boolean ok = true;
             try {
-                if (wantWeather) weather.fetchWeather(now);
+                if (wantWeather) target.fetchWeather(now);
             } catch (Exception e) {
                 ok = false;
             }
             try {
-                if (wantAir) weather.fetchAir(now);
+                if (wantAir) target.fetchAir(now);
             } catch (Exception e) {
                 ok = false;
             }
             boolean success = ok;
             handler.post(() -> {
                 fetching = false;
+                if (target != weather) {
+                    // Fetched for a city or cache that has since been replaced: start again for the current one.
+                    maybeRefreshWeather();
+                    return;
+                }
                 if (success) {
                     failures = 0;
                     retryAt = 0;
@@ -620,17 +604,6 @@ public class HomeActivity extends Activity {
     }
 
     // ---- apps -------------------------------------------------------------------------------
-
-    private List<String> readList(String key) {
-        String raw = prefs.getString(key, "");
-        List<String> out = new ArrayList<>();
-        for (String s : raw.split(",")) if (!s.isEmpty()) out.add(s);
-        return out;
-    }
-
-    private void writeList(String key, List<String> values) {
-        prefs.edit().putString(key, TextUtils.join(",", values)).apply();
-    }
 
     private Map<String, App> loadApps() {
         PackageManager pm = getPackageManager();
@@ -689,8 +662,8 @@ public class HomeActivity extends Activity {
     /** Rebuilds the grids only when the set of apps, pins or hidden apps actually changed. */
     private void refresh() {
         Map<String, App> apps = loadApps();
-        List<String> pins = readList("pins");
-        Set<String> hidden = new LinkedHashSet<>(readList("hidden"));
+        List<String> pins = Prefs.list(prefs, PINS);
+        Set<String> hidden = new LinkedHashSet<>(Prefs.list(prefs, HIDDEN));
 
         boolean setUp = isSetUp();
         String sig = apps.keySet() + "|" + pins + "|" + hidden + "|" + setUp;
@@ -774,23 +747,19 @@ public class HomeActivity extends Activity {
     private int brandColor(App app) {
         Integer cached = brand.get(app.pkg);
         if (cached != null) return cached;
-        Drawable art = app.banner != null ? app.banner : app.icon;
+        Bitmap bmp = render(app.banner != null ? app.banner : app.icon, BRAND_W, BRAND_H);
         int result = NEUTRAL;
-        if (art != null && art.getConstantState() != null) {
-            Drawable d = art.getConstantState().newDrawable().mutate();
-            Bitmap bmp = Bitmap.createBitmap(32, 18, Bitmap.Config.ARGB_8888);
-            d.setBounds(0, 0, 32, 18);
-            d.draw(new Canvas(bmp));
-            float[] weight = new float[24];
-            float[][] sum = new float[24][3];
+        if (bmp != null) {
+            float[] weight = new float[HUES];
+            float[][] sum = new float[HUES][3];
             float[] hsv = new float[3];
-            for (int y = 0; y < 18; y++) {
-                for (int x = 0; x < 32; x++) {
+            for (int y = 0; y < BRAND_H; y++) {
+                for (int x = 0; x < BRAND_W; x++) {
                     int p = bmp.getPixel(x, y);
                     if (Color.alpha(p) < 128) continue;
                     Color.colorToHSV(p, hsv);
                     if (hsv[1] < 0.3f || hsv[2] < 0.25f) continue;
-                    int bucket = Math.min(23, (int) (hsv[0] / 15f));
+                    int bucket = Math.min(HUES - 1, (int) (hsv[0] / (360f / HUES)));
                     float wgt = hsv[1] * hsv[2] * hsv[2];
                     weight[bucket] += wgt;
                     sum[bucket][0] += Color.red(p) * wgt;
@@ -800,9 +769,9 @@ public class HomeActivity extends Activity {
             }
             bmp.recycle();
             int best = 0;
-            for (int i = 1; i < 24; i++) if (weight[i] > weight[best]) best = i;
+            for (int i = 1; i < HUES; i++) if (weight[i] > weight[best]) best = i;
             // At least about 3% of the artwork has to be colourful to count.
-            if (weight[best] > 0.03f * 32 * 18 * 0.3f) {
+            if (weight[best] > 0.03f * BRAND_W * BRAND_H * 0.3f) {
                 int rgb = Color.rgb(Math.round(sum[best][0] / weight[best]),
                         Math.round(sum[best][1] / weight[best]), Math.round(sum[best][2] / weight[best]));
                 Color.colorToHSV(rgb, hsv);
@@ -826,8 +795,7 @@ public class HomeActivity extends Activity {
         final int h = dp(TILE_H);
         final int blur = dp(SHADOW_BLUR);
 
-        LinearLayout cell = new LinearLayout(this);
-        cell.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout cell = ui.column();
         cell.setClipChildren(false);
         cell.setClipToPadding(false);
 
@@ -875,7 +843,7 @@ public class HomeActivity extends Activity {
             // A hairline edge so dark tiles don't dissolve into the background.
             GradientDrawable edge = new GradientDrawable();
             edge.setCornerRadius(radius);
-            edge.setStroke(Math.max(1, dp(0.75f)), 0x14FFFFFF);
+            edge.setStroke(ui.hairline(), 0x14FFFFFF);
             card.setForeground(edge);
         }
         View sheen = new Sheen(this);
@@ -887,8 +855,7 @@ public class HomeActivity extends Activity {
         lift.addView(card, new FrameLayout.LayoutParams(w, h));
         cell.addView(lift, new LinearLayout.LayoutParams(w, h));
 
-        TextView label = text(12, 500, 0xE6F5F5F7);
-        label.setText(app.label);
+        TextView label = ui.line(12, 500, 0xE6F5F5F7, app.label);
         label.setGravity(Gravity.CENTER_HORIZONTAL);
         label.setEllipsize(TextUtils.TruncateAt.END);
         label.setAlpha(0f);
@@ -910,8 +877,8 @@ public class HomeActivity extends Activity {
             if (hasFocus) lightUp(app, v, scrollToRow(cell, pinned), pinned);
         });
         // A quick press-in before launching, so the remote's OK feels physical.
-        lift.setOnClickListener(v -> v.animate().scaleX(PRESS_SCALE).scaleY(PRESS_SCALE).setDuration(90)
-                .withEndAction(() -> v.animate().scaleX(FOCUS_SCALE).scaleY(FOCUS_SCALE).setDuration(120)
+        lift.setOnClickListener(v -> v.animate().scaleX(PRESS_SCALE).scaleY(PRESS_SCALE).setDuration(PRESS_MS)
+                .withEndAction(() -> v.animate().scaleX(FOCUS_SCALE).scaleY(FOCUS_SCALE).setDuration(RELEASE_MS)
                         .withEndAction(() -> launch(app, v)).start())
                 .start());
         lift.setOnLongClickListener(v -> {
@@ -959,15 +926,11 @@ public class HomeActivity extends Activity {
 
     /** A dark, muted version of the icon's average colour, for apps without a TV banner. */
     private static int tileColor(Drawable icon) {
-        int fallback = 0xFF2A2D34;
-        if (icon == null || icon.getConstantState() == null) return fallback;
-        Drawable d = icon.getConstantState().newDrawable().mutate();
-        Bitmap bmp = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888);
-        d.setBounds(0, 0, 16, 16);
-        d.draw(new Canvas(bmp));
+        Bitmap bmp = render(icon, ICON_SAMPLE, ICON_SAMPLE);
+        if (bmp == null) return TILE_FALLBACK;
         long r = 0, g = 0, b = 0, n = 0;
-        for (int y = 0; y < 16; y++) {
-            for (int x = 0; x < 16; x++) {
+        for (int y = 0; y < ICON_SAMPLE; y++) {
+            for (int x = 0; x < ICON_SAMPLE; x++) {
                 int p = bmp.getPixel(x, y);
                 if (Color.alpha(p) < 128) continue;
                 r += Color.red(p);
@@ -977,12 +940,22 @@ public class HomeActivity extends Activity {
             }
         }
         bmp.recycle();
-        if (n == 0) return fallback;
+        if (n == 0) return TILE_FALLBACK;
         float[] hsv = new float[3];
         Color.RGBToHSV((int) (r / n), (int) (g / n), (int) (b / n), hsv);
         hsv[1] = Math.min(hsv[1], 0.55f);
         hsv[2] = Math.max(0.30f, Math.min(hsv[2], 0.38f));
         return Color.HSVToColor(hsv);
+    }
+
+    /** A drawable drawn small into a bitmap, for sampling its colours; null if it can't be copied. */
+    private static Bitmap render(Drawable art, int w, int h) {
+        if (art == null || art.getConstantState() == null) return null;
+        Drawable d = art.getConstantState().newDrawable().mutate();
+        Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        d.setBounds(0, 0, w, h);
+        d.draw(new Canvas(bmp));
+        return bmp;
     }
 
     private static int scaleBrightness(int color, float factor) {
@@ -992,11 +965,7 @@ public class HomeActivity extends Activity {
         return Color.HSVToColor(hsv);
     }
 
-    private void launch(App app) {
-        launch(app, null);
-    }
-
-    /** Opens the app; from a tile, its window grows out of that tile, as on tvOS. */
+    /** Opens the app; from a tile ({@code from} not null), its window grows out of that tile, as on tvOS. */
     private void launch(App app, View from) {
         try {
             Bundle zoom = from == null ? null : ActivityOptions
@@ -1013,7 +982,7 @@ public class HomeActivity extends Activity {
     private void openToday() {
         if (today != null) return;
         FrameLayout overlay = new FrameLayout(this);
-        overlay.setBackgroundColor(0xB3000000);
+        overlay.setBackgroundColor(SCRIM);
         View card = TodayCard.build(this, weather);
         overlay.addView(card, new FrameLayout.LayoutParams(dp(TodayCard.WIDTH),
                 ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
@@ -1039,11 +1008,11 @@ public class HomeActivity extends Activity {
 
         DecelerateInterpolator ease = new DecelerateInterpolator(2f);
         overlay.setAlpha(0f);
-        overlay.animate().alpha(1f).setDuration(220).setInterpolator(ease).start();
+        overlay.animate().alpha(1f).setDuration(TODAY_FADE_MS).setInterpolator(ease).start();
         card.setScaleX(0.94f);
         card.setScaleY(0.94f);
         card.setTranslationY(dp(12));
-        card.animate().scaleX(1f).scaleY(1f).translationY(0).setDuration(280).setInterpolator(ease).start();
+        card.animate().scaleX(1f).scaleY(1f).translationY(0).setDuration(TODAY_RISE_MS).setInterpolator(ease).start();
     }
 
     private void closeToday() {
@@ -1051,7 +1020,7 @@ public class HomeActivity extends Activity {
         if (overlay == null) return;
         today = null;
         overlay.setFocusable(false);
-        overlay.animate().alpha(0f).setDuration(160)
+        overlay.animate().alpha(0f).setDuration(TODAY_CLOSE_MS)
                 .withEndAction(() -> root.removeView(overlay)).start();
         pill.requestFocus();
     }
@@ -1059,61 +1028,61 @@ public class HomeActivity extends Activity {
     // ---- options menu -----------------------------------------------------------------------
 
     private void showMenu(App app, boolean pinned) {
+        if (app.pkg.equals(AANGAN_KEY)) return;
         List<String> labels = new ArrayList<>();
         List<Runnable> actions = new ArrayList<>();
-        List<String> pins = readList("pins");
-        List<String> hidden = readList("hidden");
+        List<String> pins = Prefs.list(prefs, PINS);
+        List<String> hidden = Prefs.list(prefs, HIDDEN);
 
-        if (app.pkg.equals(AANGAN_KEY)) return;
         if (app.pkg.equals(SETTINGS_KEY)) {
             if (hidden.isEmpty()) return;
             labels.add("Show " + hidden.size() + " hidden app" + (hidden.size() == 1 ? "" : "s"));
-            actions.add(() -> writeList("hidden", new ArrayList<String>()));
+            actions.add(() -> Prefs.putList(prefs, HIDDEN, new ArrayList<String>()));
         } else if (pinned) {
             int index = pins.indexOf(app.pkg);
             if (index > 0) {
                 labels.add("Move left");
-                actions.add(() -> {
-                    Collections.swap(pins, index, index - 1);
-                    writeList("pins", pins);
-                });
+                actions.add(swapPins(pins, index, index - 1));
             }
             if (index < pins.size() - 1) {
                 labels.add("Move right");
-                actions.add(() -> {
-                    Collections.swap(pins, index, index + 1);
-                    writeList("pins", pins);
-                });
+                actions.add(swapPins(pins, index, index + 1));
             }
             labels.add("Remove from top row");
             actions.add(() -> {
                 pins.remove(app.pkg);
-                writeList("pins", pins);
+                Prefs.putList(prefs, PINS, pins);
             });
         } else {
             labels.add("Add to top row");
             actions.add(() -> {
                 pins.add(app.pkg);
-                writeList("pins", pins);
+                Prefs.putList(prefs, PINS, pins);
             });
             labels.add("Hide");
             actions.add(() -> {
                 hidden.add(app.pkg);
-                writeList("hidden", hidden);
+                Prefs.putList(prefs, HIDDEN, hidden);
             });
         }
         if (!app.pkg.equals(SETTINGS_KEY)) {
             labels.add("App info");
-            actions.add(() -> launch(appInfo(app)));
+            actions.add(() -> launch(appInfo(app), null));
         }
 
-        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                .setTitle(app.label)
+        Ui.dialog(this, app.label)
                 .setItems(labels.toArray(new String[0]), (dialog, which) -> {
                     actions.get(which).run();
                     refresh();
                 })
                 .show();
+    }
+
+    private Runnable swapPins(List<String> pins, int a, int b) {
+        return () -> {
+            Collections.swap(pins, a, b);
+            Prefs.putList(prefs, PINS, pins);
+        };
     }
 
     private App appInfo(App app) {

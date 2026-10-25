@@ -12,7 +12,18 @@
     <p>It replaces the screen they're on. With Aangan as your home screen, you see your apps and nothing promoted. Apps themselves, such as streaming services, still show whatever they show inside them.</p>
   </div></details>
   <details><summary>Which TVs does it work on?</summary><div>
-    <p>It should work on any TV or streaming box with Android TV or Google TV 9 (Pie) or later: Sony Bravia, TCL, Hisense, Philips, Sharp, Xiaomi Mi TV and Mi Box, Chromecast with Google TV, Nvidia Shield and others. It's developed and tested on Sony Bravia TVs. It doesn't run on Fire TV, Tizen (Samsung), webOS (LG) or Roku.</p>
+    <p>It should work on any TV or streaming box with Android TV or Google TV 9 (Pie) or later: Sony Bravia, TCL, Hisense, Philips, Sharp, Xiaomi Mi TV and Mi Box, Chromecast with Google TV, Nvidia Shield and others. It's developed and tested on Sony Bravia TVs. It doesn't run on Samsung (Tizen), LG (webOS), Roku or Fire TV; <a href="#samsung">here's why</a>.</p>
+  </div></details>
+  <details id=samsung><summary>Why doesn't it work on Samsung TVs?</summary><div>
+    <p>Samsung's smart TVs don't run Android. They run Samsung's own system, Tizen, and it doesn't allow this kind of customisation:</p>
+    <ul>
+      <li><b>No Android apps.</b> Tizen apps are web or .NET apps written specifically for Tizen, so Aangan, like any Android app, can't be installed.</li>
+      <li><b>The home screen belongs to Samsung.</b> Smart Hub, the bar of apps and Samsung TV Plus recommendations, is part of the system. Tizen has no setting to choose a different home screen and no way for an app to become one.</li>
+      <li><b>So does the Home button.</b> Tizen apps can ask for some remote keys, such as the coloured and media buttons, but the Home button goes to the TV itself. There's no equivalent of the Android feature Aangan uses to answer it.</li>
+      <li><b>No easy installs.</b> Apps from outside Samsung's store need the TV's developer mode, a computer with Samsung's developer tools and a signing certificate, and they can't replace anything that ships with the TV.</li>
+    </ul>
+    <p>LG's webOS and Roku are closed in the same way. Amazon's Fire TV is built on Android, but Amazon has blocked other home screens since a 2022 update.</p>
+    <p><b>What you can do:</b> plug a Google TV or Android TV streamer, such as Google TV Streamer, Chromecast with Google TV or Xiaomi TV Box, into the Samsung's HDMI port, and install Aangan on that. Turn on Anynet+ (HDMI-CEC) in the TV's settings so one remote controls both, and the streamer becomes your home screen. <a href="install.html#other-tvs">More on the install page.</a></p>
   </div></details>
   <details><summary>Do I need developer mode or a computer?</summary><div>
     <p>No. Install it with the free Downloader app, and use the welcome's <b>Open with Home</b> to make the Home button bring it up. <a href="install.html">See how.</a></p>

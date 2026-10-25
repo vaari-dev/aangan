@@ -2,8 +2,6 @@ package dev.vaari.aangan;
 
 import android.accessibilityservice.AccessibilityService;
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -42,6 +40,7 @@ public class HomeButton extends AccessibilityService {
 
     @Override
     public void onInterrupt() {
+        // Nothing to stop: the service gives no spoken or other feedback.
     }
 
     /**
@@ -53,8 +52,7 @@ public class HomeButton extends AccessibilityService {
             openSettings(activity);
             return;
         }
-        new AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                .setTitle("Open Aangan with the Home button")
+        Ui.dialog(activity, "Open Aangan with the Home button")
                 .setMessage("Aangan uses Android's accessibility service for one thing: when you press Home, "
                         + "or the TV's own home screen appears, it opens Aangan instead.\n\n"
                         + "It reacts to the Home button only; every other button passes straight through. "
@@ -66,11 +64,7 @@ public class HomeButton extends AccessibilityService {
     }
 
     private static void openSettings(Activity activity) {
-        try {
-            activity.startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
-        } catch (ActivityNotFoundException | SecurityException e) {
-            activity.startActivity(new Intent(Settings.ACTION_SETTINGS));
-        }
+        Ui.openSettings(activity, Settings.ACTION_ACCESSIBILITY_SETTINGS);
     }
 
     static boolean isOn(Context context) {

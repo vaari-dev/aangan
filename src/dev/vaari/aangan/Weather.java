@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -33,10 +34,18 @@ final class Weather {
 
     static final long WEATHER_TTL = 30 * 60_000L;
     static final long AIR_TTL = 60 * 60_000L;
-    static final long STALE_AFTER = 3 * 60 * 60_000L;
+    private static final long STALE_AFTER = 3 * 60 * 60_000L;
 
     /** Minutes either side of sunrise and sunset that count as golden hour. */
     private static final int GOLDEN_MIN = 45;
+    /** PM2.5 (µg/m³) above which the air is heavy: clear skies read as haze, and no hour is worth airing out. */
+    static final int HEAVY_PM25 = 90;
+    /** How far ahead, in hours, to look for the cleanest hour to open the windows. */
+    static final int CLEAN_AIR_HOURS = 18;
+    /** How far ahead, in hours after the current one, a likely shower is worth mentioning. */
+    private static final int RAIN_HOURS = 6;
+    /** A chance of rain, in percent, from which it is called likely. */
+    private static final int RAIN_LIKELY = 50;
 
     /**
      * An air-quality index: the index range for each category, the 24-hour PM2.5 and PM10
@@ -132,24 +141,24 @@ final class Weather {
 
     // ---- cache ------------------------------------------------------------------------------
 
-    static Weather load(SharedPreferences p) {
+    static Weather load(SharedPreferences prefs) {
         Weather w = new Weather();
-        w.place = Place.load(p);
+        w.place = Place.load(prefs);
         w.scale = "IN".equals(w.place.country) ? CPCB : EPA;
         zone = TimeZone.getTimeZone(w.place.timezone);
-        w.temp = Double.longBitsToDouble(p.getLong("w_temp", 0));
-        w.feels = Double.longBitsToDouble(p.getLong("w_feels", 0));
-        w.code = p.getInt("w_code", -1);
-        w.day = p.getBoolean("w_day", true);
-        w.weatherAt = p.getLong("w_at", 0);
-        w.pm25 = Double.longBitsToDouble(p.getLong("a_pm25", 0));
-        w.pm10 = Double.longBitsToDouble(p.getLong("a_pm10", 0));
-        w.aqi = p.getInt("a_aqi", -1);
-        w.airAt = p.getLong("a_at", 0);
+        w.temp = Double.longBitsToDouble(prefs.getLong("w_temp", 0));
+        w.feels = Double.longBitsToDouble(prefs.getLong("w_feels", 0));
+        w.code = prefs.getInt("w_code", -1);
+        w.day = prefs.getBoolean("w_day", true);
+        w.weatherAt = prefs.getLong("w_at", 0);
+        w.pm25 = Double.longBitsToDouble(prefs.getLong("a_pm25", 0));
+        w.pm10 = Double.longBitsToDouble(prefs.getLong("a_pm10", 0));
+        w.aqi = prefs.getInt("a_aqi", -1);
+        w.airAt = prefs.getLong("a_at", 0);
         try {
-            String json = p.getString("w_json", null);
+            String json = prefs.getString("w_json", null);
             if (json != null) w.parseForecast(json);
-            json = p.getString("a_json", null);
+            json = prefs.getString("a_json", null);
             if (json != null) w.parseAirSeries(json);
         } catch (JSONException ignored) {
             // An unreadable cache just means no forecast until the next fetch.
@@ -157,8 +166,8 @@ final class Weather {
         return w;
     }
 
-    void save(SharedPreferences p) {
-        p.edit()
+    void save(SharedPreferences prefs) {
+        prefs.edit()
                 .putLong("w_temp", Double.doubleToLongBits(temp))
                 .putLong("w_feels", Double.doubleToLongBits(feels))
                 .putInt("w_code", code)
@@ -174,8 +183,8 @@ final class Weather {
     }
 
     /** Forgets everything fetched for the old city, so the next check fetches for the new one. */
-    static void clear(SharedPreferences p) {
-        p.edit().remove("w_at").remove("w_json").remove("a_at").remove("a_json").remove("a_aqi").apply();
+    static void clear(SharedPreferences prefs) {
+        prefs.edit().remove("w_at").remove("w_json").remove("a_at").remove("a_json").remove("a_aqi").apply();
     }
 
     boolean hasWeather() {
@@ -188,6 +197,10 @@ final class Weather {
 
     boolean hasForecast() {
         return hourTime.length > 0;
+    }
+
+    boolean hasAirSeries() {
+        return airTime.length > 0;
     }
 
     boolean isStale(long now) {
@@ -215,11 +228,10 @@ final class Weather {
         String currentTime = json.getJSONObject("current").getString("time");
         JSONObject hourly = json.getJSONObject("hourly");
         JSONArray times = hourly.getJSONArray("time");
+        String[] hours = new String[times.length()];
+        for (int i = 0; i < hours.length; i++) hours[i] = times.getString(i);
 
-        int last = -1;
-        for (int i = 0; i < times.length(); i++) {
-            if (times.getString(i).compareTo(currentTime) <= 0) last = i;
-        }
+        int last = indexAt(hours, currentTime);
         if (last < 0) throw new JSONException("no hourly data before " + currentTime);
         pm25 = mean(hourly.getJSONArray("pm2_5"), last);
         pm10 = mean(hourly.getJSONArray("pm10"), last);
@@ -299,7 +311,7 @@ final class Weather {
     }
 
     private String url(String template) throws IOException {
-        return String.format(Locale.US, template, place.lat, place.lon, java.net.URLEncoder.encode(place.timezone, "UTF-8"));
+        return String.format(Locale.US, template, place.lat, place.lon, URLEncoder.encode(place.timezone, "UTF-8"));
     }
 
     private int subIndex(double c, double[] bp) {
@@ -358,6 +370,11 @@ final class Weather {
         return clock(f.format(new Date(millis)), true);
     }
 
+    /** An hour of the forecast, "2026-10-25T19:00", as "7 PM". */
+    static String hour(String iso) {
+        return clock(clockPart(iso), false);
+    }
+
     private static String clockPart(String iso) {
         return iso != null && iso.length() >= 16 ? iso.substring(11, 16) : null;
     }
@@ -377,34 +394,36 @@ final class Weather {
 
     // ---- things worth knowing today ---------------------------------------------------------
 
-    /** "Rain likely around 7 PM" when an hour in the next six has a 50% chance or more, else null. */
+    /** "Rain likely around 7 PM" when this hour or one of the next six is likely to rain, else null. */
     String rainSoon() {
         int now = indexAt(hourTime, isoNow());
         if (now < 0) return null;
-        for (int i = now; i < Math.min(hourTime.length, now + 7); i++) {
-            if (hourRain[i] >= 50) {
-                return i == now ? "Rain likely now" : "Rain likely around " + clock(hourTime[i].substring(11, 16), false);
-            }
+        for (int i = now; i < Math.min(hourTime.length, now + RAIN_HOURS + 1); i++) {
+            if (hourRain[i] >= RAIN_LIKELY) return i == now ? "Rain likely now" : "Rain likely around " + hour(hourTime[i]);
         }
         return null;
     }
 
     /**
-     * The hour with the least PM2.5 between now and the end of tomorrow morning, as
-     * {"7 AM", "48"}, or null. In a North Indian winter this is when to open the windows.
+     * The hour with the least PM2.5 between now and the end of tomorrow morning, as an index into
+     * {@link #airPm25}, or -1. In a North Indian winter this is when to open the windows.
      */
-    String[] cleanestHour() {
-        String nowIso = isoNow();
-        int from = indexAt(airTime, nowIso);
-        if (from < 0) return null;
+    int cleanestHour() {
+        int from = indexAt(airTime, isoNow());
+        if (from < 0) return -1;
         int best = -1;
-        for (int i = from; i < Math.min(airTime.length, from + 18); i++) {
+        for (int i = from; i < Math.min(airTime.length, from + CLEAN_AIR_HOURS); i++) {
             if (!Double.isNaN(airPm25[i]) && (best < 0 || airPm25[i] < airPm25[best])) best = i;
         }
-        if (best < 0) return null;
-        String when = best == from ? "Now" : clock(airTime[best].substring(11, 16), false);
-        if (best != from && !airTime[best].startsWith(nowIso.substring(0, 10))) when += " tomorrow";
-        return new String[]{when, String.valueOf(Math.round(airPm25[best]))};
+        return best;
+    }
+
+    /** Hour {@code i} of the air series: "now", "7 AM", or "7 AM tomorrow". */
+    String airHour(int i) {
+        String nowIso = isoNow();
+        if (i == indexAt(airTime, nowIso)) return "now";
+        String when = hour(airTime[i]);
+        return airTime[i].startsWith(nowIso.substring(0, 10)) ? when : when + " tomorrow";
     }
 
     /** Today's daylight, e.g. "11h 04m", or null. */
@@ -426,7 +445,8 @@ final class Weather {
     /** Fraction of the lunar cycle, 0 = new moon, 0.5 = full; computed locally from a known new moon. */
     static double moonAge(long now) {
         double synodic = 29.530588853;
-        double days = (now - 947182440000L) / 86_400_000.0; // 6 January 2000, 18:14 UTC
+        // Days since a known new moon: 6 January 2000, 18:14 UTC.
+        double days = (now - 947182440000L) / 86_400_000.0;
         double age = (days % synodic) / synodic;
         return age < 0 ? age + 1 : age;
     }
@@ -441,7 +461,7 @@ final class Weather {
 
     /** Smog never shows up as a weather code, so clear skies with heavy PM2.5 read as haze. */
     private static boolean hazy(int code, double pm25) {
-        return code >= 0 && code <= 2 && pm25 > 90;
+        return code >= 0 && code <= 2 && pm25 > HEAVY_PM25;
     }
 
     private boolean hazy() {

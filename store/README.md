@@ -112,7 +112,7 @@ Aangan isn't an accessibility tool (`isAccessibilityTool` isn't set), so Play ne
    Aangan has the banner, the leanback launcher entry, no touchscreen requirement, D-pad navigation
    throughout, and `android.software.leanback` required, so Play offers it only to TVs.
 4. Each later release: bump `--version-code` in `build.sh` (it must always increase), build the bundle,
-   upload, and add release notes from `docs/site/changelog.html`.
+   upload, and add release notes from `CHANGELOG.md`.
 
 ## Notes for review
 
@@ -121,3 +121,23 @@ Aangan isn't an accessibility tool (`isAccessibilityTool` isn't set), so Play ne
   with those apps hidden.
 - The app sends no data to its developers and has no server. The privacy policy covers the Open-Meteo
   requests, the phone setup page and the accessibility service in detail.
+
+## 9. Automatic uploads from CI
+
+Every release CI publishes can also go to Play's internal track. The step stays dormant until it's
+set up:
+
+1. Upload the first bundle by hand (step 8). Play only accepts API uploads for an app that already exists.
+2. In Google Cloud, create a service account in any project and download a JSON key for it. Enable the
+   *Google Play Android Developer API* for that project.
+3. In Play Console → *Users and permissions*, invite the service account's email and give it
+   *Release to testing tracks* for Aangan.
+4. Store the key as a secret of the approval-gated `release` environment, then delete the file:
+
+       gh secret set PLAY_SERVICE_ACCOUNT_JSON --env release --repo vaari-dev/aangan < key.json
+
+5. Until the first production release, Play takes drafts only, so CI uploads drafts that you roll out in
+   the Console. Afterwards, set `gh variable set PLAY_RELEASE_STATUS --body completed --repo vaari-dev/aangan`
+   to release to testers straight away.
+
+Promoting from internal testing to production stays a deliberate step in the Console.

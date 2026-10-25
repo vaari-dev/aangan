@@ -6,6 +6,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.time.LocalDate;
+import java.time.Month;
+import java.time.MonthDay;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -15,6 +18,8 @@ import java.util.List;
  * phone on the same Wi-Fi (see {@link PhoneSetup}); never sent anywhere.
  */
 final class People {
+
+    private static final String KEY = "people";
 
     static final class Day {
         final int month;
@@ -29,24 +34,48 @@ final class People {
             this.birthday = birthday;
             this.who = who;
         }
+
+        /** True for a real calendar day; 29 February counts, as it comes round in leap years. */
+        static boolean valid(int month, int day) {
+            return month >= 1 && month <= 12 && day >= 1 && day <= Month.of(month).maxLength();
+        }
+
+        /**
+         * Identifies the day by what it is rather than where it sits in the list, so an edit from
+         * a phone page loaded before someone else's change still reaches the right day.
+         */
+        String key() {
+            return month + "-" + day + "-" + (birthday ? "b" : "a") + "-" + who;
+        }
+
+        /** The day as it falls in {@code year}; 29 February becomes the 28th in other years. */
+        LocalDate in(int year) {
+            return MonthDay.of(month, day).atYear(year);
+        }
+
+        /** The next time the day comes round, from {@code today} (today included). */
+        LocalDate next(LocalDate today) {
+            LocalDate date = in(today.getYear());
+            return date.isBefore(today) ? in(today.getYear() + 1) : date;
+        }
     }
 
     private People() {
     }
 
-    /** All days, in calendar order. */
+    /** All days, in calendar order. Anything that isn't a real date is left out. */
     static List<Day> load(SharedPreferences prefs) {
         List<Day> days = new ArrayList<>();
-        try {
-            JSONArray a = new JSONArray(prefs.getString("people", "[]"));
-            for (int i = 0; i < a.length(); i++) {
-                JSONObject o = a.getJSONObject(i);
-                days.add(new Day(o.getInt("m"), o.getInt("d"), o.getBoolean("birthday"), o.getString("who")));
-            }
-        } catch (JSONException ignored) {
-            // A damaged list reads as empty rather than taking the home screen down.
+        JSONArray a = Prefs.array(prefs, KEY);
+        for (int i = 0; i < a.length(); i++) {
+            JSONObject o = a.optJSONObject(i);
+            if (o == null) continue;
+            int month = o.optInt("m");
+            int day = o.optInt("d");
+            String who = o.optString("who", "");
+            if (Day.valid(month, day) && !who.isEmpty()) days.add(new Day(month, day, o.optBoolean("birthday", true), who));
         }
-        Collections.sort(days, (a, b) -> a.month != b.month ? a.month - b.month : a.day - b.day);
+        Collections.sort(days, (x, y) -> x.month != y.month ? x.month - y.month : x.day - y.day);
         return days;
     }
 
@@ -59,7 +88,7 @@ final class People {
         } catch (JSONException e) {
             throw new IllegalStateException(e);
         }
-        prefs.edit().putString("people", a.toString()).commit();
+        prefs.edit().putString(KEY, a.toString()).apply();
     }
 
     static void add(SharedPreferences prefs, Day day) {
@@ -68,16 +97,28 @@ final class People {
         save(prefs, days);
     }
 
-    /** Replaces the day at {@code index} in calendar order. */
-    static void update(SharedPreferences prefs, int index, Day day) {
+    /** Replaces the day with this {@link Day#key()}; false, changing nothing, if it has gone. */
+    static boolean update(SharedPreferences prefs, String key, Day day) {
         List<Day> days = load(prefs);
-        if (index >= 0 && index < days.size()) days.set(index, day);
+        int i = indexOf(days, key);
+        if (i < 0) return false;
+        days.set(i, day);
         save(prefs, days);
+        return true;
     }
 
-    static void remove(SharedPreferences prefs, int index) {
+    /** Removes the day with this {@link Day#key()}; false, changing nothing, if it has gone. */
+    static boolean remove(SharedPreferences prefs, String key) {
         List<Day> days = load(prefs);
-        if (index >= 0 && index < days.size()) days.remove(index);
+        int i = indexOf(days, key);
+        if (i < 0) return false;
+        days.remove(i);
         save(prefs, days);
+        return true;
+    }
+
+    private static int indexOf(List<Day> days, String key) {
+        for (int i = 0; i < days.size(); i++) if (days.get(i).key().equals(key)) return i;
+        return -1;
     }
 }

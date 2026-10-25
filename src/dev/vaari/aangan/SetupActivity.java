@@ -2,18 +2,14 @@ package dev.vaari.aangan;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.ActivityNotFoundException;
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.text.InputType;
-import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,7 +23,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.YearMonth;
+import java.time.format.TextStyle;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -39,11 +37,9 @@ import java.util.concurrent.Executors;
  */
 public class SetupActivity extends Activity {
 
-    private static final int LABEL = 0xFFF5F5F7;
-    private static final int SECONDARY = 0x99EBEBF5;
-    private static final int TERTIARY = 0x4DEBEBF5;
-    private static final String[] MONTHS = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+    private static final String[] MONTHS = Dates.months(TextStyle.SHORT);
 
+    private Ui ui;
     private SharedPreferences prefs;
     private LinearLayout rows;
     private LinearLayout phonePanel;
@@ -53,39 +49,32 @@ public class SetupActivity extends Activity {
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
-        prefs = getSharedPreferences("aangan", MODE_PRIVATE);
+        ui = new Ui(this);
+        prefs = Prefs.of(this);
 
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.HORIZONTAL);
-        root.setPadding(dp(48), dp(36), dp(48), dp(24));
+        LinearLayout root = ui.row();
+        root.setPadding(ui.dp(48), ui.dp(36), ui.dp(48), ui.dp(24));
 
-        LinearLayout left = new LinearLayout(this);
-        left.setOrientation(LinearLayout.VERTICAL);
-        left.addView(text(34, 300, LABEL, "Settings"));
+        LinearLayout left = ui.column();
+        left.addView(ui.text(34, 300, Ui.LABEL, "Settings"));
         ScrollView scroll = new ScrollView(this);
         scroll.setVerticalScrollBarEnabled(false);
         // Rows fade out under the title rather than butting against it.
         scroll.setVerticalFadingEdgeEnabled(true);
-        scroll.setFadingEdgeLength(dp(32));
-        rows = new LinearLayout(this);
-        rows.setOrientation(LinearLayout.VERTICAL);
-        rows.setPadding(0, dp(12), 0, dp(24));
+        scroll.setFadingEdgeLength(ui.dp(32));
+        rows = ui.column();
+        rows.setPadding(0, ui.dp(12), 0, ui.dp(24));
         scroll.addView(rows);
         left.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
         root.addView(left, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1));
 
-        phonePanel = new LinearLayout(this);
-        phonePanel.setOrientation(LinearLayout.VERTICAL);
+        phonePanel = ui.column();
         phonePanel.setGravity(Gravity.CENTER_HORIZONTAL);
-        phonePanel.setPadding(dp(24), dp(24), dp(24), dp(24));
-        GradientDrawable card = new GradientDrawable();
-        card.setColor(0xFF1F2026);
-        card.setCornerRadius(dp(20));
-        card.setStroke(Math.max(1, dp(0.75f)), 0x1FFFFFFF);
-        phonePanel.setBackground(card);
-        LinearLayout.LayoutParams panelLp = new LinearLayout.LayoutParams(dp(290), ViewGroup.LayoutParams.WRAP_CONTENT);
-        panelLp.leftMargin = dp(40);
-        panelLp.topMargin = dp(56);
+        phonePanel.setPadding(ui.dp(24), ui.dp(24), ui.dp(24), ui.dp(24));
+        phonePanel.setBackground(ui.panel(20));
+        LinearLayout.LayoutParams panelLp = new LinearLayout.LayoutParams(ui.dp(290), ViewGroup.LayoutParams.WRAP_CONTENT);
+        panelLp.leftMargin = ui.dp(40);
+        panelLp.topMargin = ui.dp(56);
         root.addView(phonePanel, panelLp);
 
         setContentView(root);
@@ -95,7 +84,7 @@ public class SetupActivity extends Activity {
     protected void onResume() {
         super.onResume();
         phone = new PhoneSetup(this, prefs, this::showRows);
-        showPhonePanel(phone.start(this));
+        showPhonePanel(phone.start());
         showRows();
     }
 
@@ -113,41 +102,25 @@ public class SetupActivity extends Activity {
 
     // ---- views ------------------------------------------------------------------------------
 
-    private int dp(float v) {
-        return Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, getResources().getDisplayMetrics()));
-    }
-
-    private TextView text(float sp, int weight, int color, String s) {
-        TextView t = new TextView(this);
-        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
-        t.setTypeface(Typeface.create(Typeface.DEFAULT, weight, false));
-        t.setTextColor(color);
-        t.setText(s);
-        return t;
-    }
-
     private void heading(String s) {
-        TextView t = text(11, 600, TERTIARY, s.toUpperCase());
+        TextView t = ui.text(11, 600, Ui.TERTIARY, s.toUpperCase());
         t.setLetterSpacing(0.08f);
-        t.setPadding(dp(16), dp(20), 0, dp(6));
+        t.setPadding(ui.dp(16), ui.dp(20), 0, ui.dp(6));
         rows.addView(t);
     }
 
     /** A focusable line with a title on the left and its current value on the right. */
     private void row(String title, String value, View.OnClickListener action) {
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout row = ui.row();
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(16), dp(12), dp(16), dp(12));
+        row.setPadding(ui.dp(16), ui.dp(12), ui.dp(16), ui.dp(12));
         row.setFocusable(true);
         row.setClickable(true);
-        GradientDrawable focused = new GradientDrawable();
-        focused.setColor(0x26FFFFFF);
-        focused.setCornerRadius(dp(12));
-        row.setOnFocusChangeListener((v, has) -> v.setBackground(has ? focused : null));
+        GradientDrawable focused = ui.rounded(Ui.FOCUS_FILL, 12);
+        row.setOnFocusChangeListener((v, hasFocus) -> v.setBackground(hasFocus ? focused : null));
         row.setOnClickListener(action);
-        row.addView(text(16, 500, LABEL, title), new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-        row.addView(text(14, 400, SECONDARY, value));
+        row.addView(ui.text(16, 500, Ui.LABEL, title), Ui.share(1));
+        row.addView(ui.text(14, 400, Ui.SECONDARY, value));
         rows.addView(row);
     }
 
@@ -159,20 +132,17 @@ public class SetupActivity extends Activity {
         Place place = Place.load(prefs);
         row("City", place.name, v -> askCity());
         row("Open with the Home button", HomeButton.isOn(this) ? "On" : "Off", v -> HomeButton.askToTurnOn(this));
-        row("Screensaver", "Choose", v -> open(Settings.ACTION_DREAM_SETTINGS));
+        row("Screensaver", "Choose", v -> Ui.openSettings(this, Settings.ACTION_DREAM_SETTINGS));
 
         heading("Birthdays & anniversaries");
-        List<People.Day> days = People.load(prefs);
-        for (int i = 0; i < days.size(); i++) {
-            People.Day d = days.get(i);
-            int index = i;
-            row(d.who, (d.birthday ? "Birthday" : "Anniversary") + "  ·  " + d.day + " " + MONTHS[d.month - 1],
+        for (People.Day d : People.load(prefs)) {
+            row(d.who, (d.birthday ? "Birthday" : "Anniversary") + "  ·  " + Dates.dayMonth(d.month, d.day),
                     v -> dialog(d.who).setItems(new String[]{"Edit", "Remove"}, (dlg, which) -> {
-                        if (which == 0) askDay(index, d);
-                        else confirmRemove(index, d);
+                        if (which == 0) askDay(d);
+                        else confirmRemove(d);
                     }).show());
         }
-        row("Add one", "", v -> askDay(-1, null));
+        row("Add one", "", v -> askDay(null));
 
         heading("Festivals");
         for (Festival f : Festival.editable(Festival.today())) {
@@ -186,45 +156,37 @@ public class SetupActivity extends Activity {
 
     private void showPhonePanel(String url) {
         phonePanel.removeAllViews();
-        phonePanel.addView(text(18, 600, LABEL, "Set up from your phone"));
+        phonePanel.addView(ui.text(18, 600, Ui.LABEL, "Set up from your phone"));
         if (url == null) {
-            TextView t = text(13, 400, SECONDARY, "Connect the TV to Wi-Fi to set things up from a phone.");
-            t.setPadding(0, dp(12), 0, 0);
+            TextView t = ui.text(13, 400, Ui.SECONDARY, "Connect the TV to Wi-Fi to set things up from a phone.");
+            t.setPadding(0, ui.dp(12), 0, 0);
             phonePanel.addView(t);
             return;
         }
-        LinearLayout.LayoutParams qrLp = new LinearLayout.LayoutParams(dp(176), dp(176));
-        qrLp.topMargin = dp(16);
-        qrLp.bottomMargin = dp(14);
+        LinearLayout.LayoutParams qrLp = new LinearLayout.LayoutParams(ui.dp(176), ui.dp(176));
+        qrLp.topMargin = ui.dp(16);
+        qrLp.bottomMargin = ui.dp(14);
         phonePanel.addView(new QrView(this, QrCode.encode(url)), qrLp);
-        TextView how = text(13, 400, SECONDARY, "Scan with your phone's camera to set the city, the family's days and festival dates. "
+        TextView how = ui.text(13, 400, Ui.SECONDARY, "Scan with your phone's camera to set the city, the family's days and festival dates. "
                 + "Your phone needs to be on the same Wi-Fi.");
         how.setGravity(Gravity.CENTER_HORIZONTAL);
         phonePanel.addView(how);
-        TextView link = text(11, 400, TERTIARY, url.replace("http://", ""));
+        TextView link = ui.text(11, 400, Ui.TERTIARY, url.replace("http://", ""));
         link.setGravity(Gravity.CENTER_HORIZONTAL);
-        link.setPadding(0, dp(10), 0, 0);
+        link.setPadding(0, ui.dp(10), 0, 0);
         phonePanel.addView(link);
         // Browsers warn about any page without HTTPS, and a TV on a home network can't have it.
-        TextView warning = text(11, 400, TERTIARY, "If your phone says the page isn't secure, choose to continue. "
+        TextView warning = ui.text(11, 400, Ui.TERTIARY, "If your phone says the page isn't secure, choose to continue. "
                 + "It's served by this TV and stays on your Wi-Fi.");
         warning.setGravity(Gravity.CENTER_HORIZONTAL);
-        warning.setPadding(0, dp(8), 0, 0);
+        warning.setPadding(0, ui.dp(8), 0, 0);
         phonePanel.addView(warning);
     }
 
     // ---- actions ----------------------------------------------------------------------------
 
-    private void open(String action) {
-        try {
-            startActivity(new Intent(action));
-        } catch (ActivityNotFoundException | SecurityException e) {
-            startActivity(new Intent(Settings.ACTION_SETTINGS));
-        }
-    }
-
     private AlertDialog.Builder dialog(String title) {
-        return new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert).setTitle(title);
+        return Ui.dialog(this, title);
     }
 
     private void askCity() {
@@ -250,6 +212,8 @@ public class SetupActivity extends Activity {
             }
             List<Place> places = found;
             runOnUiThread(() -> {
+                // The search can outlast the screen; a dialog on a closed one would crash.
+                if (isFinishing() || isDestroyed()) return;
                 if (places == null || places.isEmpty()) {
                     Toast.makeText(this, places == null ? "Couldn't search. Is the TV online?" : "No places called " + query,
                             Toast.LENGTH_LONG).show();
@@ -266,10 +230,9 @@ public class SetupActivity extends Activity {
         });
     }
 
-    /** Adds a day when {@code index} is -1, or edits the day at {@code index}. */
-    private void askDay(int index, People.Day existing) {
-        LinearLayout form = new LinearLayout(this);
-        form.setOrientation(LinearLayout.VERTICAL);
+    /** Adds a day when {@code existing} is null, or edits it. */
+    private void askDay(People.Day existing) {
+        LinearLayout form = ui.column();
         EditText who = new EditText(this);
         who.setHint("Name, e.g. Asha or Asha & Rohan");
         who.setSingleLine(true);
@@ -292,19 +255,13 @@ public class SetupActivity extends Activity {
 
         LinearLayout date = new LinearLayout(this);
         date.setGravity(Gravity.CENTER);
-        NumberPicker day = new NumberPicker(this);
-        day.setMinValue(1);
-        day.setMaxValue(31);
-        NumberPicker month = new NumberPicker(this);
-        month.setMinValue(1);
-        month.setMaxValue(12);
-        month.setDisplayedValues(MONTHS);
+        NumberPicker[] dayMonth = dayMonthPickers(date);
+        NumberPicker day = dayMonth[0];
+        NumberPicker month = dayMonth[1];
         if (existing != null) {
             day.setValue(existing.day);
             month.setValue(existing.month);
         }
-        date.addView(day);
-        date.addView(month);
         form.addView(date);
 
         dialog(existing == null ? "Add a birthday or anniversary" : "Edit " + existing.who + "'s day")
@@ -312,20 +269,22 @@ public class SetupActivity extends Activity {
                 .setPositiveButton(existing == null ? "Add" : "Save", (d, w) -> {
                     String name = who.getText().toString().trim();
                     if (name.isEmpty()) return;
-                    People.Day edited = new People.Day(month.getValue(), day.getValue(),
+                    // The day wheel always runs to 31; 31 February becomes the 29th, the month's last.
+                    int m = month.getValue();
+                    People.Day edited = new People.Day(m, Math.min(day.getValue(), Month.of(m).maxLength()),
                             kind.getCheckedRadioButtonId() == birthday.getId(), name);
                     if (existing == null) People.add(prefs, edited);
-                    else People.update(prefs, index, edited);
+                    else People.update(prefs, existing.key(), edited);
                     showRows();
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
     }
 
-    private void confirmRemove(int index, People.Day d) {
+    private void confirmRemove(People.Day d) {
         dialog("Remove " + d.who + "'s " + (d.birthday ? "birthday" : "anniversary") + "?")
                 .setPositiveButton("Remove", (dlg, w) -> {
-                    People.remove(prefs, index);
+                    People.remove(prefs, d.key());
                     showRows();
                 })
                 .setNegativeButton("Keep", null)
@@ -334,7 +293,7 @@ public class SetupActivity extends Activity {
 
     private void askFestival(Festival f) {
         String[] actions = f.moved()
-                ? new String[]{"Change the date", f.hidden ? "Show it" : "Hide it", "Back to " + shortDay(f.original)}
+                ? new String[]{"Change the date", f.hidden ? "Show it" : "Hide it", "Back to " + Dates.dayMonth(f.original)}
                 : new String[]{"Change the date", f.hidden ? "Show it" : "Hide it"};
         dialog(f.name).setItems(actions, (d, which) -> {
             if (which == 0) askFestivalDate(f);
@@ -347,22 +306,17 @@ public class SetupActivity extends Activity {
     private void askFestivalDate(Festival f) {
         LinearLayout date = new LinearLayout(this);
         date.setGravity(Gravity.CENTER);
-        NumberPicker day = new NumberPicker(this);
-        day.setMinValue(1);
-        day.setMaxValue(31);
+        NumberPicker[] dayMonth = dayMonthPickers(date);
+        NumberPicker day = dayMonth[0];
+        NumberPicker month = dayMonth[1];
         day.setValue(f.date.getDayOfMonth());
-        NumberPicker month = new NumberPicker(this);
-        month.setMinValue(1);
-        month.setMaxValue(12);
-        month.setDisplayedValues(MONTHS);
         month.setValue(f.date.getMonthValue());
+        // Only the years a move can reach; Festival.move keeps the date itself within range.
         NumberPicker year = new NumberPicker(this);
-        year.setMinValue(f.original.getYear() - 1);
-        year.setMaxValue(f.original.getYear() + 1);
+        year.setMinValue(f.clampMove(LocalDate.MIN).getYear());
+        year.setMaxValue(f.clampMove(LocalDate.MAX).getYear());
         year.setValue(f.date.getYear());
         year.setWrapSelectorWheel(false);
-        date.addView(day);
-        date.addView(month);
         date.addView(year);
         dialog("When is " + f.name + "?")
                 .setView(padded(date))
@@ -375,19 +329,31 @@ public class SetupActivity extends Activity {
                 .show();
     }
 
-    private static String shortDay(LocalDate date) {
-        return date.getDayOfMonth() + " " + MONTHS[date.getMonthValue() - 1];
+    /** A day wheel (1 to 31) and a month wheel ("Jan" to "Dec"), added to {@code into} in that order. */
+    private NumberPicker[] dayMonthPickers(LinearLayout into) {
+        NumberPicker day = new NumberPicker(this);
+        day.setMinValue(1);
+        day.setMaxValue(31);
+        NumberPicker month = new NumberPicker(this);
+        month.setMinValue(1);
+        month.setMaxValue(12);
+        month.setDisplayedValues(MONTHS);
+        into.addView(day);
+        into.addView(month);
+        return new NumberPicker[]{day, month};
     }
 
     private View padded(View content) {
         LinearLayout box = new LinearLayout(this);
-        box.setPadding(dp(24), dp(8), dp(24), 0);
-        box.addView(content, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        box.setPadding(ui.dp(24), ui.dp(8), ui.dp(24), 0);
+        box.addView(content, Ui.fill());
         return box;
     }
 
     /** A QR code, black on white with the standard four-module quiet zone. */
     private static final class QrView extends View {
+        /** The quiet zone around the code, in modules, as the QR standard requires. */
+        private static final int QUIET = 4;
         private final boolean[][] modules;
         private final Paint paint = new Paint();
 
@@ -398,14 +364,16 @@ public class SetupActivity extends Activity {
 
         @Override
         protected void onDraw(Canvas c) {
-            int n = modules.length + 8;
+            int n = modules.length + 2 * QUIET;
             float cell = Math.min(getWidth(), getHeight()) / (float) n;
             paint.setColor(0xFFFFFFFF);
             c.drawRoundRect(0, 0, cell * n, cell * n, cell * 2, cell * 2, paint);
             paint.setColor(0xFF000000);
             for (int y = 0; y < modules.length; y++) {
                 for (int x = 0; x < modules.length; x++) {
-                    if (modules[y][x]) c.drawRect((x + 4) * cell, (y + 4) * cell, (x + 5) * cell, (y + 5) * cell, paint);
+                    if (modules[y][x]) {
+                        c.drawRect((x + QUIET) * cell, (y + QUIET) * cell, (x + QUIET + 1) * cell, (y + QUIET + 1) * cell, paint);
+                    }
                 }
             }
         }

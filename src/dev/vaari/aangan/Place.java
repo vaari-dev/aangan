@@ -17,6 +17,7 @@ import java.util.List;
  */
 final class Place {
 
+    private static final String KEY = "place";
     static final Place DEFAULT = new Place("Gurgaon", "Haryana, India", 28.46, 77.03, "Asia/Kolkata", "IN");
 
     final String name;
@@ -38,20 +39,19 @@ final class Place {
     }
 
     static Place load(SharedPreferences prefs) {
-        String json = prefs.getString("place", null);
-        if (json == null) return DEFAULT;
+        if (!prefs.contains(KEY)) return DEFAULT;
         try {
-            return fromJson(new JSONObject(json));
+            return fromJson(Prefs.object(prefs, KEY));
         } catch (JSONException e) {
             return DEFAULT;
         }
     }
 
     void save(SharedPreferences prefs) {
-        prefs.edit().putString("place", toJson().toString()).apply();
+        prefs.edit().putString(KEY, toJson().toString()).apply();
     }
 
-    JSONObject toJson() {
+    private JSONObject toJson() {
         try {
             return new JSONObject().put("name", name).put("region", region).put("lat", lat).put("lon", lon)
                     .put("timezone", timezone).put("country", country);
@@ -60,7 +60,7 @@ final class Place {
         }
     }
 
-    static Place fromJson(JSONObject o) throws JSONException {
+    private static Place fromJson(JSONObject o) throws JSONException {
         return new Place(o.getString("name"), o.optString("region", ""), o.getDouble("lat"), o.getDouble("lon"),
                 o.getString("timezone"), o.optString("country", ""));
     }
