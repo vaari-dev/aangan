@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 90" width="640" height="360">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFE3A8"/><stop offset="0.45" stop-color="#FF9E6B"/><stop offset="1" stop-color="#7B4BA8"/>
+    </linearGradient>
+    <radialGradient id="sunglow" cx="66" cy="31" r="26" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFBE8" stop-opacity="0.95"/><stop offset="0.35" stop-color="#FFF1C4" stop-opacity="0.55"/><stop offset="1" stop-color="#FFF1C4" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="top" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#B9532C"/><stop offset="1" stop-color="#E58A55"/></linearGradient>
+    <linearGradient id="left" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#E9955C"/><stop offset="1" stop-color="#FFC58C"/></linearGradient>
+    <linearGradient id="right" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#7C2E1C"/><stop offset="1" stop-color="#B4502E"/></linearGradient>
+    <linearGradient id="bottom" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#5E2418"/><stop offset="1" stop-color="#9A4027"/></linearGradient>
+  </defs>
+  <path d="M0,0 H160 L110,24 H50 Z" fill="url(#top)"/>
+  <path d="M0,0 L50,24 V66 L0,90 Z" fill="url(#left)"/>
+  <path d="M160,0 V90 L110,66 V24 Z" fill="url(#right)"/>
+  <path d="M0,90 L50,66 H110 L160,90 Z" fill="url(#bottom)"/>
+  <g fill="#3A140C" fill-opacity="0.45">
+    <path d="M12,58 V38.5 A3.5,3.5 0 0 1 19,38.5 V55.5 Z"/>
+    <path d="M27,53 V42 A2.5,2.5 0 0 1 32,42 V51.5 Z"/>
+    <path d="M148,58 V38.5 A3.5,3.5 0 0 0 141,38.5 V55.5 Z"/>
+    <path d="M133,53 V42 A2.5,2.5 0 0 0 128,42 V51.5 Z"/>
+    <path d="M60,15 L61,10 A4,4 0 0 1 69,10 L70,15 Z"/><path d="M75,15 L76,10 A4,4 0 0 1 84,10 L85,15 Z"/><path d="M90,15 L91,10 A4,4 0 0 1 99,10 L100,15 Z"/>
+    <path d="M60,75 L61,80 A4,4 0 0 0 69,80 L70,75 Z"/><path d="M75,75 L76,80 A4,4 0 0 0 84,80 L85,75 Z"/><path d="M90,75 L91,80 A4,4 0 0 0 99,80 L100,75 Z"/>
+  </g>
+  <path d="M50,24 H110 V66 H50 Z" fill="none" stroke="#FFE2BA" stroke-width="2.2" stroke-opacity="0.9"/>
+  <rect x="51.1" y="25.1" width="57.8" height="39.8" fill="url(#sky)"/>
+  <rect x="51.1" y="25.1" width="57.8" height="39.8" fill="url(#sunglow)"/>
+  <circle cx="66" cy="34" r="5" fill="#FFFDF2"/>
+  <g fill="none" stroke="#3B1F4A" stroke-width="0.9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M82,50 q1.8,-1.8 3.6,0 q1.8,-1.8 3.6,0"/><path d="M90,43 q1.2,-1.2 2.4,0 q1.2,-1.2 2.4,0"/><path d="M95,52 q0.9,-0.9 1.8,0 q0.9,-0.9 1.8,0"/>
+  </g>
+  <g stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="0.7"><path d="M0,0 L50,24 M160,0 L110,24 M0,90 L50,66 M160,90 L110,66"/></g>
+</svg>

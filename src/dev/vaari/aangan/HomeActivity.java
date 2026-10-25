@@ -120,6 +120,9 @@ public class HomeActivity extends Activity {
     /** A festival's opening plays again only after this long away from the home screen. */
     private static final long FESTIVE_REPLAY_MS = 3 * 60 * 60_000L;
 
+    /** How many visits to the home screen show the tips. */
+    private static final int TIP_VISITS = 8;
+
     /** How often to check, while visible, whether weather or air quality is due a refresh. */
     private static final long WEATHER_CHECK_MS = 5 * 60_000L;
 
@@ -162,6 +165,7 @@ public class HomeActivity extends Activity {
     private TextView aqiCategoryView;
     private TextView credit;
     private TextView festivalView;
+    private TextView tip;
     private Festive festive;
     /** A festival to show instead of today's, set with: am start -n dev.vaari.aangan/.HomeActivity --es festival Holi */
     private String preview;
@@ -216,6 +220,7 @@ public class HomeActivity extends Activity {
         weather = Weather.load(prefs);
         Festival.load(this, prefs);
         refresh();
+        welcomeOrTip();
         showFestival();
         maybeRefreshWeather();
     }
@@ -225,6 +230,24 @@ public class HomeActivity extends Activity {
         resumed = false;
         handler.removeCallbacks(weatherCheck);
         super.onPause();
+    }
+
+    /** The first time on a TV that isn't set up, the welcome; then a few visits with a tip. */
+    private void welcomeOrTip() {
+        if (WelcomeActivity.needed(prefs)) {
+            if (!isSetUp()) {
+                startActivity(new Intent(this, WelcomeActivity.class));
+                return;
+            }
+            prefs.edit().putBoolean("welcomed", true).apply();
+        }
+        int shown = prefs.getInt("tips", 0);
+        if (shown >= TIP_VISITS) {
+            tip.setVisibility(View.GONE);
+            return;
+        }
+        prefs.edit().putInt("tips", shown + 1).apply();
+        tip.animate().alpha(1f).setStartDelay(1200).setDuration(600).start();
     }
 
     /** Pressing Home while already home returns to the top row. */
@@ -309,6 +332,14 @@ public class HomeActivity extends Activity {
         root.addView(festive, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         root.addView(ambient, new FrameLayout.LayoutParams(dp(Ambient.WIDTH), dp(Ambient.HEIGHT)));
         root.addView(scroll, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        // One-time tips along the bottom edge, for the first few visits.
+        tip = text(13, 400, SECONDARY);
+        tip.setText("Press  ▲  then OK for today's weather and air     ·     Hold OK on an app to move or hide it");
+        tip.setAlpha(0f);
+        FrameLayout.LayoutParams tipLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+        tipLp.bottomMargin = dp(22);
+        root.addView(tip, tipLp);
         setContentView(root);
         paintBackdrop(glowColor());
     }

@@ -1,28 +1,67 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Aangan icon: a sunlit courtyard seen through an arched doorway, on a night-indigo tile. -->
+<!-- Aangan's icon: looking up from the middle of a courtyard. Four sandstone walls, each lit
+     differently, rise to a square of open sky with the sun and two birds crossing. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="96dp"
     android:height="96dp"
     android:viewportWidth="48"
     android:viewportHeight="48">
-    <path android:pathData="M10,0 H38 A10,10 0 0 1 48,10 V38 A10,10 0 0 1 38,48 H10 A10,10 0 0 1 0,38 V10 A10,10 0 0 1 10,0 Z">
-        <aapt:attr name="android:fillColor">
-            <gradient android:type="linear" android:startX="0" android:startY="0" android:endX="0" android:endY="48"
-                android:startColor="#FF262A52" android:endColor="#FF14162E" />
-        </aapt:attr>
-    </path>
-    <!-- The doorway, lit from within. -->
-    <path android:pathData="M15,37 V23 A9,9 0 0 1 33,23 V37 Z">
-        <aapt:attr name="android:fillColor">
-            <gradient android:type="linear" android:startX="0" android:startY="14" android:endX="0" android:endY="37"
-                android:startColor="#FFFFD58A" android:endColor="#FFFF7A45" />
-        </aapt:attr>
-    </path>
-    <!-- The sun over the courtyard. -->
-    <path android:fillColor="#FFFFF4D6" android:pathData="M24,21.5 m-3.5,0 a3.5,3.5 0 1,0 7,0 a3.5,3.5 0 1,0 -7,0" />
-    <!-- The arch's frame and the threshold. -->
-    <path android:strokeColor="#FFFFE3B0" android:strokeWidth="1.4" android:fillColor="#00000000"
-        android:pathData="M13,37 V23 A11,11 0 0 1 35,23 V37" />
-    <path android:fillColor="#FFFFE3B0" android:pathData="M10,37 H38 V39.2 H10 Z" />
+    <group>
+        <clip-path android:pathData="M11,0 H37 A11,11 0 0 1 48,11 V37 A11,11 0 0 1 37,48 H11 A11,11 0 0 1 0,37 V11 A11,11 0 0 1 11,0 Z" />
+        <!-- The walls. -->
+        <path android:pathData="M0,0 H48 L33,15 H15 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="linear" android:startX="0" android:startY="0" android:endX="0" android:endY="15"
+                    android:startColor="#FFB9532C" android:endColor="#FFE58A55" />
+            </aapt:attr>
+        </path>
+        <path android:pathData="M0,0 L15,15 V33 L0,48 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="linear" android:startX="0" android:startY="0" android:endX="15" android:endY="0"
+                    android:startColor="#FFE9955C" android:endColor="#FFFFC58C" />
+            </aapt:attr>
+        </path>
+        <path android:pathData="M48,0 V48 L33,33 V15 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="linear" android:startX="48" android:startY="0" android:endX="33" android:endY="0"
+                    android:startColor="#FF7C2E1C" android:endColor="#FFB4502E" />
+            </aapt:attr>
+        </path>
+        <path android:pathData="M0,48 L15,33 H33 L48,48 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="linear" android:startX="0" android:startY="48" android:endX="0" android:endY="33"
+                    android:startColor="#FF5E2418" android:endColor="#FF9A4027" />
+            </aapt:attr>
+        </path>
+        <!-- Arched windows, foreshortened. -->
+        <path android:fillColor="#733A140C"
+            android:pathData="M5.2,28 V20.6 A1.5,1.5 0 0 1 8.2,20.6 V26.8 Z M42.8,28 V20.6 A1.5,1.5 0 0 0 39.8,20.6 V26.8 Z M21,9.2 L21.5,6.6 A2.5,2.5 0 0 1 26.5,6.6 L27,9.2 Z M21,38.8 L21.5,41.4 A2.5,2.5 0 0 0 26.5,41.4 L27,38.8 Z" />
+        <!-- The cornice, and the sky. -->
+        <path android:strokeColor="#E6FFE2BA" android:strokeWidth="1.6" android:pathData="M15,15 H33 V33 H15 Z" />
+        <path android:pathData="M15.8,15.8 H32.2 V32.2 H15.8 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="linear" android:startX="15.8" android:startY="15.8" android:endX="32.2" android:endY="32.2">
+                    <item android:offset="0" android:color="#FFFFE3A8" />
+                    <item android:offset="0.45" android:color="#FFFF9E6B" />
+                    <item android:offset="1" android:color="#FF7B4BA8" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path android:pathData="M15.8,15.8 H32.2 V32.2 H15.8 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="radial" android:centerX="19" android:centerY="19" android:gradientRadius="12">
+                    <item android:offset="0" android:color="#F2FFFBE8" />
+                    <item android:offset="0.35" android:color="#8CFFF1C4" />
+                    <item android:offset="1" android:color="#00FFF1C4" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path android:fillColor="#FFFFFDF2" android:pathData="M19.6,19.6 m-2.6,0 a2.6,2.6 0 1,0 5.2,0 a2.6,2.6 0 1,0 -5.2,0" />
+        <path android:strokeColor="#FF3B1F4A" android:strokeWidth="0.55" android:strokeLineCap="round" android:strokeLineJoin="round"
+            android:pathData="M24.6,25.4 q0.9,-0.9 1.8,0 q0.9,-0.9 1.8,0 M27.8,22.6 q0.6,-0.6 1.2,0 q0.6,-0.6 1.2,0" />
+        <!-- Seams where the walls meet, for depth. -->
+        <path android:strokeColor="#1FFFFFFF" android:strokeWidth="0.5"
+            android:pathData="M0,0 L15,15 M48,0 L33,15 M0,48 L15,33 M48,48 L33,33" />
+    </group>
 </vector>
