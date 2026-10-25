@@ -40,12 +40,19 @@ import java.util.Map;
 public class SetupActivity extends Activity {
 
     private static final String[] MONTHS = Dates.months(TextStyle.SHORT);
+    private static final ComponentName SONY_SCREENSAVER =
+            new ComponentName("com.android.tv.settings", "com.sony.dtv.settings.device.display.daydream.DaydreamActivity");
 
     private Ui ui;
     private SharedPreferences prefs;
     private LinearLayout rows;
     private LinearLayout phonePanel;
     private PhoneSetup phone;
+
+    @Override
+    protected void attachBaseContext(Context base) {
+        super.attachBaseContext(Ui.canvas(base));
+    }
 
     @Override
     protected void onCreate(Bundle state) {
@@ -134,9 +141,11 @@ public class SetupActivity extends Activity {
         row("City", place.name, v -> startActivity(new Intent(this, CityActivity.class)));
         row("Dock", dockNames(), v -> askDock());
         row("Open with the Home button", HomeButton.isOn(this) ? "On" : "Off", v -> HomeButton.askToTurnOn(this));
-        // Sony's Android 9 TVs keep the screensaver page under their own name.
-        row("Screensaver", "Choose", v -> Ui.openSettings(this, Settings.ACTION_DREAM_SETTINGS,
-                new ComponentName("com.android.tv.settings", "com.sony.dtv.settings.device.display.daydream.DaydreamActivity")));
+        // Only where the TV lets people choose a screensaver: recent Google TVs offer only their own
+        // Ambient mode. Sony's Android 9 TVs keep the page under their own name.
+        if (Ui.hasSettings(this, Settings.ACTION_DREAM_SETTINGS, SONY_SCREENSAVER)) {
+            row("Screensaver", "Choose", v -> Ui.openSettings(this, Settings.ACTION_DREAM_SETTINGS, SONY_SCREENSAVER));
+        }
         String crash = Crash.report(this);
         if (crash != null) row("Aangan closed unexpectedly", Crash.when(crash), v -> showCrash());
 

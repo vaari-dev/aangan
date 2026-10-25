@@ -16,6 +16,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 
 import release
 
@@ -139,7 +140,8 @@ def structured(name, meta, body, url):
     if name == "index":
         graph.append({
             "@type": "SoftwareApplication", "@id": SITE + "#app", "name": "Aangan",
-            "alternateName": "Aangan TV launcher", "description": meta["description"],
+            "alternateName": ["Aangan TV launcher", "Aangan launcher for Android TV and Google TV"],
+            "description": meta["description"],
             "applicationCategory": "UtilitiesApplication", "applicationSubCategory": "Launcher",
             "operatingSystem": "Android TV 9+, Google TV", "softwareVersion": release.version(),
             "license": "https://opensource.org/licenses/MIT", "isAccessibleForFree": True,
@@ -148,10 +150,14 @@ def structured(name, meta, body, url):
             "codeRepository": REPO, "inLanguage": "en",
             "screenshot": [SITE + f for f in ("home.jpg", "today.jpg", "diwali.jpg", "settings.jpg")],
             "image": SITE + "social.png", "author": {"@id": SITE + "#org"}, "publisher": {"@id": SITE + "#org"},
-            "featureList": ["No ads, tracking or account", "Weather and air quality (CPCB AQI, US AQI)",
+            # No aggregateRating or review: Google's software-app rich result needs one, and there are
+            # no genuine ratings to give. The markup still describes the app to search engines.
+            "featureList": ["No ads, tracking or account", "A dock of four apps you choose",
+                            "Weather and air quality (CPCB AQI in India, US AQI elsewhere)",
+                            "City search that knows older names such as Bombay and Gurgaon",
                             "Indian festival countdowns and animated scenes", "Birthdays and anniversaries",
-                            "A dock of four apps you choose", "Set up from your phone by QR code",
-                            "Opens with the Home button without adb", "Screensaver"],
+                            "Set up from your phone by QR code", "Opens with the Home button without adb",
+                            "Clock screensaver", "Crash notes kept on the TV, never sent"],
         })
     else:
         graph.append({"@type": "BreadcrumbList", "itemListElement": [
@@ -228,6 +234,22 @@ def page(name, meta, body):
     return out
 
 
+def lastmod(name):
+    """When the page's sources last changed, from git, or None in a shallow clone, where every file
+    would get the newest commit's date. Google uses lastmod only while it's accurate."""
+    sources = {"changelog": ["CHANGELOG.md"], "festivals": ["site/pages/festivals.html", "assets/festivals.csv"]}
+    files = sources.get(name, [f"site/pages/{name}.html"])
+    try:
+        if subprocess.run(["git", "rev-parse", "--is-shallow-repository"], cwd=ROOT, capture_output=True,
+                          text=True, check=True).stdout.strip() != "false":
+            return None
+        date = subprocess.run(["git", "log", "-1", "--format=%cs", "--", *files], cwd=ROOT, capture_output=True,
+                              text=True, check=True).stdout.strip()
+        return date or None
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
+
 def main():
     shutil.rmtree(OUT, ignore_errors=True)
     os.makedirs(os.path.join(OUT, "assets"))
@@ -248,12 +270,12 @@ def main():
         with open(os.path.join(OUT, name + ".html"), "w", encoding="utf-8") as out:
             out.write(page(name, meta, body))
         if not meta.get("noindex"):
-            indexed.append(SITE + path(name))
+            indexed.append((SITE + path(name), lastmod(name)))
 
-    today = datetime.date.today().isoformat()
     with open(os.path.join(OUT, "sitemap.xml"), "w", encoding="utf-8") as out:
         out.write('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-                  + "".join(f"<url><loc>{u}</loc><lastmod>{today}</lastmod></url>\n" for u in indexed) + "</urlset>\n")
+                  + "".join(f"<url><loc>{u}</loc>" + (f"<lastmod>{d}</lastmod>" if d else "") + "</url>\n"
+                          for u, d in indexed) + "</urlset>\n")
     with open(os.path.join(OUT, "robots.txt"), "w", encoding="utf-8") as out:
         out.write(f"User-agent: *\nAllow: /\n\nSitemap: {SITE}sitemap.xml\n")
     print(f"built {len(sources)} pages into build/site/")

@@ -1,6 +1,7 @@
 package dev.vaari.aangan;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
@@ -40,6 +41,11 @@ public class WelcomeActivity extends Activity {
 
     static void markSeen(SharedPreferences prefs) {
         prefs.edit().putBoolean(WELCOMED, true).apply();
+    }
+
+    @Override
+    protected void attachBaseContext(Context base) {
+        super.attachBaseContext(Ui.canvas(base));
     }
 
     @Override

@@ -1,6 +1,7 @@
 package dev.vaari.aangan;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
@@ -51,6 +52,11 @@ public class CityActivity extends Activity {
     private int asked;
     /** Set by the keyboard's Search key: focus the first result once this search's results arrive. */
     private boolean focusResults;
+
+    @Override
+    protected void attachBaseContext(Context base) {
+        super.attachBaseContext(Ui.canvas(base));
+    }
 
     @Override
     protected void onCreate(Bundle state) {

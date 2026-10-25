@@ -42,6 +42,11 @@ public class ClockDream extends DreamService {
     };
 
     @Override
+    protected void attachBaseContext(Context base) {
+        super.attachBaseContext(Ui.canvas(base));
+    }
+
+    @Override
     public void onAttachedToWindow() {
         super.onAttachedToWindow();
         setInteractive(false);

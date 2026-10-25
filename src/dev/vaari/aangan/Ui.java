@@ -8,9 +8,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.content.res.Configuration;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.provider.Settings;
+import android.util.DisplayMetrics;
 import android.util.TypedValue;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
@@ -37,6 +39,18 @@ final class Ui {
     /** Rain chances and "Rain likely" lines. */
     static final int RAIN = 0xFF64D2FF;
 
+    /** True if this TV has the settings page: by its standard action, or as one of {@code screens}. */
+    static boolean hasSettings(Context context, String action, ComponentName... screens) {
+        if (handled(context, new Intent(action))) return true;
+        for (ComponentName screen : screens) if (handled(context, new Intent().setComponent(screen))) return true;
+        return false;
+    }
+
+    private static boolean handled(Context context, Intent intent) {
+        ResolveInfo r = context.getPackageManager().resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY);
+        return r != null && !r.activityInfo.packageName.equals(STUBS);
+    }
+
     /** Google's stand-ins for settings pages a TV doesn't have. */
     private static final String STUBS = "com.google.android.tv.frameworkpackagestubs";
 
@@ -47,6 +61,24 @@ final class Ui {
     }
 
     // ---- units and type ---------------------------------------------------------------------
+
+    /** Every screen is laid out for a canvas this many dp wide, which is what most TVs report. */
+    private static final int CANVAS_DP = 960;
+
+    /**
+     * {@code base}, with its density adjusted so the screen is {@link #CANVAS_DP} wide. Most TVs
+     * already are (1080p at 320 dpi, 4K at 640); some boxes run 1080p at 240 dpi or less, which
+     * would leave the layout small in one corner. For each screen's attachBaseContext.
+     */
+    static Context canvas(Context base) {
+        DisplayMetrics m = base.getResources().getDisplayMetrics();
+        int dpi = Math.round(Math.max(m.widthPixels, m.heightPixels) * (float) DisplayMetrics.DENSITY_DEFAULT / CANVAS_DP);
+        Configuration config = base.getResources().getConfiguration();
+        if (dpi == config.densityDpi) return base;
+        Configuration scaled = new Configuration(config);
+        scaled.densityDpi = dpi;
+        return base.createConfigurationContext(scaled);
+    }
 
     /** Density-independent pixels to pixels, read afresh each time in case the display changes. */
     int dp(float v) {
@@ -201,8 +233,7 @@ final class Ui {
      * as nothing.
      */
     private static boolean open(Activity activity, Intent intent) {
-        ResolveInfo r = activity.getPackageManager().resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY);
-        if (r == null || r.activityInfo.packageName.equals(STUBS)) return false;
+        if (!handled(activity, intent)) return false;
         try {
             activity.startActivity(intent);
             return true;

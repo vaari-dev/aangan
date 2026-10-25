@@ -13,7 +13,7 @@ graphics are in [`graphics/`](graphics/).
 
 ## 2. Create the app
 
-- Name `Aangan: Private TV Home Screen`, default language English (India) – en-IN, App, Free.
+- Name `Aangan: Private TV Launcher`, default language English (India) – en-IN, App, Free.
 - Package name: `dev.vaari.aangan`, fixed by the first upload.
 
 ## 3. Signing: keep the existing key

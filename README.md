@@ -2,7 +2,7 @@
 
 <h1 align="center">Aangan</h1>
 
-<p align="center"><b>A calm, private home screen for Android TV and Google TV.</b><br>
+<p align="center"><b>A calm, private home screen, or launcher, for Android TV and Google TV.</b><br>
 No ads. No tracking. No account. Just your apps, the sky outside, and the days that matter.</p>
 
 <p align="center"><a href="https://vaari-dev.github.io/aangan/"><b>Website</b></a> · <a href="https://vaari-dev.github.io/aangan/install.html"><b>Install</b></a> · <a href="https://vaari-dev.github.io/aangan/guide.html">Guide</a> · <a href="https://vaari-dev.github.io/aangan/privacy.html">Privacy</a> · <a href="../../releases/latest/download/aangan.apk">Download the latest release</a></p>
@@ -52,7 +52,9 @@ and Independence Day, and for birthdays and anniversaries.
 
 ## Install on any TV, without developer mode
 
-Aangan runs on Android TV and Google TV: Sony, TCL, Hisense, Philips, Xiaomi, Chromecast with Google TV and others.
+Aangan runs on Android TV and Google TV, on Android 9 or later: Sony, TCL, Hisense, Philips, Xiaomi, Chromecast with
+Google TV and others. It's tested on Sony Bravia TVs (Android TV 9 and Google TV 12) and on Google's emulators for
+Android TV 13, Google TV 14 and Google TV 16.
 It can't run on Samsung (Tizen), LG (webOS) or Roku, which don't run Android apps and don't let any app replace the
 home screen or take the Home button. Fire TV blocks other home screens too. On those TVs, plug in a Google TV or Android TV
 streamer and install Aangan there; see [why, and how](https://vaari-dev.github.io/aangan/faq.html#samsung).

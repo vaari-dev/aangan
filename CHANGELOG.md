@@ -2,7 +2,14 @@
 
 Each version's notes become its GitHub release notes and the website's changelog page.
 
-## 1.3.2
+## 1.3.3
+
+- Checked on Android TV 13, Google TV 14 and Google TV 16 (the newest), as well as Android TV 9 and Google TV 12.
+- On TV boxes that use a lower screen density, everything now fills the screen instead of sitting small in one corner.
+- On Google TV, the TV's Settings app no longer appears twice, once as an app and once as Aangan's Settings tile, and can't end up in the dock.
+- Settings shows **Screensaver** only on TVs that let you choose one. Recent Google TVs offer only Google's Ambient mode.
+
+## 1.3.2 · 25 October 2026
 
 - Fixed: on some Android 9 TVs, **Agree and continue** showed "No application can handle this action" instead of opening the accessibility settings, so Aangan couldn't be set to open with Home from the TV. It now opens the TV's own accessibility page, or tells you where to find it.
 - Fixed: on the same TVs, **Screensaver** in Settings opened the TV's main Settings instead of the screensaver page.

@@ -222,6 +222,11 @@ public class HomeActivity extends Activity {
     };
 
     @Override
+    protected void attachBaseContext(Context base) {
+        super.attachBaseContext(Ui.canvas(base));
+    }
+
+    @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         ui = new Ui(this);
