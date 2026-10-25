@@ -5,7 +5,7 @@
 <p align="center"><b>A calm, private home screen for Android TV and Google TV.</b><br>
 No ads. No tracking. No account. Just your apps, the sky outside, and the days that matter.</p>
 
-<p align="center"><a href="../../releases/latest/download/aangan.apk"><b>Download the latest release</b></a></p>
+<p align="center"><a href="https://vaari-dev.github.io/aangan/"><b>Website</b></a> · <a href="https://vaari-dev.github.io/aangan/install.html"><b>Install</b></a> · <a href="https://vaari-dev.github.io/aangan/guide.html">Guide</a> · <a href="https://vaari-dev.github.io/aangan/privacy.html">Privacy</a> · <a href="../../releases/latest/download/aangan.apk">Download the latest release</a></p>
 
 ---
 

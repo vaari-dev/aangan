@@ -1,0 +1,22 @@
+<!-- {"title": "Indian festival calendar 2026–2027 on your TV", "description": "Every festival Aangan celebrates on your TV in 2026 and 2027, from Diwali, Holi and Karwa Chauth to Eid, Gurpurab and Christmas, with dates from Drik Panchang and the scene each one gets."} -->
+<div class="wrap page-head">
+  <p class=eyebrow>Festival calendar</p>
+  <h1>Every festival, and how your TV celebrates it.</h1>
+  <p class=lede>Aangan carries the main Indian festivals and national days, with a countdown before each and a scene on the day. This page is generated from the same calendar the app uses.</p>
+</div>
+<div class="wrap" style="padding-bottom:96px">
+  <section aria-labelledby=scenes-h>
+    <h2 id=scenes-h style="margin-bottom:10px">The scenes</h2>
+    <p class=muted style="margin:0 0 22px;max-width:44em">Each is drawn in code, frame by frame, so the app stays small. It plays an opening, keeps moving gently while the home screen is showing, and rests when you open an app.</p>
+    {{SCENES}}
+  </section>
+  <section aria-labelledby=cal-h style="margin-top:72px">
+    <h2 id=cal-h>The calendar</h2>
+    <p class=muted style="max-width:44em">Dates follow <a href="https://www.drikpanchang.com/calendars/indian/indiancalendar.html">Drik Panchang</a> for New Delhi; national holidays and Eid follow the Government of India's list. Your family keeps a festival on another day? <a href="guide.html#move">Move it on your TV.</a></p>
+    {{CALENDAR}}
+  </section>
+  <section style="margin-top:72px" class=prose>
+    <h2>Missing a festival?</h2>
+    <p>The calendar is a plain text file, <a href="{{REPO}}/blob/main/assets/festivals.csv"><code>assets/festivals.csv</code></a>, one line per day. Suggest an addition or a correction by <a href="{{REPO}}/issues">opening an issue</a>, or edit it and send a pull request. The <a href="developers.html#calendar">developer guide</a> explains the format.</p>
+  </section>
+</div>

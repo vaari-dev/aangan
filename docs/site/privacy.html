@@ -1,0 +1,106 @@
+<!-- {"title": "Privacy policy", "description": "Aangan's privacy policy: no ads, tracking, analytics or accounts. Exactly what the TV launcher stores, what it sends to Open-Meteo for the forecast, and how the phone setup page and Home-button service work."} -->
+<div class="wrap page-head">
+  <p class=eyebrow>Privacy policy</p>
+  <h1>We don't collect anything. Here's exactly what the app does.</h1>
+  <p class=lede>Aangan has no servers, accounts, analytics or advertising, so the people who make it never receive any information about you. This policy explains what stays on your TV and the few things the app sends to a weather service on your behalf.</p>
+  <p class=updated>Effective 25 October 2026 · Applies to Aangan 1.1 and later, and to this website</p>
+</div>
+<div class="wrap doc">
+  <nav class=toc aria-label="On this page"><b>On this page</b>
+    <a href="#summary">In short</a><a href="#who">Who we are</a><a href="#stored">What stays on your TV</a><a href="#network">What leaves your TV</a><a href="#permissions">Permissions</a><a href="#accessibility">The Home-button service</a><a href="#phone">The phone setup page</a><a href="#not">What Aangan never does</a><a href="#control">Your control</a><a href="#children">Children</a><a href="#website">This website</a><a href="#changes">Changes</a><a href="#contact">Contact</a>
+  </nav>
+  <div class=prose>
+    <h2 id=summary>In short</h2>
+    <ul>
+      <li><b>We collect no personal data.</b> Aangan has no account, no analytics, no crash reporting and no advertising, and the people who make it have no server that receives anything from it.</li>
+      <li><b>Your settings stay on your TV</b>, including your family's names and dates. They are excluded from Android's cloud backup.</li>
+      <li><b>The app talks to one outside service:</b> Open-Meteo, for the forecast and air quality of the city you chose, and for city search when you search.</li>
+      <li><b>No location permission.</b> Aangan uses the city you choose, never your TV's location.</li>
+      <li><b>The source code is public</b>, so all of this can be checked: <a href="{{REPO}}">github.com/vaari-dev/aangan</a>.</li>
+    </ul>
+
+    <h2 id=who>Who we are</h2>
+    <p>Aangan is a free, open-source app published by Vaari (the <a href="https://github.com/vaari-dev">vaari-dev</a> project on GitHub), under the MIT licence. "We" in this policy means the people who make and publish it. Because we receive no data from the app, we don't act as a controller or processor of any personal data that it handles on your TV.</p>
+
+    <h2 id=stored>What stays on your TV</h2>
+    <p>Aangan keeps its settings in its private storage on the TV, which other apps can't read. Android's cloud backup is switched off for Aangan (<code>android:allowBackup="false"</code>), so none of it is copied to Google or anywhere else.</p>
+    <div class=table><table>
+      <tr><th>What</th><th>Why</th></tr>
+      <tr><td>Birthdays and anniversaries: the names you type, the day and month, and which kind of day it is</td><td>To count down to them and celebrate them on the day. No year of birth is asked for or stored.</td></tr>
+      <tr><td>Festival dates you moved or hid</td><td>To show the calendar the way your family keeps it.</td></tr>
+      <tr><td>Your chosen city: its name, region, coordinates, time zone and country</td><td>To fetch its weather and air quality, and pick the right air-quality scale.</td></tr>
+      <tr><td>The last forecast and air-quality readings</td><td>To show something straight away and avoid repeat requests.</td></tr>
+      <tr><td>Your top row and hidden apps, as app package names</td><td>To arrange the home screen your way.</td></tr>
+      <tr><td>Whether you've seen the welcome, and how many times the tips have shown</td><td>To stop showing them.</td></tr>
+    </table></div>
+    <p>Aangan reads the list of apps installed on the TV, but only the ones that can be opened from a home screen, and only to show them. That list never leaves the TV.</p>
+
+    <h2 id=network>What leaves your TV</h2>
+    <p>Aangan makes three kinds of request, all over HTTPS, all to <a href="https://open-meteo.com">Open-Meteo</a>, an open weather service. None contain an identifier for you or your TV. Like any internet request, they carry your network's IP address, which Open-Meteo receives as part of the connection; see <a href="https://open-meteo.com/en/terms">Open-Meteo's terms and privacy</a>.</p>
+    <div class=table><table>
+      <tr><th>Request</th><th>What's sent</th><th>When</th></tr>
+      <tr><td>Weather forecast<br><code>api.open-meteo.com</code></td><td>Your city's latitude and longitude rounded to two decimals (about 1 km) and its time zone</td><td>At most every 30 minutes, and only while the home screen is on screen</td></tr>
+      <tr><td>Air quality<br><code>air-quality-api.open-meteo.com</code></td><td>The same rounded coordinates and time zone</td><td>At most every 60 minutes, and only while the home screen is on screen</td></tr>
+      <tr><td>City search<br><code>geocoding-api.open-meteo.com</code></td><td>The words you typed in the search box</td><td>Only when you search for a city</td></tr>
+    </table></div>
+    <p>The requests identify the app as <code>Aangan</code> and include nothing else: no device ID, advertising ID, account, app list or family data. The code that makes them is in <a href="{{REPO}}/blob/main/src/dev/vaari/aangan/Weather.java"><code>Weather.java</code></a> and <a href="{{REPO}}/blob/main/src/dev/vaari/aangan/Place.java"><code>Place.java</code></a>.</p>
+    <div class=note><p>When you open another app from Aangan, that app's own privacy policy applies. Aangan just opens it.</p></div>
+
+    <h2 id=permissions>Permissions</h2>
+    <div class=table><table>
+      <tr><th>Permission</th><th>Why</th></tr>
+      <tr><td><code>INTERNET</code></td><td>For the three requests above, and to serve the phone setup page on your home network.</td></tr>
+      <tr><td><code>ACCESS_NETWORK_STATE</code></td><td>To find the TV's address on your home network, so the QR code can point your phone to it.</td></tr>
+    </table></div>
+    <p>Both are "normal" permissions that Android grants without asking. Aangan doesn't ask for location, storage, camera, microphone, contacts, accounts or any other permission.</p>
+
+    <h2 id=accessibility>The Home-button service</h2>
+    <p>Most TVs don't let you choose a different home screen, so Aangan includes an optional <b>accessibility service</b> that you can switch on to make the Home button open Aangan. Android asks you to confirm before it can be turned on. Here is everything it does:</p>
+    <ul>
+      <li><b>The Home button.</b> It watches for the Home key only. When you press Home, it opens Aangan. Every other button passes straight through, unseen.</li>
+      <li><b>The TV's own home screen.</b> It is told only when the TV's built-in home screen app comes to the front (as at start-up), and then opens Aangan instead. It receives no events from any other app.</li>
+      <li><b>Nothing on screen.</b> It can't read the contents of any window (<code>canRetrieveWindowContent="false"</code>), so it can't see what you watch, type or open.</li>
+      <li><b>Nothing kept or sent.</b> It stores nothing and sends nothing anywhere.</li>
+    </ul>
+    <p>It acts only on this fixed rule, never on its own initiative, and Aangan works without it. You can switch it off any time in your TV's accessibility settings. Its configuration is in <a href="{{REPO}}/blob/main/res/xml/home_button.xml"><code>home_button.xml</code></a> and its code in <a href="{{REPO}}/blob/main/src/dev/vaari/aangan/HomeButton.java"><code>HomeButton.java</code></a>.</p>
+
+    <h2 id=phone>The phone setup page</h2>
+    <p>While Aangan's Settings screen is open, the TV serves a small web page on your home network so you can change settings from your phone. It's the only time Aangan accepts a connection.</p>
+    <ul>
+      <li>It starts when Settings opens and stops when you leave.</li>
+      <li>Its address includes a new random secret each time, shown only on the TV's screen as a QR code. A request without it gets only a "link expired" page.</li>
+      <li>The page is served directly by the TV over your Wi-Fi; it doesn't pass through the internet or any server of ours. It loads nothing from anywhere else (its font and logo come from the TV), sets no cookies, and asks your browser not to cache it or send referrer information.</li>
+      <li>It uses plain HTTP, because a device on a home network can't obtain an HTTPS certificate without a cloud service. Anyone on the same network who could watch traffic could see what you enter while you use it. On a home network you trust, that's no different from the TV itself.</li>
+    </ul>
+
+    <h2 id=not>What Aangan never does</h2>
+    <ul>
+      <li>Show ads, or use any advertising or analytics library. Aangan has no third-party libraries at all.</li>
+      <li>Collect, sell, share or transfer your data, because it doesn't collect any.</li>
+      <li>Use your TV's location, microphone or camera.</li>
+      <li>Track what you watch, which apps you open, or for how long.</li>
+      <li>Read other apps' screens or notifications.</li>
+      <li>Phone home: there is no Aangan server.</li>
+    </ul>
+
+    <h2 id=control>Your control</h2>
+    <ul>
+      <li><b>See or change your data:</b> everything Aangan stores is visible and editable in its Settings, or from your phone.</li>
+      <li><b>Delete it:</b> remove a family day or festival change in Settings; or clear everything with <b>Settings → Apps → Aangan → Clear data</b>, or by uninstalling Aangan. Nothing remains anywhere else.</li>
+      <li><b>Stop all network use:</b> disconnect the TV from the internet. Aangan keeps working, minus fresh weather.</li>
+    </ul>
+    <p>Because we hold no data about you, we can't look up, export or delete anything on your behalf; it's all on your TV and in your hands.</p>
+
+    <h2 id=children>Children</h2>
+    <p>Aangan is suitable for all ages. It collects no information from anyone, including children, and contains no ads, purchases or links to social media.</p>
+
+    <h2 id=website>This website</h2>
+    <p>This site has no scripts, cookies, analytics or embedded content, and loads nothing from other servers. It's hosted by <a href="https://pages.github.com">GitHub Pages</a>, which, like any web host, may log your IP address and browser details for security and operations; see <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub's privacy statement</a>. Downloads from the Releases page are served by GitHub too.</p>
+
+    <h2 id=changes>Changes to this policy</h2>
+    <p>If what Aangan does with data changes, this policy will change first, with a new effective date, and the change will be listed in the <a href="changelog.html">changelog</a>. Every past version is in the <a href="{{REPO}}/commits/main/docs/site/privacy.html">history of this page</a>.</p>
+
+    <h2 id=contact>Contact</h2>
+    <p>Questions about privacy are welcome. Open an issue at <a href="{{REPO}}/issues">github.com/vaari-dev/aangan/issues</a>. To report a security problem privately, use <a href="{{REPO}}/security/advisories/new">GitHub's private vulnerability reporting</a>.</p>
+  </div>
+</div>

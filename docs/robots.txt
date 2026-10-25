@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://vaari-dev.github.io/aangan/sitemap.xml
