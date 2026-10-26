@@ -2,6 +2,16 @@
 
 Each version's notes become its GitHub release notes and the website's changelog page.
 
+## 1.4
+
+- **Hindi.** Aangan follows the TV's language, and now speaks Hindi as well as English, festival names included. The phone page follows too. This is a first translation; corrections are welcome.
+- **Back up and restore.** The phone page can save the city, the dock, the family's days, festival changes and hidden apps to a file on your phone, and put them back on a new TV. Nothing goes to any cloud.
+- Settings shows the version, for bug reports.
+- Names for the family's days now stop at 40 characters on the TV, as they already did on the phone page. A longer name from before is kept whole.
+- Fixed: after the TV moved to another time zone, festivals and birthdays could show on the wrong day around midnight until Aangan restarted.
+- Festival scenes reuse more of what they draw each frame, for smoother animation on slower TVs.
+- Under the hood: a standard Gradle build, automated tests, stricter checks, and every build started on Android TV 13, Google TV 14 and Google TV 16 emulators before release. Releases are reproducible and come with build provenance.
+
 ## 1.3.3
 
 - Checked on Android TV 13, Google TV 14 and Google TV 16 (the newest), as well as Android TV 9 and Google TV 12.

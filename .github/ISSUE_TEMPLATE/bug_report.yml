@@ -1,0 +1,59 @@
+name: Something isn't working
+description: Report a problem with Aangan on your TV.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time. The more we know about your TV, the easier it is to find the cause.
+        Security problems shouldn't go here: please see the [security policy](https://github.com/vaari-dev/aangan/security/policy).
+  - type: input
+    id: tv
+    attributes:
+      label: TV brand and model
+      placeholder: e.g. Sony Bravia KD-55X80K, Chromecast with Google TV, Mi Box S
+    validations:
+      required: true
+  - type: input
+    id: android
+    attributes:
+      label: Android TV or Google TV version
+      description: Usually in the TV's Settings, under About.
+      placeholder: e.g. Google TV, Android 12
+  - type: input
+    id: version
+    attributes:
+      label: Aangan version
+      description: Aangan's Settings shows it.
+      placeholder: e.g. 1.2
+    validations:
+      required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: Installed from
+      options:
+        - Google Play
+        - GitHub Releases
+        - Built from source
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Settings
+        2. ...
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot or photo
+      description: A photo of the TV screen is fine. Please blur any names you'd rather not share.

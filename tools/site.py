@@ -5,7 +5,7 @@
 
 Pages live in site/pages/<name>.html, each starting with a JSON comment giving its title and
 description; this adds the shared head, navigation and footer. The festival calendar comes from
-assets/festivals.csv, scene colours from Festive.Theme, the changelog from CHANGELOG.md, and the
+app/src/main/assets/festivals.csv, scene colours from Festive.Theme, the changelog from CHANGELOG.md, and the
 font and pictures from where the app and README keep them. The site has no scripts, cookies or
 analytics, and loads nothing from anywhere else.
 """
@@ -68,14 +68,14 @@ def read(*path):
 
 def theme_colours():
     """{"DIWALI": ("#7A5A2E", "#FFC56B"), ...}: each Festive.Theme's glow and accent."""
-    java = read("src", "dev", "vaari", "aangan", "Festive.java")
+    java = read("app", "src", "main", "java", "dev", "vaari", "aangan", "Festive.java")
     enum = re.search(r"enum Theme \{(.*?);", java, re.S).group(1)
     return {name: ("#" + glow, "#" + accent)
             for name, glow, accent in re.findall(r"(\w+)\(0xFF(\w{6}), 0xFF(\w{6})\)", enum)}
 
 
 def festivals():
-    for row in csv.reader(line for line in read("assets", "festivals.csv").splitlines()
+    for row in csv.reader(line for line in read("app", "src", "main", "assets", "festivals.csv").splitlines()
                           if line.strip() and not line.startswith("#")):
         row = [x.strip() for x in row]
         yield datetime.date.fromisoformat(row[0]), row[1], row[2], row[3], row[4:] == ["expected"]
@@ -257,7 +257,7 @@ def main():
     for f in os.listdir(os.path.join(ROOT, "docs")):
         shutil.copy(os.path.join(ROOT, "docs", f), OUT)
     shutil.copy(os.path.join(ROOT, "site", "site.css"), os.path.join(OUT, "assets"))
-    shutil.copy(os.path.join(ROOT, "assets", "phone", "fraunces.woff2"), os.path.join(OUT, "assets"))
+    shutil.copy(os.path.join(ROOT, "app", "src", "main", "assets", "phone", "fraunces.woff2"), os.path.join(OUT, "assets"))
 
     sources = {f[:-5]: read("site", "pages", f) for f in os.listdir(os.path.join(ROOT, "site", "pages")) if f.endswith(".html")}
     sources["changelog"] = changelog()

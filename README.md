@@ -7,6 +7,8 @@ No ads. No tracking. No account. Just your apps, the sky outside, and the days t
 
 <p align="center"><a href="https://vaari-dev.github.io/aangan/"><b>Website</b></a> · <a href="https://vaari-dev.github.io/aangan/install.html"><b>Install</b></a> · <a href="https://vaari-dev.github.io/aangan/guide.html">Guide</a> · <a href="https://vaari-dev.github.io/aangan/privacy.html">Privacy</a> · <a href="../../releases/latest/download/aangan.apk">Download the latest release</a></p>
 
+<p align="center"><a href="https://github.com/vaari-dev/aangan/actions/workflows/ci.yml"><img src="https://github.com/vaari-dev/aangan/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="https://scorecard.dev/viewer/?uri=github.com/vaari-dev/aangan"><img src="https://api.scorecard.dev/projects/github.com/vaari-dev/aangan/badge" alt="OpenSSF Scorecard"></a></p>
+
 ---
 
 *Aangan* (आँगन) is the courtyard at the heart of an Indian home: the open space everyone passes through, where you
@@ -23,6 +25,7 @@ screen, with its rows of ads and recommendations, with something quiet, beautifu
 - **Festivals.** A countdown to the next one, and on the day itself a hand-drawn scene behind your apps. If your family keeps a festival on another day, move it, or hide one you don't celebrate.
 - **Your family's days.** Birthdays and anniversaries get balloons, confetti, rings and petals, with a greeting by name. Add, edit and remove them on the TV or from your phone.
 - **A quiet screensaver.** A dim clock and the weather, drifting slowly so nothing burns in.
+- **In English or Hindi**, following the TV's language. More languages are welcome; see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ![Today card](docs/today.jpg)
 
@@ -47,7 +50,8 @@ and Independence Day, and for birthdays and anniversaries.
   can read and choose to report yourself from the phone page. Nothing is sent automatically.
 - No location permission. You choose your city; Gurgaon is the default.
 - The only network use: [Open-Meteo](https://open-meteo.com) weather for your city (two requests, at most every 30–60 minutes, and only while the home screen is on screen), city search when you ask for it, and the phone-setup page below.
-- Birthdays and anniversaries are stored on the TV and nowhere else.
+- Birthdays and anniversaries are stored on the TV and nowhere else. To move to a new TV, export a backup file to
+  your phone from the phone page, and import it there.
 - Light on the TV: on an ordinary day nothing animates, so Aangan uses no CPU while you watch.
 
 ## Install on any TV, without developer mode
@@ -104,20 +108,26 @@ move or hide festival dates, all from the phone's browser. The TV itself serves 
 
 ## Build from source
 
-You need the Android SDK (build-tools 37.0.0, platform android-37.2) and JDK 17 or later. There's no Gradle, and no
-third-party libraries: the app uses only Android itself.
+You need JDK 17 or later and the Android SDK, found through `ANDROID_HOME` or `sdk.dir` in `local.properties`.
+It's a standard Gradle build; the app itself still has no third-party libraries.
 
-    ./build.sh            # builds build/aangan.apk, signed with a local development key
-    ./build.sh install    # and installs it over adb (set ANDROID_SERIAL when several devices are connected)
-    ./build.sh bundle     # also builds build/aangan.aab for Google Play
+    ./gradlew assembleDebug        # builds app/build/outputs/apk/debug/aangan-debug.apk
+    ./gradlew installDebug         # and installs it over adb (set ANDROID_SERIAL when several devices are connected)
+    ./gradlew check                # unit tests, Android Lint and javac warnings, all as errors
+    ./gradlew assembleRelease bundleRelease   # the release APK and the bundle for Google Play
 
-    python3 tools/icon.py # redraws the icon and banner: res/drawable/ and the SVGs in docs/
+    python3 tools/icon.py # redraws the icon and banner: app/src/main/res/drawable/ and the SVGs in docs/
     python3 tools/site.py # builds the website from site/ into build/site/
+
+Release builds are shrunk with R8 and written to `app/build/outputs/apk/release/aangan-release.apk` and
+`app/build/outputs/bundle/release/aangan-release.aab`. They're signed with the release key when `AANGAN_KEYSTORE`
+and `AANGAN_KEY_PASS` are set, and otherwise with the local debug key, which is fine for trying a build but can't
+update a real install. See [`CONTRIBUTING.md`](CONTRIBUTING.md) to send a change.
 
 ### Releasing
 
-1. Raise `VERSION_NAME` and `VERSION_CODE` at the top of `build.sh`, and add a section for the new version to
-   [`CHANGELOG.md`](CHANGELOG.md).
+1. Raise `versionName` and `versionCode` in [`app/build.gradle.kts`](app/build.gradle.kts), and add a section for the
+   new version to [`CHANGELOG.md`](CHANGELOG.md).
 2. Push to `main`. CI builds and checks every commit, and publishes the website.
 3. Seeing a version with no release yet, CI waits for an owner to approve the `release` environment. Then it builds
    with the release key, checks the certificate, publishes the GitHub release with the changelog as its notes, and,
@@ -138,7 +148,7 @@ Press Home to clear it.
 
 ### The festival calendar
 
-`assets/festivals.csv` holds the public calendar: one line per day, with its greeting and scene.
+[`app/src/main/assets/festivals.csv`](app/src/main/assets/festivals.csv) holds the public calendar: one line per day, with its greeting and scene.
 
     # date,name,greeting,scene[,expected]
     2026-11-08,Diwali,Happy Diwali,DIWALI
@@ -153,6 +163,6 @@ Press Home to clear it.
 
 - **Weather and air quality:** [Open-Meteo](https://open-meteo.com) (CC BY 4.0), with air quality from Copernicus CAMS.
 - **Air-quality scale:** India's CPCB National AQI in India, and the US EPA AQI elsewhere.
-- **Typeface:** the wordmark and the phone page use [Fraunces](https://github.com/undercasetype/Fraunces) by Undercase Type, under the SIL Open Font Licence (`assets/phone/OFL-Fraunces.txt`).
+- **Typeface:** the wordmark and the phone page use [Fraunces](https://github.com/undercasetype/Fraunces) by Undercase Type, under the SIL Open Font Licence (`app/src/main/assets/phone/OFL-Fraunces.txt`).
 
 Released under the [MIT licence](LICENSE).

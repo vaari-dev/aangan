@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lint runs on every build with warnings as errors. Each exception here says why. -->
+<lint>
+    <!-- Google Play asks TV apps to target API 34; Aangan targets 35 and moves up deliberately,
+         after testing each version's behaviour changes on a TV. -->
+    <issue id="OldTargetApi" severity="ignore" />
+    <!-- Newer SDKs and libraries arrive as Dependabot pull requests instead. -->
+    <issue id="GradleDependency" severity="ignore" />
+    <issue id="AndroidGradlePluginVersion" severity="ignore" />
+    <issue id="NewerVersionAvailable" severity="ignore" />
+    <!-- The TV banner is drawn once, by the system launcher, at 320×180. -->
+    <issue id="VectorRaster">
+        <ignore path="src/main/res/drawable/banner.xml" />
+    </issue>
+    <issue id="VectorPath">
+        <ignore path="src/main/res/drawable/banner.xml" />
+    </issue>
+    <!-- The Today card's chart and the weather glyphs draw once when shown, not every frame. -->
+    <issue id="DrawAllocation">
+        <ignore path="src/main/java/dev/vaari/aangan/TodayCard.java" />
+        <ignore path="src/main/java/dev/vaari/aangan/WeatherGlyph.java" />
+    </issue>
+</lint>

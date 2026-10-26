@@ -1,0 +1,346 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Everything Aangan says, in English. To translate, copy this file to values-XX/strings.xml (XX is
+    the language code, such as hi for Hindi) and translate each string, keeping the placeholders
+    (%1$s, %2$d) and the quoted spacing as they are. Festival names are translated separately, in
+    assets/festival-names/XX.csv. See CONTRIBUTING.md.
+-->
+<resources>
+    <string name="app_name" translatable="false">Aangan</string>
+    <string name="settings_label">Aangan settings</string>
+    <string name="clock_label">Aangan clock</string>
+    <string name="home_button_description">Opens Aangan when you press Home or turn the TV on. Aangan acts only on the Home button and on the TV\'s own home screen opening. Every other button passes straight through, and it can\'t see other apps or anything on screen.</string>
+
+    <!-- Common words -->
+    <string name="add">Add</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="remove">Remove</string>
+    <string name="keep">Keep</string>
+    <string name="edit">Edit</string>
+    <string name="change">Change</string>
+    <string name="choose">Choose</string>
+    <string name="search">Search</string>
+    <string name="on">On</string>
+    <string name="off">Off</string>
+    <string name="turn_on">Turn on</string>
+    <string name="not_now">Not now</string>
+    <string name="now">Now</string>
+    <string name="today">Today</string>
+    <string name="tomorrow">Tomorrow</string>
+    <string name="hidden">Hidden</string>
+    <string name="moved">Moved</string>
+    <string name="settings">Settings</string>
+    <string name="city">City</string>
+    <string name="festivals">Festivals</string>
+    <string name="birthday">Birthday</string>
+    <string name="anniversary">Anniversary</string>
+
+    <!-- Dates and countdowns -->
+    <plurals name="in_days">
+        <item quantity="one">in %d day</item>
+        <item quantity="other">in %d days</item>
+    </plurals>
+    <plurals name="in_days_capital">
+        <item quantity="one">In %d day</item>
+        <item quantity="other">In %d days</item>
+    </plurals>
+    <!-- "Diwali tomorrow" -->
+    <string name="festival_tomorrow">%1$s tomorrow</string>
+    <!-- "Diwali on Sunday" -->
+    <string name="festival_on_day">%1$s on %2$s</string>
+    <!-- "Diwali in 14 days" -->
+    <plurals name="festival_in_days">
+        <item quantity="one">%1$s in %2$d day</item>
+        <item quantity="other">%1$s in %2$d days</item>
+    </plurals>
+    <!-- "Thu 29 Oct (expected)": a date that depends on the moon being sighted -->
+    <string name="date_expected">%1$s (expected)</string>
+    <string name="birthday_of">%1$s\'s birthday</string>
+    <string name="anniversary_of">%1$s\'s anniversary</string>
+    <string name="happy_birthday">Happy birthday, %1$s</string>
+    <string name="happy_anniversary">Happy anniversary, %1$s</string>
+
+    <!-- The home screen -->
+    <string name="home_tip">"Press  ▲  then OK for today's weather and air     ·     Hold OK on an app to put it in the dock or hide it"</string>
+    <string name="weather_credit">Open-Meteo · Copernicus CAMS</string>
+    <string name="set_up_aangan">Set up Aangan</string>
+    <string name="cant_open">Can\'t open %1$s</string>
+    <plurals name="show_hidden_apps">
+        <item quantity="one">Show %d hidden app</item>
+        <item quantity="other">Show %d hidden apps</item>
+    </plurals>
+    <string name="move_left">Move left</string>
+    <string name="move_right">Move right</string>
+    <string name="hide">Hide</string>
+    <string name="app_info">App info</string>
+
+    <!-- Weather -->
+    <!-- "Feels 24°" -->
+    <string name="feels_like">Feels %1$s</string>
+    <!-- "H 31°  L 19°" -->
+    <string name="high_low">"H %1$s  L %2$s"</string>
+    <!-- The air-quality index, "AQI 214" -->
+    <string name="aqi_value">AQI %1$d</string>
+    <!-- Times: "5 PM", "6:31 AM" -->
+    <string name="clock_am">%1$s AM</string>
+    <string name="clock_pm">%1$s PM</string>
+    <string name="rain_now">Rain likely now</string>
+    <string name="rain_around">Rain likely around %1$s</string>
+    <string name="sky_hazy">Hazy</string>
+    <string name="sky_clear">Clear</string>
+    <string name="sky_mostly_clear">Mostly Clear</string>
+    <string name="sky_partly_cloudy">Partly Cloudy</string>
+    <string name="sky_cloudy">Cloudy</string>
+    <string name="sky_fog">Fog</string>
+    <string name="sky_drizzle">Drizzle</string>
+    <string name="sky_freezing_drizzle">Freezing Drizzle</string>
+    <string name="sky_light_rain">Light Rain</string>
+    <string name="sky_rain">Rain</string>
+    <string name="sky_heavy_rain">Heavy Rain</string>
+    <string name="sky_freezing_rain">Freezing Rain</string>
+    <string name="sky_light_snow">Light Snow</string>
+    <string name="sky_snow">Snow</string>
+    <string name="sky_heavy_snow">Heavy Snow</string>
+    <string name="sky_snow_grains">Snow Grains</string>
+    <string name="sky_showers">Showers</string>
+    <string name="sky_heavy_showers">Heavy Showers</string>
+    <string name="sky_snow_showers">Snow Showers</string>
+    <string name="sky_thunderstorm">Thunderstorm</string>
+    <string name="sky_thunderstorm_hail">Thunderstorm &amp; Hail</string>
+    <!-- "UV peak: 8 Very High" -->
+    <string name="uv_label">%1$d %2$s</string>
+    <string name="uv_low">Low</string>
+    <string name="uv_moderate">Moderate</string>
+    <string name="uv_high">High</string>
+    <string name="uv_very_high">Very High</string>
+    <string name="uv_extreme">Extreme</string>
+    <!-- Today's daylight, "11h 04m" -->
+    <string name="daylight">%1$dh %2$02dm</string>
+    <string-array name="moon_phases">
+        <item>New Moon</item>
+        <item>Waxing Crescent</item>
+        <item>First Quarter</item>
+        <item>Waxing Gibbous</item>
+        <item>Full Moon</item>
+        <item>Waning Gibbous</item>
+        <item>Last Quarter</item>
+        <item>Waning Crescent</item>
+    </string-array>
+
+    <!-- Air quality: India's National AQI (CPCB), its category names and health statements -->
+    <string name="cpcb_good">Good</string>
+    <string name="cpcb_satisfactory">Satisfactory</string>
+    <string name="cpcb_moderate">Moderate</string>
+    <string name="cpcb_poor">Poor</string>
+    <string name="cpcb_very_poor">Very Poor</string>
+    <string name="cpcb_severe">Severe</string>
+    <string name="cpcb_good_advice">Minimal impact.</string>
+    <string name="cpcb_satisfactory_advice">Minor breathing discomfort for sensitive people.</string>
+    <string name="cpcb_moderate_advice">Breathing discomfort for people with asthma, lung or heart disease.</string>
+    <string name="cpcb_poor_advice">Breathing discomfort for most people on prolonged exposure.</string>
+    <string name="cpcb_very_poor_advice">Respiratory illness on prolonged exposure. Keep windows closed.</string>
+    <string name="cpcb_severe_advice">Affects healthy people too. Stay indoors and run a purifier.</string>
+    <!-- Air quality: the US EPA AQI, used outside India -->
+    <string name="epa_good">Good</string>
+    <string name="epa_moderate">Moderate</string>
+    <string name="epa_sensitive">Unhealthy for Some</string>
+    <string name="epa_unhealthy">Unhealthy</string>
+    <string name="epa_very_unhealthy">Very Unhealthy</string>
+    <string name="epa_hazardous">Hazardous</string>
+    <string name="epa_good_advice">Air quality is satisfactory.</string>
+    <string name="epa_moderate_advice">Unusually sensitive people should limit long exertion outdoors.</string>
+    <string name="epa_sensitive_advice">Sensitive groups should reduce long or heavy exertion outdoors.</string>
+    <string name="epa_unhealthy_advice">Everyone should reduce long or heavy exertion outdoors.</string>
+    <string name="epa_very_unhealthy_advice">Avoid long exertion outdoors. Keep windows closed.</string>
+    <string name="epa_hazardous_advice">Stay indoors and keep activity low.</string>
+
+    <!-- The Today card -->
+    <string name="today_in">Today in %1$s</string>
+    <string name="updated_at">Updated %1$s</string>
+    <string name="today_footer">Open-Meteo · Copernicus CAMS · Back to close</string>
+    <string name="no_weather">No weather yet</string>
+    <string name="no_air">No air quality yet</string>
+    <string name="sunrise">Sunrise</string>
+    <string name="sunset">Sunset</string>
+    <string name="daylight_label">Daylight</string>
+    <string name="uv_peak">UV peak</string>
+    <string name="moon">Moon</string>
+    <string name="coming_up">Coming up</string>
+    <!-- "24-hour average  ·  PM2.5 112  ·  PM10 187 µg/m³" -->
+    <string name="air_average">"24-hour average  ·  PM2.5 %1$d  ·  PM10 %2$d µg/m³"</string>
+    <plurals name="no_clean_air">
+        <item quantity="one">No clean-air window in the next %d hour</item>
+        <item quantity="other">No clean-air window in the next %d hours</item>
+    </plurals>
+    <!-- "Best time to air out: 2 PM  ·  PM2.5 48" -->
+    <string name="air_out">"Best time to air out: %1$s  ·  PM2.5 %2$d"</string>
+    <string name="air_now">now</string>
+    <!-- "7 AM tomorrow" -->
+    <string name="air_tomorrow">%1$s tomorrow</string>
+    <!-- On the air-quality chart -->
+    <string name="safe_limit">Safe limit %1$d</string>
+    <string name="hours_ago_24">24h ago</string>
+    <string name="hours_ahead">+%1$dh</string>
+
+    <!-- Welcome -->
+    <string name="welcome_title">Welcome to Aangan</string>
+    <string name="welcome_lede">A calm home screen for your TV. Three quick things and you\'re ready.</string>
+    <string name="welcome_start">Start using Aangan</string>
+    <string name="welcome_home">Open with Home</string>
+    <string name="welcome_home_done">Done. The Home button now brings you to Aangan.</string>
+    <string name="welcome_home_how">Choose Turn on, then Aangan, and switch it on. Android shows its usual warning; Aangan only acts on the Home button.</string>
+    <string name="welcome_city">Your city</string>
+    <string name="welcome_city_body">Weather and air quality for %1$s. Change it if you live elsewhere.</string>
+    <string name="welcome_family">Family days</string>
+    <plurals name="welcome_family_added">
+        <item quantity="one">%d birthday or anniversary added.</item>
+        <item quantity="other">%d birthdays and anniversaries added.</item>
+    </plurals>
+    <string name="welcome_family_how">Add birthdays and anniversaries from your phone. Aangan celebrates them on the day.</string>
+    <string name="add_more">Add more</string>
+
+    <!-- The Home-button service's disclosure, shown before Android's accessibility settings -->
+    <string name="disclosure_title">Open Aangan with the Home button</string>
+    <string name="disclosure_body">Aangan uses Android\'s accessibility service for one thing: when you press Home, or the TV\'s own home screen appears, it opens Aangan instead.\n\nIt reacts to the Home button only; every other button passes straight through. It can\'t see what\'s on screen or what you watch, and it stores and sends nothing.\n\nNext, choose Aangan and switch it on. You can switch it off there any time.</string>
+    <string name="disclosure_agree">Agree and continue</string>
+
+    <!-- Settings -->
+    <string name="open_with_home">Open with the Home button</string>
+    <string name="screensaver">Screensaver</string>
+    <string name="family_days_heading">Birthdays &amp; anniversaries</string>
+    <string name="add_one">Add one</string>
+    <string name="about">About</string>
+    <string name="version">Version</string>
+    <string name="phone_title">Set up from your phone</string>
+    <string name="phone_offline">Connect the TV to Wi-Fi to set things up from a phone.</string>
+    <string name="phone_how">Scan with your phone\'s camera to set the city, the dock, the family\'s days and festival dates. Your phone needs to be on the same Wi-Fi.</string>
+    <string name="phone_not_secure">If your phone says the page isn\'t secure, choose to continue. It\'s served by this TV and stays on your Wi-Fi.</string>
+    <string name="choose_city">Choose your city</string>
+    <string name="search_failed">Couldn\'t search right now. Check the TV\'s internet connection.</string>
+    <string name="no_places">No places called “%1$s”. Try the nearest large town.</string>
+    <string name="name_hint">Name, e.g. Asha or Asha &amp; Rohan</string>
+    <string name="add_day">Add a birthday or anniversary</string>
+    <string name="edit_day">Edit %1$s\'s day</string>
+    <string name="remove_birthday">Remove %1$s\'s birthday?</string>
+    <string name="remove_anniversary">Remove %1$s\'s anniversary?</string>
+    <string name="change_date">Change the date</string>
+    <string name="show_it">Show it</string>
+    <string name="hide_it">Hide it</string>
+    <!-- "Back to 9 Nov": undoes a moved festival -->
+    <string name="back_to">Back to %1$s</string>
+    <string name="when_is">When is %1$s?</string>
+
+    <!-- The phone page -->
+    <string name="page_title">Set up your home screen</string>
+    <string name="page_lede">Changes appear on the TV as soon as you make them.</string>
+    <string name="page_city">Your city</string>
+    <string name="page_city_label">Weather and air quality for</string>
+    <string name="page_city_search">Search for another city</string>
+    <string name="page_family_note">On the day, Aangan greets them by name, with balloons for a birthday and petals for an anniversary.</string>
+    <string name="page_next_12_months">the next 12 months</string>
+    <!-- "Show 18 more, to October" -->
+    <plurals name="page_show_more">
+        <item quantity="one">Show %1$d more, to %2$s</item>
+        <item quantity="other">Show %1$d more, to %2$s</item>
+    </plurals>
+    <string name="page_moved_from">Moved from %1$s</string>
+    <string name="page_expected">Expected</string>
+    <string name="page_new_date">New date</string>
+    <string name="page_move">Move</string>
+    <string name="page_show_again">Show it again</string>
+    <string name="page_hide_year">Hide this year</string>
+    <string name="page_moon_hint">This date depends on the moon being sighted, and may move by a day.</string>
+    <string name="page_festival_note">Dates follow Drik Panchang for New Delhi. If your family keeps a festival on another day, move it here.</string>
+    <string name="page_name">Name</string>
+    <string name="page_kind">Kind of day</string>
+    <string name="page_day">Day</string>
+    <string name="page_month">Month</string>
+    <string name="page_back">Back</string>
+    <string name="page_your_tv">Your TV</string>
+    <string name="page_footer_private">Everything you set here stays on your TV.</string>
+    <string name="page_footer_open">This page works while Aangan\'s Settings are open on the TV.</string>
+    <string name="page_expired_title">This link has expired</string>
+    <string name="page_expired_body">Open Aangan\'s Settings on the TV and scan the new code.</string>
+    <string name="page_backup">Backup</string>
+    <string name="page_backup_about">Save the city, the dock, the family\'s days, festival changes and hidden apps to a file on this phone. On a new TV, import it to put everything back.</string>
+    <string name="page_export">Export to this phone</string>
+    <string name="page_backup_file">Backup file</string>
+    <string name="page_import">Import</string>
+    <string name="page_import_note">Importing replaces what\'s on this TV with what\'s in the file. The file stays on your phone; Aangan keeps no copy anywhere else.</string>
+
+    <!-- What the phone page says after a change -->
+    <string name="done_added">Added</string>
+    <string name="done_saved">Saved</string>
+    <string name="done_removed">Removed</string>
+    <string name="done_city">City changed</string>
+    <string name="done_moved">Date changed</string>
+    <string name="done_hidden">Hidden this year</string>
+    <string name="done_shown">Showing again</string>
+    <string name="done_restored">Back to the calendar\'s date</string>
+    <string name="done_invalid">Not saved: check the name and date</string>
+    <string name="done_gone">Not saved: that day was changed on the TV</string>
+    <string name="done_imported">Backup imported</string>
+    <string name="done_not_backup">Not imported: that file isn\'t an Aangan backup</string>
+
+    <!-- The dock: four large apps across the top of the home screen -->
+    <string name="dock">Dock</string>
+    <string name="dock_title">The dock</string>
+    <string name="dock_empty">Empty</string>
+    <string name="choose_an_app">Choose an app</string>
+    <string name="change_app">Change app</string>
+    <string name="put_in_dock">Put in the dock</string>
+    <string name="remove_from_dock">Remove from the dock</string>
+    <!-- "Put Netflix in the dock" -->
+    <string name="dock_put_title">Put %1$s in the dock</string>
+    <!-- "Replace YouTube": a dock place's current app -->
+    <string name="dock_replace">Replace %1$s</string>
+    <string name="dock_empty_place">Empty place %1$d</string>
+    <!-- Read aloud by TalkBack -->
+    <string name="dock_empty_place_hint">Empty place %1$d in the dock. Choose an app</string>
+    <string name="dock_place_title">Place %1$d in the dock</string>
+    <string name="dock_here_now">Here now</string>
+    <string name="dock_in_place">In place %1$d</string>
+    <string name="dock_reset">Reset to popular apps</string>
+    <string name="dock_reset_title">Reset the dock?</string>
+    <string name="dock_reset_message">Aangan will fill it with popular apps you have, such as Netflix and YouTube, then the rest in alphabetical order.</string>
+    <string name="reset">Reset</string>
+    <string name="keep_mine">Keep mine</string>
+
+    <!-- Choosing the city -->
+    <string name="city_label">Your city</string>
+    <!-- "Now: Gurgaon, Haryana, India" -->
+    <string name="city_now">Now: %1$s</string>
+    <string name="city_hint">Type a city or town</string>
+    <string name="city_privacy">Only what you type is sent, to Open-Meteo\'s place search. If your town isn\'t listed, choose the nearest large one.</string>
+    <string name="city_popular">Popular cities</string>
+    <string name="city_searching">Searching…</string>
+    <plurals name="places_found">
+        <item quantity="one">%1$s place</item>
+        <item quantity="other">%1$s places</item>
+    </plurals>
+    <!-- How many live in a place: "8.9 lakh people", "2.7 million people", "45,000 people" -->
+    <string name="people_crore">%1$s crore people</string>
+    <string name="people_lakh">%1$s lakh people</string>
+    <string name="people_million">%1$s million people</string>
+    <string name="people_count">%1$s people</string>
+
+    <!-- When Aangan has crashed: a note kept on the TV, never sent -->
+    <string name="crash_title">Aangan closed unexpectedly</string>
+    <string name="crash_message">It kept a short note about what went wrong, here on the TV, and sent nothing. To report it, scan the code on the right: the phone page shows the note, and you can read everything before sending it on GitHub.</string>
+    <string name="delete">Delete</string>
+    <!-- "On 25 Oct, Aangan stopped…" -->
+    <string name="page_crash_about">On %1$s, Aangan stopped and restarted. It kept this note on the TV and sent nothing. If you\'d like it fixed, report it on GitHub: you\'ll see everything before sending it, and can add what you were doing.</string>
+    <string name="page_crash_show">Show the note</string>
+    <string name="page_crash_report">Report on GitHub</string>
+    <string name="find_accessibility">Choose Device Preferences, then Accessibility, then Aangan</string>
+
+    <!-- The phone page's dock -->
+    <string name="page_dock_place">Dock place %1$d</string>
+    <string name="page_dock_note">The four large apps at the top of the home screen, from left to right.</string>
+    <string name="page_wrong_address">Use the address shown on the TV.</string>
+    <string name="done_no_city">Not saved: search for the city again</string>
+    <string name="done_dock">Dock saved</string>
+    <string name="done_crash">Note deleted</string>
+    <string name="done_full">Not saved: the family\'s list is full (at most %1$d)</string>
+</resources>

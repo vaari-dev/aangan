@@ -1,0 +1,36 @@
+# Festival names and greetings in Hindi, keyed by the English name in festivals.csv.
+# A first draft: please review, and correct anything a family wouldn't say.
+#
+# name,Hindi name,Hindi greeting
+Baisakhi,बैसाखी,बैसाखी की शुभकामनाएँ
+Basant Panchami,बसंत पंचमी,बसंत पंचमी की शुभकामनाएँ
+Bhai Dooj,भाई दूज,भाई दूज की शुभकामनाएँ
+Buddha Purnima,बुद्ध पूर्णिमा,आज बुद्ध पूर्णिमा है
+Chhath Puja,छठ पूजा,छठ पूजा की शुभकामनाएँ
+Choti Diwali,छोटी दिवाली,छोटी दिवाली की शुभकामनाएँ
+Christmas,क्रिसमस,क्रिसमस की शुभकामनाएँ
+Dhanteras,धनतेरस,धनतेरस की शुभकामनाएँ
+Diwali,दिवाली,दिवाली की शुभकामनाएँ
+Durga Ashtami,दुर्गा अष्टमी,आज दुर्गा अष्टमी है
+Dussehra,दशहरा,दशहरे की शुभकामनाएँ
+Eid al-Adha,ईद-उल-अज़हा,ईद मुबारक
+Eid al-Fitr,ईद-उल-फ़ित्र,ईद मुबारक
+Gandhi Jayanti,गांधी जयंती,आज गांधी जयंती है
+Ganesh Chaturthi,गणेश चतुर्थी,गणेश चतुर्थी की शुभकामनाएँ
+Govardhan Puja,गोवर्धन पूजा,गोवर्धन पूजा की शुभकामनाएँ
+Guru Nanak Jayanti,गुरु नानक जयंती,गुरपुरब की लख-लख बधाइयाँ
+Guru Purnima,गुरु पूर्णिमा,आज गुरु पूर्णिमा है
+Haryana Day,हरियाणा दिवस,हरियाणा दिवस की शुभकामनाएँ
+Holi,होली,होली की शुभकामनाएँ
+Holika Dahan,होलिका दहन,आज रात होलिका दहन है
+Independence Day,स्वतंत्रता दिवस,स्वतंत्रता दिवस की शुभकामनाएँ
+Janmashtami,जन्माष्टमी,जन्माष्टमी की शुभकामनाएँ
+Karwa Chauth,करवा चौथ,आज करवा चौथ है
+Lohri,लोहड़ी,लोहड़ी की लख-लख बधाइयाँ
+Maha Shivratri,महाशिवरात्रि,आज महाशिवरात्रि है
+Makar Sankranti,मकर संक्रांति,मकर संक्रांति की शुभकामनाएँ
+Navratri begins,नवरात्रि आरंभ,नवरात्रि की शुभकामनाएँ
+New Year's Day,नया साल,नए साल की शुभकामनाएँ
+Raksha Bandhan,रक्षा बंधन,रक्षा बंधन की शुभकामनाएँ
+Ram Navami,राम नवमी,राम नवमी की शुभकामनाएँ
+Republic Day,गणतंत्र दिवस,गणतंत्र दिवस की शुभकामनाएँ

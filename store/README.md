@@ -39,9 +39,10 @@ Then check that the SHA-256 Play shows for the app-signing key is
 ## 4. Build the bundle
 
     AANGAN_KEYSTORE=$HOME/.android-keys/aangan-release.jks \
-    AANGAN_KEY_PASS="$(security find-generic-password -s aangan-release-key -w)" ./build.sh bundle
+    AANGAN_KEY_PASS="$(security find-generic-password -s aangan-release-key -w)" ./gradlew bundleRelease
 
-This writes `build/aangan.aab`. Upload it to *Internal testing* first, install it on a TV from Play, and
+This writes `app/build/outputs/bundle/release/aangan-release.aab`. Without both variables the bundle is signed
+with the local debug key, and Play will refuse it. Upload it to *Internal testing* first, install it on a TV from Play, and
 check it there before promoting it.
 
 ## 5. App content (Policy → App content)
@@ -106,14 +107,14 @@ Aangan isn't an accessibility tool (`isAccessibilityTool` isn't set), so Play ne
 
 ## 8. Release
 
-1. Internal testing: upload `build/aangan.aab`, add yourself as a tester, install on a TV from Play.
+1. Internal testing: upload `app/build/outputs/bundle/release/aangan-release.aab`, add yourself as a tester, install on a TV from Play.
 2. Personal account: closed testing with 12 or more testers for 14 days.
 3. Production: Play reviews TV apps against the
    [TV app quality guidelines](https://developer.android.com/docs/quality-guidelines/tv-app-quality).
    Aangan has the banner, the leanback launcher entry, no touchscreen requirement, D-pad navigation
    throughout, and `android.software.leanback` required, so Play offers it only to TVs.
-4. Each later release: bump `--version-code` in `build.sh` (it must always increase), build the bundle,
-   upload, and add release notes from `CHANGELOG.md`.
+4. Each later release: raise `versionCode` (it must always increase) and `versionName` in
+   `app/build.gradle.kts`, build the bundle, upload, and add release notes from `CHANGELOG.md`.
 
 ## Notes for review
 

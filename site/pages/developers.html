@@ -1,8 +1,8 @@
-<!-- {"title": "Developer guide: build, architecture and security", "description": "Build Aangan from source without Gradle, read its architecture file by file, edit the festival calendar, add a scene, and see the security model."} -->
+<!-- {"title": "Developer guide: build, architecture and security", "description": "Build Aangan from source with Gradle, understand its architecture file by file, edit the festival calendar, add a scene, and read the security model of the phone setup page and Home-button service."} -->
 <div class="wrap page-head">
   <p class=eyebrow>Developers</p>
   <h1>Small enough to read in an afternoon.</h1>
-  <p class=lede>Aangan is about 6,700 lines of plain Java with no third-party libraries and no Gradle. It builds with one shell script and the Android SDK. Here's how it fits together.</p>
+  <p class=lede>Aangan is about 7,400 lines of plain Java with no third-party libraries. It builds with the standard Android Gradle tools. Here's how it fits together.</p>
 </div>
 <div class="wrap doc">
   <nav class=toc aria-label="On this page"><b>On this page</b>
@@ -19,21 +19,22 @@
     </ul>
 
     <h2 id=build>Building</h2>
-    <p>You need the Android SDK (build-tools 37.0.0, platform android-37.2) and JDK 17 or later. By default the script looks in <code>~/.local/share/android</code>; set <code>ANDROID_HOME</code> to point elsewhere.</p>
+    <p>You need JDK 17 or later and the Android SDK. Gradle finds the SDK through <code>ANDROID_HOME</code>, or <code>sdk.dir</code> in <code>local.properties</code>, and downloads the rest itself.</p>
 <pre><code>git clone {{REPO}}
 cd aangan
-./build.sh            # build/aangan.apk, signed with a local development key
-./build.sh install    # and install it over adb (set ANDROID_SERIAL with several devices)
-./build.sh bundle     # also build/aangan.aab for Google Play</code></pre>
-    <p>The script runs <code>aapt2</code> → <code>javac</code> → <code>d8</code> → <code>zipalign</code> → <code>apksigner</code>, in about ten seconds. The bundle step fetches a pinned <code>bundletool</code> once and checks its SHA-256 digest.</p>
+./gradlew assembleDebug    # app/build/outputs/apk/debug/aangan-debug.apk
+./gradlew installDebug     # and install it over adb (set ANDROID_SERIAL with several devices)
+./gradlew check            # unit tests, Android Lint and javac warnings</code></pre>
+    <p><code>check</code> runs the unit tests (with Robolectric, from <code>app/src/test/</code>), Android Lint and <code>javac -Xlint:all</code>, and treats every warning as an error. CI runs it on every push and pull request, along with an Android TV emulator smoke test and CodeQL.</p>
     <p>To preview a festival's scene on a connected TV:</p>
 <pre><code>adb shell am start -n dev.vaari.aangan/.HomeActivity --es festival Diwali</code></pre>
     <p>Any festival name from the calendar works, as does a family day such as <code>"Asha's birthday"</code>. Press <kbd>Home</kbd> to clear it.</p>
 
     <h2 id=release>Releases</h2>
     <p>Release builds are signed with the project's key, kept off any repository:</p>
-<pre><code>AANGAN_KEYSTORE=~/keys/aangan-release.jks AANGAN_KEY_PASS=… ./build.sh bundle</code></pre>
-    <p>The same key signs the APK on GitHub Releases and is the Google Play app-signing key, so either can update the other. Raise <code>VERSION_CODE</code> and <code>VERSION_NAME</code> in <code>build.sh</code> for each release.</p>
+<pre><code>AANGAN_KEYSTORE=~/keys/aangan-release.jks AANGAN_KEY_PASS=… ./gradlew assembleRelease bundleRelease</code></pre>
+    <p>This writes <code>app/build/outputs/apk/release/aangan-release.apk</code> and <code>app/build/outputs/bundle/release/aangan-release.aab</code>, shrunk with R8. Without those variables, release builds are signed with the local debug key: fine for trying one, but it can't update a real install.</p>
+    <p>The same key signs the APK on GitHub Releases and is the Google Play app-signing key, so either can update the other. For each release, raise <code>versionCode</code> and <code>versionName</code> in <code>app/build.gradle.kts</code> and add a section to <code>CHANGELOG.md</code>; pushing that to main starts the release, once an owner approves it.</p>
 
     <h2 id=map>Source map</h2>
     <div class=table><table>
@@ -52,10 +53,10 @@ cd aangan
       <tr><td><code>ClockDream</code></td><td>The screensaver.</td></tr>
       <tr><td><code>Crash</code></td><td>The app's <code>Application</code>: if Aangan crashes, it writes a short note to <code>files/crash.txt</code> on the TV (versions, TV model, stack trace) and sends nothing. Settings and the phone page offer to report it on GitHub, which the person does themselves, or delete it.</td></tr>
     </table></div>
-    <p>Other files: <code>assets/festivals.csv</code> (the calendar), <code>assets/phone/</code> (the phone page's stylesheet, font, logo and the small script that suggests cities as you type), <code>res/drawable/</code> (the icon and banner) and <code>res/xml/home_button.xml</code> (the service's limits).</p>
+    <p>The Java files are in <code>app/src/main/java/dev/vaari/aangan/</code>. Other files, under <code>app/src/main/</code>: <code>assets/festivals.csv</code> (the calendar), <code>assets/festival-names/</code> (festival names in other languages), <code>assets/phone/</code> (the phone page's stylesheet, font, logo and the small script that suggests cities as you type), <code>res/values/strings.xml</code> (the app's text, for translation), <code>res/drawable/</code> (the icon and banner) and <code>res/xml/home_button.xml</code> (the service's limits).</p>
 
     <h2 id=calendar>The festival calendar</h2>
-    <p><code>assets/festivals.csv</code> has one line per festival day:</p>
+    <p><code>app/src/main/assets/festivals.csv</code> has one line per festival day:</p>
 <pre><code># date,name,greeting,scene[,expected]
 2026-11-08,Diwali,Happy Diwali,DIWALI
 2027-03-10,Eid al-Fitr,Eid Mubarak,EID,expected</code></pre>
@@ -117,7 +118,7 @@ cd aangan
 
     <h2 id=art>Icon and website</h2>
     <ul>
-      <li><code>python3 tools/icon.py</code> draws the icon and banner and writes <code>res/drawable/icon.xml</code>, <code>banner.xml</code> and the SVGs. The wordmark is Fraunces, as a path in <code>tools/wordmark.txt</code>.</li>
+      <li><code>python3 tools/icon.py</code> draws the icon and banner and writes <code>app/src/main/res/drawable/icon.xml</code>, <code>banner.xml</code> and the SVGs. The wordmark is Fraunces, as a path in <code>tools/wordmark.txt</code>.</li>
       <li><code>python3 tools/site.py</code> builds this website from <code>site/</code> into <code>build/site/</code>; CI publishes it to GitHub Pages on every push to main.</li>
     </ul>
 
@@ -127,6 +128,7 @@ cd aangan
       <li>Keep to the principles above: no libraries, no tracking, no work while watching.</li>
       <li>Match the surrounding code: names, comments and idiom.</li>
       <li>Test on a real TV if you can, and say which one in the pull request.</li>
+      <li><code>./gradlew check</code> must pass. <a href="{{REPO}}/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a> has the details, including how to translate.</li>
       <li>By contributing, you agree to license your work under the MIT licence.</li>
     </ul>
   </div>

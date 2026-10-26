@@ -3,9 +3,9 @@
 
     python3 tools/icon.py
 
-It writes the icon as docs/icon.svg (for the website and README) and assets/phone/mark.svg (for the
+It writes the icon as docs/icon.svg (for the website and README) and app/src/main/assets/phone/mark.svg (for the
 phone setup page), the banner as docs/banner.svg, and both as the Android vector drawables
-res/drawable/icon.xml and banner.xml.
+app/src/main/res/drawable/icon.xml and banner.xml.
 
 The mark is the nine: eight houses around a sunlit courtyard, which is also a grid of apps with one
 in focus. tools/wordmark.txt holds "Aangan" set in Fraunces (SIL Open Font Licence) at opsz 72,
@@ -178,10 +178,10 @@ def main():
 
     icon_svg = svg(100, 100, icon, icon_clip)
     write("docs/icon.svg", icon_svg)
-    write("assets/phone/mark.svg", icon_svg)
+    write("app/src/main/assets/phone/mark.svg", icon_svg)
     write("docs/banner.svg", svg(160, 90, banner))
-    write("res/drawable/icon.xml", vector_drawable(100, 100, 96, 96, icon, ICON_TEXT, icon_clip))
-    write("res/drawable/banner.xml", vector_drawable(160, 90, 320, 180, banner, BANNER_TEXT))
+    write("app/src/main/res/drawable/icon.xml", vector_drawable(100, 100, 96, 96, icon, ICON_TEXT, icon_clip))
+    write("app/src/main/res/drawable/banner.xml", vector_drawable(160, 90, 320, 180, banner, BANNER_TEXT))
 
 
 if __name__ == "__main__":

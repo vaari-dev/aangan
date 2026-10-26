@@ -1,0 +1,320 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Hindi. A first draft, awaiting review by a native speaker: please correct anything that reads
+    as stiff or that a family wouldn't say. Times keep AM and PM, as Hindi TV menus usually do.
+-->
+<resources>
+    <string name="settings_label">आँगन सेटिंग्स</string>
+    <string name="clock_label">आँगन घड़ी</string>
+    <string name="home_button_description">होम बटन दबाने या टीवी चालू करने पर Aangan खोलता है। Aangan केवल होम बटन पर और टीवी की अपनी होम स्क्रीन खुलने पर काम करता है। बाकी हर बटन पहले की तरह चलता है, और यह दूसरे ऐप या स्क्रीन पर कुछ भी नहीं देख सकता।</string>
+
+    <!-- Common words -->
+    <string name="add">जोड़ें</string>
+    <string name="save">सहेजें</string>
+    <string name="cancel">रद्द करें</string>
+    <string name="remove">हटाएँ</string>
+    <string name="keep">रहने दें</string>
+    <string name="edit">बदलें</string>
+    <string name="change">बदलें</string>
+    <string name="choose">चुनें</string>
+    <string name="search">खोजें</string>
+    <string name="on">चालू</string>
+    <string name="off">बंद</string>
+    <string name="turn_on">चालू करें</string>
+    <string name="not_now">अभी नहीं</string>
+    <string name="now">अभी</string>
+    <string name="today">आज</string>
+    <string name="tomorrow">कल</string>
+    <string name="hidden">छिपा है</string>
+    <string name="moved">तारीख बदली</string>
+    <string name="settings">सेटिंग्स</string>
+    <string name="city">शहर</string>
+    <string name="festivals">त्योहार</string>
+    <string name="birthday">जन्मदिन</string>
+    <string name="anniversary">सालगिरह</string>
+
+    <!-- Dates and countdowns -->
+    <plurals name="in_days">
+        <item quantity="one">%d दिन में</item>
+        <item quantity="other">%d दिन में</item>
+    </plurals>
+    <plurals name="in_days_capital">
+        <item quantity="one">%d दिन में</item>
+        <item quantity="other">%d दिन में</item>
+    </plurals>
+    <string name="festival_tomorrow">कल %1$s है</string>
+    <string name="festival_on_day">%2$s को %1$s</string>
+    <plurals name="festival_in_days">
+        <item quantity="one">%2$d दिन में %1$s</item>
+        <item quantity="other">%2$d दिन में %1$s</item>
+    </plurals>
+    <string name="date_expected">%1$s (संभावित)</string>
+    <string name="birthday_of">%1$s का जन्मदिन</string>
+    <string name="anniversary_of">%1$s की सालगिरह</string>
+    <string name="happy_birthday">जन्मदिन मुबारक हो, %1$s</string>
+    <string name="happy_anniversary">सालगिरह मुबारक हो, %1$s</string>
+
+    <!-- The home screen -->
+    <string name="home_tip">"आज का मौसम और हवा देखने के लिए  ▲  फिर OK दबाएँ     ·     किसी ऐप को डॉक में रखने या छिपाने के लिए OK दबाकर रखें"</string>
+    <string name="weather_credit">Open-Meteo · Copernicus CAMS</string>
+    <string name="set_up_aangan">आँगन सेट करें</string>
+    <string name="cant_open">%1$s नहीं खुल सका</string>
+    <plurals name="show_hidden_apps">
+        <item quantity="one">%d छिपा हुआ ऐप दिखाएँ</item>
+        <item quantity="other">%d छिपे हुए ऐप दिखाएँ</item>
+    </plurals>
+    <string name="move_left">बाएँ खिसकाएँ</string>
+    <string name="move_right">दाएँ खिसकाएँ</string>
+    <string name="hide">छिपाएँ</string>
+    <string name="app_info">ऐप की जानकारी</string>
+
+    <!-- Weather -->
+    <string name="feels_like">महसूस: %1$s</string>
+    <string name="high_low">"अधिकतम %1$s  न्यूनतम %2$s"</string>
+    <string name="aqi_value">AQI %1$d</string>
+    <string name="clock_am">%1$s AM</string>
+    <string name="clock_pm">%1$s PM</string>
+    <string name="rain_now">अभी बारिश की संभावना</string>
+    <string name="rain_around">%1$s के आसपास बारिश की संभावना</string>
+    <string name="sky_hazy">धुंध</string>
+    <string name="sky_clear">साफ़</string>
+    <string name="sky_mostly_clear">ज़्यादातर साफ़</string>
+    <string name="sky_partly_cloudy">आंशिक बादल</string>
+    <string name="sky_cloudy">बादल</string>
+    <string name="sky_fog">कोहरा</string>
+    <string name="sky_drizzle">बूँदाबाँदी</string>
+    <string name="sky_freezing_drizzle">जमाने वाली बूँदाबाँदी</string>
+    <string name="sky_light_rain">हल्की बारिश</string>
+    <string name="sky_rain">बारिश</string>
+    <string name="sky_heavy_rain">तेज़ बारिश</string>
+    <string name="sky_freezing_rain">जमाने वाली बारिश</string>
+    <string name="sky_light_snow">हल्की बर्फ़बारी</string>
+    <string name="sky_snow">बर्फ़बारी</string>
+    <string name="sky_heavy_snow">भारी बर्फ़बारी</string>
+    <string name="sky_snow_grains">बर्फ़ के दाने</string>
+    <string name="sky_showers">बौछारें</string>
+    <string name="sky_heavy_showers">तेज़ बौछारें</string>
+    <string name="sky_snow_showers">बर्फ़ की बौछारें</string>
+    <string name="sky_thunderstorm">गरज के साथ तूफ़ान</string>
+    <string name="sky_thunderstorm_hail">आँधी-तूफ़ान और ओले</string>
+    <string name="uv_label">%1$d %2$s</string>
+    <string name="uv_low">कम</string>
+    <string name="uv_moderate">मध्यम</string>
+    <string name="uv_high">ज़्यादा</string>
+    <string name="uv_very_high">बहुत ज़्यादा</string>
+    <string name="uv_extreme">अत्यधिक</string>
+    <string name="daylight">%1$d घं %2$02d मि</string>
+    <string-array name="moon_phases">
+        <item>अमावस्या</item>
+        <item>शुक्ल पक्ष, बढ़ता चाँद</item>
+        <item>शुक्ल अष्टमी</item>
+        <item>शुक्ल पक्ष, लगभग पूरा</item>
+        <item>पूर्णिमा</item>
+        <item>कृष्ण पक्ष, घटता चाँद</item>
+        <item>कृष्ण अष्टमी</item>
+        <item>कृष्ण पक्ष, पतला चाँद</item>
+    </string-array>
+
+    <!-- Air quality: CPCB names as in the National AQI's Hindi bulletins -->
+    <string name="cpcb_good">अच्छा</string>
+    <string name="cpcb_satisfactory">संतोषजनक</string>
+    <string name="cpcb_moderate">मध्यम</string>
+    <string name="cpcb_poor">ख़राब</string>
+    <string name="cpcb_very_poor">बहुत ख़राब</string>
+    <string name="cpcb_severe">गंभीर</string>
+    <string name="cpcb_good_advice">न्यूनतम असर।</string>
+    <string name="cpcb_satisfactory_advice">संवेदनशील लोगों को साँस लेने में हल्की तकलीफ़।</string>
+    <string name="cpcb_moderate_advice">दमा, फेफड़े या दिल के रोग वाले लोगों को साँस लेने में तकलीफ़।</string>
+    <string name="cpcb_poor_advice">ज़्यादा देर रहने पर ज़्यादातर लोगों को साँस लेने में तकलीफ़।</string>
+    <string name="cpcb_very_poor_advice">ज़्यादा देर रहने पर साँस की बीमारी। खिड़कियाँ बंद रखें।</string>
+    <string name="cpcb_severe_advice">स्वस्थ लोगों पर भी असर। घर के अंदर रहें और प्यूरीफ़ायर चलाएँ।</string>
+    <string name="epa_good">अच्छा</string>
+    <string name="epa_moderate">मध्यम</string>
+    <string name="epa_sensitive">कुछ लोगों के लिए हानिकारक</string>
+    <string name="epa_unhealthy">हानिकारक</string>
+    <string name="epa_very_unhealthy">बहुत हानिकारक</string>
+    <string name="epa_hazardous">ख़तरनाक</string>
+    <string name="epa_good_advice">हवा की गुणवत्ता संतोषजनक है।</string>
+    <string name="epa_moderate_advice">बहुत संवेदनशील लोग बाहर लंबी मेहनत कम करें।</string>
+    <string name="epa_sensitive_advice">संवेदनशील लोग बाहर लंबी या भारी मेहनत कम करें।</string>
+    <string name="epa_unhealthy_advice">सभी लोग बाहर लंबी या भारी मेहनत कम करें।</string>
+    <string name="epa_very_unhealthy_advice">बाहर लंबी मेहनत न करें। खिड़कियाँ बंद रखें।</string>
+    <string name="epa_hazardous_advice">घर के अंदर रहें और कम से कम मेहनत करें।</string>
+
+    <!-- The Today card -->
+    <string name="today_in">आज %1$s में</string>
+    <string name="updated_at">अपडेट: %1$s</string>
+    <string name="today_footer">Open-Meteo · Copernicus CAMS · बंद करने के लिए Back</string>
+    <string name="no_weather">अभी मौसम की जानकारी नहीं</string>
+    <string name="no_air">अभी हवा की जानकारी नहीं</string>
+    <string name="sunrise">सूर्योदय</string>
+    <string name="sunset">सूर्यास्त</string>
+    <string name="daylight_label">दिन की रोशनी</string>
+    <string name="uv_peak">UV अधिकतम</string>
+    <string name="moon">चाँद</string>
+    <string name="coming_up">आने वाले दिन</string>
+    <string name="air_average">"24 घंटे का औसत  ·  PM2.5 %1$d  ·  PM10 %2$d µg/m³"</string>
+    <plurals name="no_clean_air">
+        <item quantity="one">अगले %d घंटे में हवा साफ़ होने का समय नहीं</item>
+        <item quantity="other">अगले %d घंटों में हवा साफ़ होने का समय नहीं</item>
+    </plurals>
+    <string name="air_out">"खिड़कियाँ खोलने का सबसे अच्छा समय: %1$s  ·  PM2.5 %2$d"</string>
+    <string name="air_now">अभी</string>
+    <string name="air_tomorrow">कल %1$s</string>
+    <string name="safe_limit">सुरक्षित सीमा %1$d</string>
+    <string name="hours_ago_24">24 घंटे पहले</string>
+    <string name="hours_ahead">+%1$d घं</string>
+
+    <!-- Welcome -->
+    <string name="welcome_title">आँगन में आपका स्वागत है</string>
+    <string name="welcome_lede">आपके टीवी के लिए एक शांत होम स्क्रीन। बस तीन छोटी चीज़ें, और आप तैयार हैं।</string>
+    <string name="welcome_start">आँगन इस्तेमाल करें</string>
+    <string name="welcome_home">होम बटन से खोलें</string>
+    <string name="welcome_home_done">हो गया। अब होम बटन आपको आँगन पर लाता है।</string>
+    <string name="welcome_home_how">चालू करें चुनें, फिर Aangan चुनकर उसे चालू करें। Android अपनी सामान्य चेतावनी दिखाता है; आँगन केवल होम बटन पर काम करता है।</string>
+    <string name="welcome_city">आपका शहर</string>
+    <string name="welcome_city_body">%1$s का मौसम और हवा की गुणवत्ता। अगर आप कहीं और रहते हैं तो बदलें।</string>
+    <string name="welcome_family">परिवार के दिन</string>
+    <plurals name="welcome_family_added">
+        <item quantity="one">%d जन्मदिन या सालगिरह जोड़ी गई।</item>
+        <item quantity="other">%d जन्मदिन और सालगिरहें जोड़ी गईं।</item>
+    </plurals>
+    <string name="welcome_family_how">अपने फ़ोन से जन्मदिन और सालगिरहें जोड़ें। आँगन उस दिन उन्हें मनाता है।</string>
+    <string name="add_more">और जोड़ें</string>
+
+    <!-- The Home-button service's disclosure -->
+    <string name="disclosure_title">होम बटन से आँगन खोलें</string>
+    <string name="disclosure_body">आँगन Android की सुलभता (accessibility) सेवा का इस्तेमाल सिर्फ़ एक काम के लिए करता है: जब आप होम दबाते हैं, या टीवी की अपनी होम स्क्रीन आती है, तो यह उसकी जगह आँगन खोलता है।\n\nयह केवल होम बटन पर काम करता है; बाकी हर बटन पहले की तरह चलता है। यह न स्क्रीन पर कुछ देख सकता है, न यह कि आप क्या देखते हैं, और यह कुछ भी सहेजता या भेजता नहीं है।\n\nअगले चरण में Aangan चुनें और उसे चालू करें। आप उसे वहीं कभी भी बंद कर सकते हैं।</string>
+    <string name="disclosure_agree">सहमत हूँ, आगे बढ़ें</string>
+
+    <!-- Settings -->
+    <string name="open_with_home">होम बटन से खोलें</string>
+    <string name="screensaver">स्क्रीनसेवर</string>
+    <string name="family_days_heading">जन्मदिन और सालगिरहें</string>
+    <string name="add_one">एक जोड़ें</string>
+    <string name="about">जानकारी</string>
+    <string name="version">संस्करण</string>
+    <string name="phone_title">अपने फ़ोन से सेट करें</string>
+    <string name="phone_offline">फ़ोन से सेट करने के लिए टीवी को Wi-Fi से जोड़ें।</string>
+    <string name="phone_how">शहर, डॉक, परिवार के दिन और त्योहारों की तारीखें सेट करने के लिए फ़ोन के कैमरे से स्कैन करें। आपका फ़ोन उसी Wi-Fi पर होना चाहिए।</string>
+    <string name="phone_not_secure">अगर फ़ोन कहे कि पेज सुरक्षित नहीं है, तो आगे बढ़ना चुनें। यह पेज इसी टीवी से आता है और आपके Wi-Fi पर ही रहता है।</string>
+    <string name="choose_city">अपना शहर चुनें</string>
+    <string name="search_failed">अभी खोज नहीं हो सकी। टीवी का इंटरनेट कनेक्शन जाँचें।</string>
+    <string name="no_places">“%1$s” नाम की कोई जगह नहीं मिली। पास का कोई बड़ा शहर आज़माएँ।</string>
+    <string name="name_hint">नाम, जैसे आशा या आशा और रोहन</string>
+    <string name="add_day">जन्मदिन या सालगिरह जोड़ें</string>
+    <string name="edit_day">%1$s का दिन बदलें</string>
+    <string name="remove_birthday">%1$s का जन्मदिन हटाएँ?</string>
+    <string name="remove_anniversary">%1$s की सालगिरह हटाएँ?</string>
+    <string name="change_date">तारीख बदलें</string>
+    <string name="show_it">दिखाएँ</string>
+    <string name="hide_it">छिपाएँ</string>
+    <string name="back_to">वापस %1$s पर</string>
+    <string name="when_is">%1$s कब है?</string>
+
+    <!-- The phone page -->
+    <string name="page_title">अपनी होम स्क्रीन सेट करें</string>
+    <string name="page_lede">आपके बदलाव तुरंत टीवी पर दिखते हैं।</string>
+    <string name="page_city">आपका शहर</string>
+    <string name="page_city_label">मौसम और हवा की गुणवत्ता</string>
+    <string name="page_city_search">कोई और शहर खोजें</string>
+    <string name="page_family_note">उस दिन आँगन उन्हें नाम से बधाई देता है, जन्मदिन पर गुब्बारों के साथ और सालगिरह पर पंखुड़ियों के साथ।</string>
+    <string name="page_next_12_months">अगले 12 महीने</string>
+    <plurals name="page_show_more">
+        <item quantity="one">%2$s तक %1$d और दिखाएँ</item>
+        <item quantity="other">%2$s तक %1$d और दिखाएँ</item>
+    </plurals>
+    <string name="page_moved_from">%1$s से बदली</string>
+    <string name="page_expected">संभावित</string>
+    <string name="page_new_date">नई तारीख</string>
+    <string name="page_move">बदलें</string>
+    <string name="page_show_again">फिर से दिखाएँ</string>
+    <string name="page_hide_year">इस साल छिपाएँ</string>
+    <string name="page_moon_hint">यह तारीख चाँद दिखने पर निर्भर है, और एक दिन आगे-पीछे हो सकती है।</string>
+    <string name="page_festival_note">तारीखें नई दिल्ली के द्रिक पंचांग के अनुसार हैं। अगर आपका परिवार कोई त्योहार किसी और दिन मनाता है, तो यहाँ बदलें।</string>
+    <string name="page_name">नाम</string>
+    <string name="page_kind">दिन का प्रकार</string>
+    <string name="page_day">दिन</string>
+    <string name="page_month">महीना</string>
+    <string name="page_back">वापस</string>
+    <string name="page_your_tv">आपका टीवी</string>
+    <string name="page_footer_private">यहाँ जो भी सेट करें, वह आपके टीवी पर ही रहता है।</string>
+    <string name="page_footer_open">यह पेज तभी काम करता है जब टीवी पर आँगन की सेटिंग्स खुली हों।</string>
+    <string name="page_expired_title">यह लिंक पुराना हो गया है</string>
+    <string name="page_expired_body">टीवी पर आँगन की सेटिंग्स खोलें और नया कोड स्कैन करें।</string>
+    <string name="page_backup">बैकअप</string>
+    <string name="page_backup_about">शहर, डॉक, परिवार के दिन, त्योहारों के बदलाव और छिपे ऐप इस फ़ोन पर एक फ़ाइल में सहेजें। नए टीवी पर उसे इम्पोर्ट करके सब कुछ वापस पाएँ।</string>
+    <string name="page_export">इस फ़ोन पर सहेजें</string>
+    <string name="page_backup_file">बैकअप फ़ाइल</string>
+    <string name="page_import">इम्पोर्ट करें</string>
+    <string name="page_import_note">इम्पोर्ट करने पर इस टीवी की सेटिंग्स की जगह फ़ाइल की सेटिंग्स आ जाती हैं। फ़ाइल आपके फ़ोन पर रहती है; आँगन इसकी कोई कॉपी कहीं और नहीं रखता।</string>
+
+    <!-- What the phone page says after a change -->
+    <string name="done_added">जोड़ दिया</string>
+    <string name="done_saved">सहेज लिया</string>
+    <string name="done_removed">हटा दिया</string>
+    <string name="done_city">शहर बदल गया</string>
+    <string name="done_moved">तारीख बदल गई</string>
+    <string name="done_hidden">इस साल के लिए छिपा दिया</string>
+    <string name="done_shown">फिर से दिख रहा है</string>
+    <string name="done_restored">पंचांग की तारीख पर वापस</string>
+    <string name="done_invalid">सहेजा नहीं: नाम और तारीख जाँचें</string>
+    <string name="done_gone">सहेजा नहीं: यह दिन टीवी पर बदला गया था</string>
+    <string name="done_imported">बैकअप इम्पोर्ट हो गया</string>
+    <string name="done_not_backup">इम्पोर्ट नहीं हुआ: यह आँगन की बैकअप फ़ाइल नहीं है</string>
+
+    <!-- डॉक -->
+    <string name="dock">डॉक</string>
+    <string name="dock_title">डॉक</string>
+    <string name="dock_empty">खाली</string>
+    <string name="choose_an_app">कोई ऐप चुनें</string>
+    <string name="change_app">ऐप बदलें</string>
+    <string name="put_in_dock">डॉक में रखें</string>
+    <string name="remove_from_dock">डॉक से हटाएँ</string>
+    <string name="dock_put_title">%1$s को डॉक में रखें</string>
+    <string name="dock_replace">%1$s की जगह</string>
+    <string name="dock_empty_place">खाली जगह %1$d</string>
+    <string name="dock_empty_place_hint">डॉक में खाली जगह %1$d। कोई ऐप चुनें</string>
+    <string name="dock_place_title">डॉक में जगह %1$d</string>
+    <string name="dock_here_now">अभी यहीं</string>
+    <string name="dock_in_place">जगह %1$d पर</string>
+    <string name="dock_reset">लोकप्रिय ऐप्स पर लौटाएँ</string>
+    <string name="dock_reset_title">डॉक फिर से भरें?</string>
+    <string name="dock_reset_message">आँगन इसे आपके लोकप्रिय ऐप्स से भरेगा, जैसे Netflix और YouTube, फिर बाकी वर्णक्रम में।</string>
+    <string name="reset">फिर से भरें</string>
+    <string name="keep_mine">मेरा वाला रहने दें</string>
+
+    <!-- शहर चुनना -->
+    <string name="city_label">आपका शहर</string>
+    <string name="city_now">अभी: %1$s</string>
+    <string name="city_hint">शहर या कस्बे का नाम लिखें</string>
+    <string name="city_privacy">सिर्फ़ जो आप लिखते हैं, वही Open-Meteo की जगह-खोज को भेजा जाता है। अगर आपका कस्बा सूची में नहीं है, तो पास का कोई बड़ा शहर चुनें।</string>
+    <string name="city_popular">लोकप्रिय शहर</string>
+    <string name="city_searching">खोज रहे हैं…</string>
+    <plurals name="places_found">
+        <item quantity="one">%1$s जगह</item>
+        <item quantity="other">%1$s जगहें</item>
+    </plurals>
+    <string name="people_crore">%1$s करोड़ लोग</string>
+    <string name="people_lakh">%1$s लाख लोग</string>
+    <string name="people_million">%1$s मिलियन लोग</string>
+    <string name="people_count">%1$s लोग</string>
+
+    <!-- क्रैश का नोट -->
+    <string name="crash_title">आँगन अचानक बंद हो गया</string>
+    <string name="crash_message">इसने गड़बड़ी के बारे में एक छोटा नोट यहीं टीवी पर रखा है, और कुछ भी नहीं भेजा। इसकी शिकायत करने के लिए दाईं ओर का कोड स्कैन करें: फ़ोन पेज पर नोट दिखेगा, और GitHub पर भेजने से पहले आप सब कुछ पढ़ सकते हैं।</string>
+    <string name="delete">मिटाएँ</string>
+    <string name="page_crash_about">%1$s को आँगन रुककर फिर से शुरू हुआ। इसने यह नोट टीवी पर रखा है और कुछ भी नहीं भेजा। अगर आप चाहते हैं कि इसे ठीक किया जाए, तो GitHub पर बताएँ: भेजने से पहले आप सब कुछ देख सकेंगे, और लिख सकेंगे कि आप क्या कर रहे थे।</string>
+    <string name="page_crash_show">नोट दिखाएँ</string>
+    <string name="page_crash_report">GitHub पर बताएँ</string>
+    <string name="find_accessibility">Device Preferences चुनें, फिर Accessibility, फिर Aangan</string>
+
+    <!-- फ़ोन पेज पर डॉक -->
+    <string name="page_dock_place">डॉक में जगह %1$d</string>
+    <string name="page_dock_note">होम स्क्रीन पर सबसे ऊपर के चार बड़े ऐप, बाएँ से दाएँ।</string>
+    <string name="page_wrong_address">टीवी पर दिखाया गया पता इस्तेमाल करें।</string>
+    <string name="done_no_city">सहेजा नहीं: शहर फिर से खोजें</string>
+    <string name="done_dock">डॉक सहेज लिया</string>
+    <string name="done_crash">नोट मिटा दिया</string>
+    <string name="done_full">सहेजा नहीं: परिवार की सूची भर गई है (ज़्यादा से ज़्यादा %1$d)</string>
+</resources>

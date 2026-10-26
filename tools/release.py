@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""The version (from build.sh) and the changelog (CHANGELOG.md), for the website and for releases.
+"""The version (from app/build.gradle.kts) and the changelog (CHANGELOG.md), for the website and for releases.
 
-    python3 tools/release.py version      # 1.2
-    python3 tools/release.py tag          # v1.2.0
-    python3 tools/release.py notes [1.2]  # that version's changelog, as Markdown
+    python3 tools/release.py version      # 1.4
+    python3 tools/release.py tag          # v1.4.0
+    python3 tools/release.py notes [1.4]  # that version's changelog, as Markdown
 """
 import html
 import os
@@ -14,9 +14,9 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def version():
-    """versionName from build.sh."""
-    with open(os.path.join(REPO_ROOT, "build.sh"), encoding="utf-8") as f:
-        return re.search(r"^VERSION_NAME=(\S+)", f.read(), re.M).group(1)
+    """versionName from app/build.gradle.kts."""
+    with open(os.path.join(REPO_ROOT, "app", "build.gradle.kts"), encoding="utf-8") as f:
+        return re.search(r'^\s*versionName = "([^"]+)"', f.read(), re.M).group(1)
 
 
 def tag(name=None):

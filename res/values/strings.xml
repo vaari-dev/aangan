@@ -1,4 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="home_button_description">Opens Aangan when you press Home or turn the TV on. Aangan acts only on the Home button and on the TV\'s own home screen opening. Every other button passes straight through, and it can\'t see other apps or anything on screen.</string>
-</resources>
