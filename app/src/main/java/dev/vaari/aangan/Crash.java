@@ -2,8 +2,6 @@ package dev.vaari.aangan;
 
 import android.app.Application;
 import android.content.Context;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 
@@ -42,7 +40,7 @@ public class Crash extends Application implements Thread.UncaughtExceptionHandle
     @Override
     public void uncaughtException(Thread thread, Throwable error) {
         try {
-            String report = "Aangan " + version(this) + " on Android " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT
+            String report = "Aangan " + BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ") on Android " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT
                     + "), " + Build.MANUFACTURER + " " + Build.MODEL + "\n"
                     + new SimpleDateFormat(STAMP, Locale.ENGLISH).format(new Date())
                     + "\n\n" + trace(error);
@@ -103,12 +101,4 @@ public class Crash extends Application implements Thread.UncaughtExceptionHandle
         }
     }
 
-    private static String version(Context context) {
-        try {
-            PackageInfo p = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
-            return p.versionName + " (" + p.getLongVersionCode() + ")";
-        } catch (PackageManager.NameNotFoundException e) {
-            return "?";
-        }
-    }
 }

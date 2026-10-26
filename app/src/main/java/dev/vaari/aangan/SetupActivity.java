@@ -6,7 +6,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.os.Bundle;
@@ -170,19 +169,11 @@ public class SetupActivity extends Activity {
         }
 
         heading(R.string.about);
-        row(getString(R.string.version), version(), v -> { });
+        row(getString(R.string.version), BuildConfig.VERSION_NAME, v -> { });
 
         View target = rows.getChildAt(Math.max(0, Math.min(focus, rows.getChildCount() - 1)));
         if (target == null || !target.isFocusable()) target = rows.getChildAt(0);
         target.requestFocus();
-    }
-
-    private String version() {
-        try {
-            return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
-        } catch (PackageManager.NameNotFoundException e) {
-            return "";
-        }
     }
 
     private void showPhonePanel(String url) {

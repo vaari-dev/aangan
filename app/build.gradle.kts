@@ -24,6 +24,10 @@ android {
         versionName = "1.4"
     }
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     signingConfigs {
         if (releaseKeystore != null) {
             create("release") {
