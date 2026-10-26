@@ -5,6 +5,8 @@
 # CI runs it on the minified release build, which is where shrinking mistakes would show.
 #
 #   tools/tv-smoke-test.sh path/to/aangan.apk [screenshot-dir]
+#
+# Needs adb, and zbarimg (from zbar-tools) to read the QR code in Settings.
 set -euo pipefail
 APK="$1"
 SHOTS="${2:-screenshots}"
@@ -32,12 +34,12 @@ shot 2-home
 adb shell input keyevent KEYCODE_DPAD_DOWN
 adb shell input keyevent KEYCODE_DPAD_CENTER
 shot 2-settings 4
-adb shell uiautomator dump /sdcard/ui.xml > /dev/null
-# The link under the QR code: "10.0.2.15:8737/secret".
-LINK=$(adb shell cat /sdcard/ui.xml | grep -oE 'text="[0-9.]+:[0-9]+/[^"]+"' | head -1 | sed 's/^text="//; s/"$//')
+# The address in the QR code, read the way a phone would: "http://10.0.2.15:8737/secret". This
+# checks the QR code itself too. (zbarimg is in the zbar-tools package.)
+LINK=$(zbarimg -q --raw "$SHOTS/2-settings.png" || true)
+LINK="${LINK#http://}"
 if [ -z "$LINK" ]; then
-    echo "Settings didn't show the phone page's address." >&2
-    adb shell cat /sdcard/ui.xml >&2
+    echo "Settings showed no QR code that could be read; see $SHOTS/2-settings.png." >&2
     exit 1
 fi
 HOST="${LINK%%/*}"
