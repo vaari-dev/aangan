@@ -600,27 +600,41 @@ public class HomeActivity extends Activity {
         if (fetching || now < retryAt || (!wantWeather && !wantAir)) return;
 
         fetching = true;
-        // The fetch fills this object; onResume may swap in a fresh one meanwhile (say, for a new city).
+        // onResume may swap in a fresh object meanwhile (say, for a new city).
         Weather target = weather;
         network.execute(() -> {
-            boolean ok = true;
+            String forecast = null;
+            String air = null;
             try {
-                if (wantWeather) target.fetchWeather(now);
+                if (wantWeather) forecast = target.downloadWeather();
             } catch (Exception e) {
-                ok = false;
+                // Counted as a failure below.
             }
             try {
-                if (wantAir) target.fetchAir(now);
+                if (wantAir) air = target.downloadAir();
             } catch (Exception e) {
-                ok = false;
+                // Counted as a failure below.
             }
-            boolean success = ok;
+            String forecastBody = forecast;
+            String airBody = air;
             handler.post(() -> {
                 fetching = false;
                 if (target != weather) {
                     // Fetched for a city or cache that has since been replaced: start again for the current one.
                     maybeRefreshWeather();
                     return;
+                }
+                // Read here, on the main thread, which is also where the forecast is drawn from.
+                boolean success = (!wantWeather || forecastBody != null) && (!wantAir || airBody != null);
+                try {
+                    if (forecastBody != null) weather.readWeather(forecastBody, now);
+                } catch (Exception e) {
+                    success = false;
+                }
+                try {
+                    if (airBody != null) weather.readAir(airBody, now);
+                } catch (Exception e) {
+                    success = false;
                 }
                 if (success) {
                     failures = 0;

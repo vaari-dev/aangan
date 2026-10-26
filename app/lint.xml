@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Lint runs on every build with warnings as errors. Each exception here says why. -->
 <lint>
-    <!-- Google Play asks TV apps to target API 34; Aangan targets 35 and moves up deliberately,
+    <!-- Google Play asks TV apps to target API 34; Aangan targets 36 and moves up deliberately,
          after testing each version's behaviour changes on a TV. -->
     <issue id="OldTargetApi" severity="ignore" />
     <!-- Newer SDKs and libraries arrive as Dependabot pull requests instead. -->

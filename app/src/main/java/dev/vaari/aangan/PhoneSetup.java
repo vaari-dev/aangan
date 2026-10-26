@@ -5,6 +5,8 @@ import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
@@ -20,6 +22,7 @@ import java.io.OutputStream;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -32,6 +35,8 @@ import java.time.format.TextStyle;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -145,10 +150,29 @@ final class PhoneSetup {
 
     private static String localAddress(Context context) {
         ConnectivityManager cm = context.getSystemService(ConnectivityManager.class);
-        LinkProperties link = cm.getLinkProperties(cm.getActiveNetwork());
-        if (link == null) return null;
-        for (LinkAddress a : link.getLinkAddresses()) {
-            if (a.getAddress() instanceof Inet4Address) return a.getAddress().getHostAddress();
+        Network active = cm.getActiveNetwork();
+        NetworkCapabilities caps = cm.getNetworkCapabilities(active);
+        LinkProperties link = cm.getLinkProperties(active);
+        if (link != null && caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)) {
+            for (LinkAddress a : link.getLinkAddresses()) {
+                if (a.getAddress() instanceof Inet4Address) return a.getAddress().getHostAddress();
+            }
+            return null;
+        }
+        // With a VPN on, the active network is the tunnel, which a phone on the Wi-Fi can't reach:
+        // use the Wi-Fi or Ethernet address under it instead.
+        try {
+            Enumeration<NetworkInterface> all = NetworkInterface.getNetworkInterfaces();
+            if (all == null) return null;
+            for (NetworkInterface n : Collections.list(all)) {
+                if (!n.isUp() || n.isLoopback() || n.isVirtual() || n.isPointToPoint()) continue;
+                if (!n.getName().startsWith("wlan") && !n.getName().startsWith("eth")) continue;
+                for (InetAddress a : Collections.list(n.getInetAddresses())) {
+                    if (a instanceof Inet4Address && a.isSiteLocalAddress()) return a.getHostAddress();
+                }
+            }
+        } catch (IOException e) {
+            // No address, so no phone page.
         }
         return null;
     }

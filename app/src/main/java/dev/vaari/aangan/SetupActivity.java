@@ -18,6 +18,7 @@ import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.NumberPicker;
@@ -44,6 +45,15 @@ public class SetupActivity extends Activity {
 
     private static final ComponentName SONY_SCREENSAVER =
             new ComponentName("com.android.tv.settings", "com.sony.dtv.settings.device.display.daydream.DaydreamActivity");
+
+    /**
+     * How long the screen stays on after Settings opens, or after the last change from the phone.
+     * Using the phone isn't using the TV, so otherwise the screensaver would start, Settings would
+     * pause, and the phone page would stop part way through.
+     */
+    private static final long PHONE_AWAKE_MS = 20 * 60_000L;
+
+    private final Runnable letScreenSleep = () -> getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
     private Ui ui;
     private SharedPreferences prefs;
@@ -93,15 +103,28 @@ public class SetupActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        phone = new PhoneSetup(this, prefs, this::showRows);
-        showPhonePanel(phone.start());
+        phone = new PhoneSetup(this, prefs, () -> {
+            keepScreenOn();
+            showRows();
+        });
+        String url = phone.start();
+        showPhonePanel(url);
+        if (url != null) keepScreenOn();
         showRows();
     }
 
     @Override
     protected void onPause() {
         phone.stop();
+        phonePanel.removeCallbacks(letScreenSleep);
+        letScreenSleep.run();
         super.onPause();
+    }
+
+    private void keepScreenOn() {
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        phonePanel.removeCallbacks(letScreenSleep);
+        phonePanel.postDelayed(letScreenSleep, PHONE_AWAKE_MS);
     }
 
     // ---- views ------------------------------------------------------------------------------

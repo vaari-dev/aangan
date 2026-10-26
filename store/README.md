@@ -78,10 +78,11 @@ though, and the forecast request sends the chosen city's coordinates to Open-Met
 | Required or optional? | **Required**: the weather needs a city (Gurgaon by default). |
 | Purpose | **App functionality** |
 
+City search text is also sent to Open-Meteo when the user searches. Add it as **App activity → Other
+user-generated content**: collected, not shared, optional, for app functionality. The privacy policy's
+"Google Play's data safety" section lists both, so the form and the policy say the same thing.
+
 Nothing else is collected. Family names and dates, the app list and settings never leave the TV.
-City search text is also sent to Open-Meteo when the user searches; it doesn't fit a Play data type,
-but if you prefer to be conservative, add **App activity → Other user-generated content**, collected,
-not shared, for app functionality.
 
 ## 7. Accessibility API declaration
 

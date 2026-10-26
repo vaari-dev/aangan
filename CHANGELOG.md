@@ -10,7 +10,12 @@ Each version's notes become its GitHub release notes and the website's changelog
 - Names for the family's days now stop at 40 characters on the TV, as they already did on the phone page. A longer name from before is kept whole.
 - Fixed: after the TV moved to another time zone, festivals and birthdays could show on the wrong day around midnight until Aangan restarted.
 - Festival scenes reuse more of what they draw each frame, for smoother animation on slower TVs.
-- Under the hood: a standard Gradle build, automated tests, stricter checks, and every build started on Android TV 13, Google TV 14 and Google TV 16 emulators before release. Releases are reproducible and come with build provenance.
+- While the phone page is in use, the TV's screen stays on, so the screensaver no longer stops the page part way through an edit. It lets the screen sleep again 20 minutes after the last change.
+- Fixed: with a VPN app on the TV, the QR code pointed the phone at the VPN's address, which it couldn't reach.
+- Fixed: a rare crash when a new forecast arrived while the Today card was being drawn.
+- A crash note no longer includes the error's message, which could quote a family member's name. The GitHub link made from it is kept short enough for browsers to open.
+- The privacy policy now spells out what Google Play's data safety section lists: the city's rounded coordinates and city searches, sent to Open-Meteo.
+- Under the hood: a standard Gradle build, automated tests, stricter checks, and every build started on Android TV and Google TV emulators before release. Releases are reproducible and come with build provenance.
 
 ## 1.3.3
 

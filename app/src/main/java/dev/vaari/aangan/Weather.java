@@ -203,10 +203,13 @@ final class Weather {
         return now - weatherAt > STALE_AFTER;
     }
 
-    // ---- network (blocking; call off the main thread) ---------------------------------------
+    // ---- network ----------------------------------------------------------------------------
 
-    void fetchWeather(long now) throws IOException, JSONException {
-        readWeather(get(url(FORECAST_URL)), now);
+    // Downloads block, so they run off the main thread. The main thread reads this object while it
+    // draws, so it takes the answers in itself, with readWeather and readAir.
+
+    String downloadWeather() throws IOException {
+        return get(url(FORECAST_URL));
     }
 
     /** Takes in a forecast response, fetched at {@code now}. */
@@ -221,12 +224,14 @@ final class Weather {
         weatherAt = now;
     }
 
-    /** Uses the mean of the last 24 hourly readings, as both indexes are defined on 24-hour averages. */
-    void fetchAir(long now) throws IOException, JSONException {
-        readAir(get(url(AIR_URL)), now);
+    String downloadAir() throws IOException {
+        return get(url(AIR_URL));
     }
 
-    /** Takes in an air-quality response, fetched at {@code now}. */
+    /**
+     * Takes in an air-quality response, fetched at {@code now}. Uses the mean of the last 24 hourly
+     * readings, as both indexes are defined on 24-hour averages.
+     */
     void readAir(String body, long now) throws JSONException {
         JSONObject json = new JSONObject(body);
         String currentTime = json.getJSONObject("current").getString("time");
