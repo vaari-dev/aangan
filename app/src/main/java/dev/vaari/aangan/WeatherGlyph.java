@@ -6,10 +6,7 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.view.View;
 
-/**
- * Line-art weather icons drawn with paths, in a 22-unit box. Emoji and font symbols look
- * cartoonish or inconsistent on Android TV, so these are drawn to match the thin Roboto type.
- */
+/** Drawn in a 22-unit box, since emoji and font symbols look inconsistent on Android TV. */
 final class WeatherGlyph extends View {
 
     private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -93,7 +90,6 @@ final class WeatherGlyph extends View {
         c.drawPath(disc, stroke);
     }
 
-    /** A small sun or moon peeking out from behind a cloud; the cloud hides what it covers. */
     private void behindCloud(Canvas c, boolean day) {
         Path cloud = cloud(2);
         c.save();
@@ -104,7 +100,6 @@ final class WeatherGlyph extends View {
         c.drawPath(cloud, stroke);
     }
 
-    /** Three overlapping puffs on a flat base, shifted vertically by dy. */
     private static Path cloud(float dy) {
         Path p = new Path();
         p.addCircle(7.5f, 13.5f + dy, 3.5f, Path.Direction.CW);

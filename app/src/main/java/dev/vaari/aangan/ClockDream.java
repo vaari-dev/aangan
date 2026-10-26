@@ -16,17 +16,13 @@ import android.widget.TextView;
 import java.time.LocalDate;
 import java.util.Random;
 
-/**
- * Aangan's screensaver: a dim clock, date and the last known weather on black. It moves to a new
- * spot once a minute so nothing burns in, and otherwise does no work at all. No network.
- */
+/** Moves once a minute so nothing burns in. */
 public class ClockDream extends DreamService {
 
-    // Dim greys on black, so a screen left on for hours has nothing bright to wear in.
+    // Dim, so a screen left on for hours has nothing bright to wear in.
     private static final int TIME = 0x99FFFFFF;
     private static final int DATE = 0x66FFFFFF;
     private static final int LINE = 0x4DFFFFFF;
-    /** The block wanders within this share of the screen's width and height. */
     private static final float ROOM = 0.7f;
 
     private final Random random = new Random();
@@ -81,7 +77,6 @@ public class ClockDream extends DreamService {
         SharedPreferences prefs = Prefs.of(this);
         Weather w = Weather.load(prefs);
         String line = w.isStale(System.currentTimeMillis()) ? "" : w.summary(getResources());
-        // On a festival day the screensaver says so too: "Happy Diwali  ·  24° Clear".
         Festival.load(this, prefs);
         LocalDate today = Festival.today();
         Festival festival = Festival.next(today);
@@ -93,7 +88,6 @@ public class ClockDream extends DreamService {
         weatherLine.setVisibility(line.isEmpty() ? View.GONE : View.VISIBLE);
     }
 
-    /** Moves the block somewhere else within the middle of the screen. */
     private void drift() {
         View root = (View) block.getParent();
         float roomX = Math.max(0, (root.getWidth() * ROOM - block.getWidth()) / 2f);

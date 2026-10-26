@@ -54,34 +54,24 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import dev.vaari.aangan.Apps.App;
 
-/**
- * A calm, offline-first home screen in the spirit of the Apple TV 4K: clock, date, weather and
- * air quality across the top, a dock of four large apps the viewer chooses, and every other app
- * in a uniform grid.
- * The focused app casts a soft light in its own colour; press Up to the weather and OK for
- * the day's forecast and air. Hold OK on any tile for options. Laid out on tvOS proportions
- * for a 960x540dp canvas.
- */
 public class HomeActivity extends Activity {
 
     private static final String SETTINGS_KEY = "__settings__";
     private static final String AANGAN_KEY = "__aangan__";
-    /** Followed by the slot's number, for an empty place in the dock. */
     private static final String EMPTY_KEY = "__empty__";
-    /** Followed by the slot's number, tags a dock tile, so focus stays on a place whatever app is in it. */
+    // Dock tiles are tagged by slot, not app, so focus stays on a place whatever app is in it.
     private static final String DOCK_TAG = "dock:";
-    // Preference keys: hidden apps (package names), and how many visits have shown the tips.
     static final String HIDDEN = "hidden";
-    // "tips2" from 1.3, so people upgrading see the tips again, and learn about the dock.
+    // "tips2" from 1.3, so upgraders see the tips again.
     private static final String TIPS = "tips2";
 
     // Layout, in dp. Six 16:9 tiles with 20dp gaps span 868dp, centred on the 960dp canvas; so do
-    // the dock's four larger ones.
     private static final int COLUMNS = 6;
     private static final int GAP = 20;
     private static final int ROW_PITCH = 124;
@@ -89,29 +79,23 @@ public class HomeActivity extends Activity {
     private static final int TOP = 30;
     private static final int HEADER_H = 86;
     private static final int FIRST_ROW = 132;
-    /** Grid rows are scrolled so the focused one never sits lower than this. */
     private static final int LOWEST_ROW = 380;
     private static final int RADIUS = 8;
     private static final int SHADOW_BLUR = 20;
     private static final int SHADOW_DROP = 10;
-    /** Room below the last row, so it can scroll up to {@link #LOWEST_ROW}. */
     private static final int BOTTOM_ROOM = 220;
     private static final int PILL_H = 40;
     private static final int TIP_MARGIN = 22;
 
-    // The ambient light's strength behind the dock, the grid, and apps with no strong colour.
     private static final float GLOW_DOCK = 0.24f;
     private static final float GLOW_GRID = 0.16f;
     private static final float GLOW_NEUTRAL = 0.10f;
     private static final int NEUTRAL = 0xFFB4C3E6;
-    // An app's colour is sampled from its banner drawn this small, in this many hue buckets; icons smaller still.
     private static final int BRAND_W = 32;
     private static final int BRAND_H = 18;
     private static final int HUES = 24;
     private static final int ICON_SAMPLE = 16;
 
-    // Motion.
-    /** Tiles other than the focused one recede slightly, under a dark veil (they stay opaque). */
     private static final int UNFOCUSED_VEIL = 0x2E000000;
     private static final float PRESS_SCALE = 0.96f;
     private static final long FOCUS_IN_MS = 180;
@@ -124,34 +108,22 @@ public class HomeActivity extends Activity {
     private static final long TODAY_FADE_MS = 220;
     private static final long TODAY_RISE_MS = 280;
     private static final long TODAY_CLOSE_MS = 160;
-    /** The dimming behind the Today card. */
     private static final int SCRIM = 0xB3000000;
 
-    // Colour.
-    /** Festivals: a warm marigold, for festivals coming up soon. */
     static final int FESTIVE = Festive.Theme.PLAIN.accent;
-    /** The weather pill: frosted glass, brighter when focused. */
     private static final int[] GLASS = {0x17FFFFFF, 0x0DFFFFFF};
     private static final int[] GLASS_FOCUSED = {0x33FFFFFF, 0x1FFFFFFF};
     private static final int GLASS_EDGE_FOCUSED = 0x59FFFFFF;
-    /** Tiles without a banner get a colour from their icon, or this if it has none. */
     private static final int TILE_FALLBACK = 0xFF2A2D34;
-    /** A festival's opening plays again only after this long away from the home screen. */
     private static final long FESTIVE_REPLAY_MS = 3 * 60 * 60_000L;
-
-    /** How many visits to the home screen show the tips. */
     private static final int TIP_VISITS = 8;
-
-    /** How often to check, while visible, whether weather or air quality is due a refresh. */
     private static final long WEATHER_CHECK_MS = 5 * 60_000L;
 
-    /** A tile's size: the dock's or the grid's. */
     private static final class Size {
         final int w;
         final int h;
         final int icon;
         final float label;
-        /** How much a focused tile grows. */
         final float scale;
         final float glow;
         final int pitch;
@@ -180,7 +152,6 @@ public class HomeActivity extends Activity {
     private GridLayout dockGrid;
     private GridLayout appGrid;
     private String signature = "";
-    /** The tile to focus after the next refresh, when a change to the dock should keep focus there. */
     private Object focusNext;
     private boolean resumed;
 
@@ -206,11 +177,9 @@ public class HomeActivity extends Activity {
     private TextView festivalView;
     private TextView tip;
     private Festive festive;
-    /** A festival to show instead of today's, set with: am start -n dev.vaari.aangan/.HomeActivity --es festival Holi */
+    // Preview a festival: am start -n dev.vaari.aangan/.HomeActivity --es festival Holi
     private String preview;
     private long festivePlayedAt;
-    private GradientDrawable glass;
-    private GradientDrawable glassFocused;
     private View today;
     private final Map<String, Integer> brand = new HashMap<>();
 
@@ -263,7 +232,6 @@ public class HomeActivity extends Activity {
     protected void onResume() {
         super.onResume();
         resumed = true;
-        // Settings may have changed the city or the family's days while we were away.
         weather = Weather.load(prefs);
         Festival.load(this, prefs);
         refresh();
@@ -279,7 +247,6 @@ public class HomeActivity extends Activity {
         super.onPause();
     }
 
-    /** The first time on a TV that isn't set up, the welcome; then a few visits with a tip. */
     private void welcomeOrTip() {
         if (WelcomeActivity.needed(prefs)) {
             if (!isSetUp()) {
@@ -297,21 +264,15 @@ public class HomeActivity extends Activity {
         tip.animate().alpha(1f).setStartDelay(TIP_DELAY_MS).setDuration(TIP_FADE_MS).start();
     }
 
-    /** Pressing Home while already home returns to the dock. */
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        // A plain Home press clears any preview.
         preview = intent.getStringExtra("festival");
         if (today != null) closeToday();
         goToTop();
     }
 
-    /**
-     * Back never leaves the home screen; it returns to the dock instead. Deprecated in favour of
-     * predictive back, which Aangan doesn't opt into: a home screen has nowhere to go back to.
-     * From Android 13 the callback registered in onCreate handles Back; this is for older TVs.
-     */
+    // Before Android 13. A home screen has nowhere to go back to, so it doesn't opt into predictive back.
     @Override
     @SuppressWarnings("deprecation")
     @SuppressLint("GestureBackNavigation")
@@ -324,13 +285,9 @@ public class HomeActivity extends Activity {
         else goToTop();
     }
 
-    // ---- units -------------------------------------------------------------------------------
-
     private int dp(float v) {
         return ui.dp(v);
     }
-
-    // ---- layout -----------------------------------------------------------------------------
 
     private void buildFrame() {
         // Focus changes drive scrolling (see scrollToRow); the default "just enough" scroll is disabled.
@@ -345,7 +302,6 @@ public class HomeActivity extends Activity {
         scroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
         scroll.setClipChildren(false);
         scroll.setClipToPadding(false);
-        // The header fades away over the first row's worth of scrolling.
         scroll.setOnScrollChangeListener((v, x, y, oldX, oldY) ->
                 header.setAlpha(1f - Math.min(1f, y / (float) dp(ROW_PITCH))));
 
@@ -365,16 +321,13 @@ public class HomeActivity extends Activity {
         appGrid = newGrid(COLUMNS);
         content.addView(appGrid);
 
-        // The light sits behind the scrolling content, so tiles always draw over it.
         root = new FrameLayout(this);
         ambient = new Ambient(this);
         festive = new Festive(this);
         root.addView(festive, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         root.addView(ambient, new FrameLayout.LayoutParams(dp(Ambient.WIDTH), dp(Ambient.HEIGHT)));
         root.addView(scroll, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        // One-time tips along the bottom edge, for the first few visits.
-        tip = ui.line(13, 400, Ui.SECONDARY,
-                getString(R.string.home_tip));
+        tip = ui.line(13, 400, Ui.SECONDARY, getString(R.string.home_tip));
         tip.setAlpha(0f);
         FrameLayout.LayoutParams tipLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
@@ -391,10 +344,8 @@ public class HomeActivity extends Activity {
                 Backdrop.paint(m.widthPixels, m.heightPixels, m.density, color)));
     }
 
-    /** Time and date on the left; a frosted pill with weather and air quality on the right. */
     private View buildHeader() {
         FrameLayout frame = new FrameLayout(this);
-        // The weather pill grows when focused; let it draw past its container's edges.
         frame.setClipChildren(false);
 
         LinearLayout clock = ui.column();
@@ -409,12 +360,9 @@ public class HomeActivity extends Activity {
         meridiem.setTypeface(Ui.font(500));
         meridiem.setTextColor(Ui.SECONDARY);
         meridiem.setAllCaps(true);
-        LinearLayout.LayoutParams meridiemLp = Ui.wrap();
-        meridiemLp.leftMargin = dp(5);
-        timeRow.addView(meridiem, meridiemLp);
+        timeRow.addView(meridiem, leftOf(5));
         clock.addView(timeRow);
 
-        // The next festival rides on the date line: "Sunday, 25 October  ·  Diwali in 14 days".
         LinearLayout dateRow = ui.row();
         dateRow.addView(ui.date(15, 400, Ui.SECONDARY));
         festivalView = ui.line(15, 500, FESTIVE);
@@ -442,11 +390,10 @@ public class HomeActivity extends Activity {
         LinearLayout row = ui.row();
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(dp(16), 0, dp(16), 0);
-        glass = glass(GLASS, Ui.HAIRLINE);
-        glassFocused = glass(GLASS_FOCUSED, GLASS_EDGE_FOCUSED);
+        GradientDrawable glass = glass(GLASS, Ui.HAIRLINE);
+        GradientDrawable glassFocused = glass(GLASS_FOCUSED, GLASS_EDGE_FOCUSED);
         row.setBackground(glass);
 
-        // Up from the top row reaches the pill; OK opens the day's forecast and air.
         row.setFocusable(true);
         row.setClickable(true);
         DecelerateInterpolator ease = new DecelerateInterpolator(1.5f);
@@ -505,7 +452,6 @@ public class HomeActivity extends Activity {
         return d;
     }
 
-    /** Wrapped, {@code left} dp after the view before it in a row. */
     private LinearLayout.LayoutParams leftOf(int left) {
         LinearLayout.LayoutParams lp = Ui.wrap();
         lp.leftMargin = dp(left);
@@ -521,10 +467,7 @@ public class HomeActivity extends Activity {
         return grid;
     }
 
-    // ---- weather ----------------------------------------------------------------------------
-
     private void showWeather() {
-        long now = System.currentTimeMillis();
         Festival festival = preview != null ? Festival.preview(preview) : Festival.next(Festival.today());
         festivalView.setText(festival == null ? "" : "  ·  " + festival.headline(this, Festival.today()));
         if (festival != null) festivalView.setTextColor(festival.theme.accent);
@@ -542,7 +485,6 @@ public class HomeActivity extends Activity {
             glyph.setGlyph(weather.glyph());
             tempView.setText(Weather.degrees(weather.temp));
             conditionView.setText(weather.condition(getResources()));
-            // An imminent shower matters more than the feels-like temperature.
             String rain = weather.rainSoon(getResources());
             feelsView.setText(rain != null ? rain : getString(R.string.feels_like, Weather.degrees(weather.feels)));
             feelsView.setTextColor(rain != null ? Ui.RAIN : Ui.SECONDARY);
@@ -555,11 +497,9 @@ public class HomeActivity extends Activity {
             aqiCategoryView.setText(weather.aqiCategory(getResources()));
             aqiCategoryView.setTextColor(weather.aqiColor());
         }
-        // Old readings stay visible but dimmed, so a lost connection is obvious.
-        pill.setAlpha(weather.isStale(now) ? 0.5f : 1f);
+        pill.setAlpha(weather.isStale(System.currentTimeMillis()) ? 0.5f : 1f);
     }
 
-    /** The sky's colour, except during a festival, when the room takes on the festival's colour. */
     private int glowColor() {
         Festival festival = celebrating();
         return festival != null ? festival.theme.glow : weather.glowColor();
@@ -569,23 +509,16 @@ public class HomeActivity extends Activity {
         return preview != null ? Festival.preview(preview) : Festival.celebrating(Festival.today());
     }
 
-    /**
-     * Puts up the festival's scene. Its opening plays when the festival changes, or when the home
-     * screen comes back after a few hours; otherwise the scene is simply there, still.
-     */
     private void showFestival() {
         Festival festival = celebrating();
-        // A PLAIN festival has a greeting but no scene, so it shows as no scene at all.
         Festive.Theme theme = festival == null || festival.theme == Festive.Theme.PLAIN ? null : festival.theme;
         long now = System.currentTimeMillis();
-        boolean replay = theme != festive.theme() || now - festivePlayedAt > FESTIVE_REPLAY_MS;
-        if (!replay) return;
-        festive.show(theme, replay);
-        if (replay) festivePlayedAt = now;
+        if (theme == festive.theme() && now - festivePlayedAt <= FESTIVE_REPLAY_MS) return;
+        festive.show(theme);
+        festivePlayedAt = now;
         showWeather();
     }
 
-    /** Fetches only while the home screen is visible, and only what is out of date. */
     private void maybeRefreshWeather() {
         handler.removeCallbacks(weatherCheck);
         if (!resumed) return;
@@ -603,28 +536,15 @@ public class HomeActivity extends Activity {
         // onResume may swap in a fresh object meanwhile (say, for a new city).
         Weather target = weather;
         network.execute(() -> {
-            String forecast = null;
-            String air = null;
-            try {
-                if (wantWeather) forecast = target.downloadWeather();
-            } catch (Exception e) {
-                // Counted as a failure below.
-            }
-            try {
-                if (wantAir) air = target.downloadAir();
-            } catch (Exception e) {
-                // Counted as a failure below.
-            }
-            String forecastBody = forecast;
-            String airBody = air;
+            String forecastBody = wantWeather ? orNull(target::downloadWeather) : null;
+            String airBody = wantAir ? orNull(target::downloadAir) : null;
             handler.post(() -> {
                 fetching = false;
                 if (target != weather || !resumed) {
-                    // The city may have changed meanwhile (onResume reloads it), so this answer is dropped.
                     maybeRefreshWeather();
                     return;
                 }
-                // Read here, on the main thread, which is also where the forecast is drawn from.
+                // Read on the main thread, which is also where the forecast is drawn from.
                 boolean success = (!wantWeather || forecastBody != null) && (!wantAir || airBody != null);
                 try {
                     if (forecastBody != null) weather.readWeather(forecastBody, now);
@@ -640,7 +560,6 @@ public class HomeActivity extends Activity {
                     failures = 0;
                     retryAt = 0;
                 } else {
-                    // Back off 1, 2, 4... minutes, up to 30.
                     retryAt = System.currentTimeMillis() + Math.min(30, 1L << Math.min(failures, 5)) * 60_000L;
                     failures++;
                 }
@@ -650,7 +569,13 @@ public class HomeActivity extends Activity {
         });
     }
 
-    // ---- apps -------------------------------------------------------------------------------
+    private static String orNull(Callable<String> download) {
+        try {
+            return download.call();
+        } catch (Exception e) {
+            return null;
+        }
+    }
 
     private App settingsApp() {
         PackageManager pm = getPackageManager();
@@ -664,7 +589,6 @@ public class HomeActivity extends Activity {
         return app;
     }
 
-    /** Aangan's own settings: city, Home button, birthdays. Labelled as a call to action until set up. */
     private App aanganApp(boolean setUp) {
         App app = new App();
         app.pkg = AANGAN_KEY;
@@ -674,7 +598,6 @@ public class HomeActivity extends Activity {
         return app;
     }
 
-    /** True once pressing Home brings up Aangan, either as the default home screen or via {@link HomeButton}. */
     private boolean isSetUp() {
         if (HomeButton.isOn(this)) return true;
         ResolveInfo home = getPackageManager().resolveActivity(
@@ -682,7 +605,6 @@ public class HomeActivity extends Activity {
         return home != null && getPackageName().equals(home.activityInfo.packageName);
     }
 
-    /** Rebuilds the grids only when the apps, the dock or the hidden apps actually changed. */
     private void refresh() {
         Map<String, App> apps = Apps.load(this);
         List<String> hidden = Prefs.list(prefs, HIDDEN);
@@ -708,7 +630,6 @@ public class HomeActivity extends Activity {
         for (App app : Apps.sorted(apps.values())) {
             if (!dock.contains(app.pkg) && !hidden.contains(app.pkg)) rest.add(app);
         }
-        // Until Aangan opens with the Home button, its setup tile leads the grid.
         rest.add(setUp ? rest.size() : 0, aanganApp(setUp));
         rest.add(settingsApp());
         for (App app : rest) appGrid.addView(makeTile(app, GRID, -1), cellParams(GRID));
@@ -718,7 +639,6 @@ public class HomeActivity extends Activity {
         if (target != null) target.requestFocus();
     }
 
-    /** A dock slot with no app in it: OK chooses one. */
     private App emptySlot(int slot) {
         App app = new App();
         app.pkg = EMPTY_KEY + slot;
@@ -733,10 +653,12 @@ public class HomeActivity extends Activity {
         return lp;
     }
 
+    private static View lift(GridLayout grid, int i) {
+        return ((ViewGroup) grid.getChildAt(i)).getChildAt(0);
+    }
+
     private View firstTile() {
-        if (dockGrid.getChildCount() == 0) return null;
-        // Each cell's first child is the focusable lift.
-        return ((ViewGroup) dockGrid.getChildAt(0)).getChildAt(0);
+        return dockGrid.getChildCount() == 0 ? null : lift(dockGrid, 0);
     }
 
     private void goToTop() {
@@ -745,7 +667,6 @@ public class HomeActivity extends Activity {
         if (first != null) first.requestFocus();
     }
 
-    /** The dock shows the whole header; grid rows rise just enough to stay on screen. */
     private int scrollToRow(View cell, Size size) {
         int target = size == DOCK ? 0 : Math.max(0, contentRect(cell).top - dp(LOWEST_ROW));
         scroll.smoothScrollTo(0, target);
@@ -759,20 +680,13 @@ public class HomeActivity extends Activity {
         return r;
     }
 
-    /** Pools the app's colour under its tile, where the tile will be once scrolling settles. */
     private void lightUp(App app, View lift, int scrollTarget, Size size) {
         Rect r = contentRect(lift);
         int color = brandColor(app);
         float strength = color == NEUTRAL ? GLOW_NEUTRAL : size.glow;
-        // Centred on the tile's lower edge, so the light pools beneath it rather than over the header.
         ambient.glow(r.exactCenterX(), r.bottom - scrollTarget + dp(8), color, strength);
     }
 
-    /**
-     * The app's most vivid colour, from its banner (or icon): hues weighted by how saturated and
-     * bright they are, so Netflix gives red and Prime gives blue, not the black around the logo.
-     * Grey-only artwork gets a neutral cool white.
-     */
     private int brandColor(App app) {
         Integer cached = brand.get(app.pkg);
         if (cached != null) return cached;
@@ -813,26 +727,17 @@ public class HomeActivity extends Activity {
         return result;
     }
 
-    // ---- tiles ------------------------------------------------------------------------------
-
-    /**
-     * One app: a 16:9 card with rounded corners, a soft shadow and a specular sheen that appear
-     * only on focus, and the app's name beneath the focused card. {@code slot} is its place in the
-     * dock, or -1 in the grid.
-     */
     private View makeTile(App app, Size size, int slot) {
-        final int w = dp(size.w);
-        final int h = dp(size.h);
-        final int blur = dp(SHADOW_BLUR);
+        int w = dp(size.w);
+        int h = dp(size.h);
+        int blur = dp(SHADOW_BLUR);
 
         LinearLayout cell = ui.column();
         cell.setClipChildren(false);
         cell.setClipToPadding(false);
 
-        // The lift scales as one: shadow and card together.
         FrameLayout lift = new FrameLayout(this);
         lift.setTag(slot >= 0 ? DOCK_TAG + slot : app.pkg);
-        // The name shows only on focus, so screen readers need it spelt out.
         lift.setContentDescription(app.intent == null ? getString(R.string.dock_empty_place_hint, slot + 1) : app.label);
         lift.setFocusable(true);
         lift.setClickable(true);
@@ -858,7 +763,6 @@ public class HomeActivity extends Activity {
             }
         });
         if (app.intent == null) {
-            // An empty dock slot: an outline with a plus.
             GradientDrawable outline = new GradientDrawable();
             outline.setCornerRadius(radius);
             outline.setColor(0x0DFFFFFF);
@@ -881,7 +785,6 @@ public class HomeActivity extends Activity {
                 icon.setImageDrawable(app.icon);
                 card.addView(icon, new FrameLayout.LayoutParams(dp(size.icon), dp(size.icon), Gravity.CENTER));
             }
-            // A hairline edge so dark tiles don't dissolve into the background.
             GradientDrawable edge = new GradientDrawable();
             edge.setCornerRadius(radius);
             edge.setStroke(ui.hairline(), 0x14FFFFFF);
@@ -917,7 +820,6 @@ public class HomeActivity extends Activity {
             label.animate().alpha(hasFocus ? 1f : 0f).setDuration(LABEL_MS).setInterpolator(ease).start();
             if (hasFocus) lightUp(app, v, scrollToRow(cell, size), size);
         });
-        // A quick press-in before launching, so the remote's OK feels physical.
         lift.setOnClickListener(v -> v.animate().scaleX(PRESS_SCALE).scaleY(PRESS_SCALE).setDuration(PRESS_MS)
                 .withEndAction(() -> v.animate().scaleX(size.scale).scaleY(size.scale).setDuration(RELEASE_MS)
                         .withEndAction(() -> {
@@ -933,7 +835,6 @@ public class HomeActivity extends Activity {
         return cell;
     }
 
-    /** One soft rounded-rectangle shadow, blurred once and shared by every tile of this size. */
     private Bitmap shadowBitmap(Size size) {
         int w = dp(size.w);
         int h = dp(size.h);
@@ -946,7 +847,6 @@ public class HomeActivity extends Activity {
         return bmp;
     }
 
-    /** Light catching the top-left of a focused card, plus a bright hairline along its top edge. */
     private static final class Sheen extends View {
         private final Paint gloss = new Paint();
         private final Paint rim = new Paint();
@@ -969,7 +869,6 @@ public class HomeActivity extends Activity {
         }
     }
 
-    /** A dark, muted version of the icon's average colour, for apps without a TV banner. */
     private static int tileColor(Drawable icon) {
         Bitmap bmp = render(icon, ICON_SAMPLE, ICON_SAMPLE);
         if (bmp == null) return TILE_FALLBACK;
@@ -993,7 +892,6 @@ public class HomeActivity extends Activity {
         return Color.HSVToColor(hsv);
     }
 
-    /** A drawable drawn small into a bitmap, for sampling its colours; null if it can't be copied. */
     private static Bitmap render(Drawable art, int w, int h) {
         if (art == null || art.getConstantState() == null) return null;
         Drawable d = art.getConstantState().newDrawable().mutate();
@@ -1010,7 +908,6 @@ public class HomeActivity extends Activity {
         return Color.HSVToColor(hsv);
     }
 
-    /** Opens the app; from a tile ({@code from} not null), its window grows out of that tile, as on tvOS. */
     private void launch(App app, View from) {
         try {
             Bundle zoom = from == null ? null : ActivityOptions
@@ -1021,11 +918,7 @@ public class HomeActivity extends Activity {
         }
     }
 
-    // ---- today card -------------------------------------------------------------------------
-
-    /** Dims the home screen and rises the Today card out of it. Back, OK or Home closes it. */
-    /** Back closes the card: the key on older TVs, and the callback registered in onCreate from Android 13. */
-    @SuppressLint("GestureBackNavigation")
+    @SuppressLint("GestureBackNavigation") // KEYCODE_BACK for older TVs; from Android 13, the callback in onCreate.
     private void openToday() {
         if (today != null) return;
         FrameLayout overlay = new FrameLayout(this);
@@ -1072,9 +965,6 @@ public class HomeActivity extends Activity {
         pill.requestFocus();
     }
 
-    // ---- options menu -----------------------------------------------------------------------
-
-    /** Options for a tile: {@code slot} is its place in the dock, or -1 in the grid. */
     private void showMenu(App app, int slot) {
         if (app.pkg.equals(AANGAN_KEY)) return;
         List<String> labels = new ArrayList<>();
@@ -1092,17 +982,11 @@ public class HomeActivity extends Activity {
             actions.add(() -> chooseForSlot(slot));
             if (slot > 0) {
                 labels.add(getString(R.string.move_left));
-                actions.add(() -> {
-                    Dock.swap(prefs, dock, slot, slot - 1);
-                    focusNext = DOCK_TAG + (slot - 1);
-                });
+                actions.add(() -> move(dock, slot, slot - 1));
             }
             if (slot < Dock.SIZE - 1) {
                 labels.add(getString(R.string.move_right));
-                actions.add(() -> {
-                    Dock.swap(prefs, dock, slot, slot + 1);
-                    focusNext = DOCK_TAG + (slot + 1);
-                });
+                actions.add(() -> move(dock, slot, slot + 1));
             }
             labels.add(getString(R.string.remove_from_dock));
             actions.add(() -> {
@@ -1132,28 +1016,29 @@ public class HomeActivity extends Activity {
                 .show();
     }
 
-    /** The grid tile after this one (or before it, at the end), to keep focus nearby when it goes. */
+    private void move(List<String> dock, int from, int to) {
+        Dock.swap(prefs, dock, from, to);
+        focusNext = DOCK_TAG + to;
+    }
+
     private Object neighbour(String pkg) {
         for (int i = 0; i < appGrid.getChildCount(); i++) {
-            Object tag = ((ViewGroup) appGrid.getChildAt(i)).getChildAt(0).getTag();
-            if (!pkg.equals(tag)) continue;
+            if (!pkg.equals(lift(appGrid, i).getTag())) continue;
             int next = i + 1 < appGrid.getChildCount() ? i + 1 : i - 1;
-            return next >= 0 ? ((ViewGroup) appGrid.getChildAt(next)).getChildAt(0).getTag() : null;
+            return next >= 0 ? lift(appGrid, next).getTag() : null;
         }
         return null;
     }
 
-    /** Asks which app goes in this dock slot. */
     private void chooseForSlot(int slot) {
         Map<String, App> apps = Apps.load(this);
-        List<String> dock = Dock.load(prefs, apps, Prefs.list(prefs, HIDDEN));
-        Dock.choose(this, apps, dock, Prefs.list(prefs, HIDDEN), slot, pkg -> {
+        List<String> hidden = Prefs.list(prefs, HIDDEN);
+        Dock.choose(this, apps, Dock.load(prefs, apps, hidden), hidden, slot, pkg -> {
             focusNext = DOCK_TAG + slot;
             refresh();
         });
     }
 
-    /** Asks which dock slot {@code app} should take. */
     private void chooseSlotFor(App app, Map<String, App> apps, List<String> dock) {
         String[] names = new String[Dock.SIZE];
         for (int i = 0; i < names.length; i++) {
@@ -1179,7 +1064,6 @@ public class HomeActivity extends Activity {
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        // The MENU key, where a remote has one, opens options for the focused tile.
         if (keyCode == KeyEvent.KEYCODE_MENU) {
             View focused = getCurrentFocus();
             if (focused != null) return focused.performLongClick();

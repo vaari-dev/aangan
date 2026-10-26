@@ -20,15 +20,8 @@ import android.view.View;
 import java.util.Random;
 
 /**
- * The festival look: a hand-drawn scene behind the home screen on festival days. Diyas for
- * Diwali, gulal for Holi, kites for Sankranti, a moon through the chalni for Karwa Chauth and
- * so on. Each scene plays a short opening (flames catching, colour bursting, lanterns swinging)
- * and then keeps gently moving: flames flicker, snow falls, lanterns sway. The loop runs at
- * 20 fps, only on festival days and only while the home screen has focus; an app, the
- * screensaver or standby stops it (measured: about 3-7% of the TV's CPU while it runs, 0 otherwise).
- *
- * Scenes keep to the margins (the strip above the clock, the gap between the clock and the
- * weather, and the bottom edge) so the tiles always read cleanly.
+ * Scenes keep to the margins (above the clock, between the clock and the weather, the bottom edge)
+ * so tiles read cleanly. The loop runs only with window focus: measured at 3-7% of a TV's CPU.
  */
 final class Festive extends View {
 
@@ -52,17 +45,10 @@ final class Festive extends View {
         TRICOLOUR(0xFF5A4A36, 0xFFFFB066),
         BIRTHDAY(0xFF5A2E66, 0xFFFFA3CF),
         ANNIVERSARY(0xFF6A2A40, 0xFFFFB3C1),
-        /**
-         * No scene, just the greeting. It borrows Diwali's warm glow and marigold accent, which are
-         * also the home screen's festive colour: the general "something to celebrate" look. (Written
-         * out rather than referring to DIWALI, since an enum constant can't read another's fields
-         * in its constructor call; tools/site.py also reads these values from this file.)
-         */
+        // Diwali's colours, written out: a constant can't read another's fields here, and tools/site.py reads this file.
         PLAIN(0xFF7A5A2E, 0xFFFFC56B);
 
-        /** The background's glow on the day. */
         final int glow;
-        /** The countdown and greeting colour. */
         final int accent;
 
         Theme(int glow, int accent) {
@@ -75,7 +61,7 @@ final class Festive extends View {
     private static final long FRAME_MS = 50;
 
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
-    /** For gradient fills only; its own alpha stays opaque, so the gradient's colours alone set the look. */
+    /** Alpha stays opaque, so the gradient's colours alone set the look. */
     private final Paint gradient = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
     private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
@@ -85,7 +71,7 @@ final class Festive extends View {
     private final float u;
     private Theme theme;
     private float progress = 1f;
-    /** Seconds of animation so far; it only advances while the loop is running. */
+    /** Seconds, advancing only while the loop runs. */
     private float time;
     private float introStart = -100f;
     private long lastFrame;
@@ -113,10 +99,9 @@ final class Festive extends View {
         return theme;
     }
 
-    /** Shows {@code theme} (null for none), playing its opening when {@code animate} is set. */
-    void show(Theme theme, boolean animate) {
+    void show(Theme theme) {
         this.theme = theme == Theme.PLAIN ? null : theme;
-        introStart = animate ? time : time - 100f;
+        introStart = time;
         loop(hasWindowFocus());
         invalidate();
     }
@@ -144,13 +129,10 @@ final class Festive extends View {
         }
     }
 
-    // ---- timing helpers ---------------------------------------------------------------------
-
     private static float clamp(float x) {
         return Math.max(0f, Math.min(1f, x));
     }
 
-    /** Progress through one element's part of the opening: starts at {@code at}, lasts {@code len}. */
     private float part(float at, float len) {
         return clamp((progress - at) / len);
     }
@@ -160,27 +142,22 @@ final class Festive extends View {
         return 1f - i * i * i;
     }
 
-    /** Ease-out with a small overshoot, for things that drop or pop into place. */
+    /** Ease-out with a small overshoot. */
     private static float easeBack(float x) {
         float s = 1.6f;
         float t = x - 1f;
         return t * t * ((s + 1) * t + s) + 1f;
     }
 
-    /** A gentle, endless sway: a sine of the animation clock. */
     private float wave(float speed, float seed) {
         return (float) Math.sin(time * speed + seed);
     }
 
-    /** An irregular flame flicker, from two out-of-step waves. */
     private float flicker(float seed, float amount) {
         return amount * (0.6f * wave(9f, seed * 2.3f) + 0.4f * wave(23.7f, seed * 5.1f));
     }
 
-    /**
-     * A soft pool of light. Drawn from one cached falloff image tinted to the colour, rather than a
-     * new gradient each frame, which keeps the looping scenes cheap.
-     */
+    /** A cached falloff image, tinted, is much cheaper per frame than a new gradient. */
     private void glow(Canvas c, float x, float y, float r, int color, float a) {
         if (a <= 0 || r <= 0) return;
         glowPaint.setColorFilter(tint(color | 0xFF000000));
@@ -189,7 +166,6 @@ final class Festive extends View {
         c.drawBitmap(falloff, null, glowRect, glowPaint);
     }
 
-    /** Glow tints by colour; each scene uses only a handful, so they're made once and reused. */
     private final SparseArray<ColorFilter> tints = new SparseArray<>();
 
     private ColorFilter tint(int color) {
@@ -201,7 +177,6 @@ final class Festive extends View {
         return filter;
     }
 
-    /** A radial falloff matching a linear gradient from full to none, with a little dither noise. */
     private static Bitmap falloff(int size) {
         int[] px = new int[size * size];
         Random random = new Random(2);
@@ -216,9 +191,7 @@ final class Festive extends View {
         return Bitmap.createBitmap(px, size, size, Bitmap.Config.ARGB_8888);
     }
 
-    // ---- drawing ----------------------------------------------------------------------------
-
-    /** Fireworks bursts: {x, y} as fractions of the screen, then the radius in dp. */
+    /** {x, y} as fractions of the screen, radius in dp. */
     private static final float[][] DIWALI_BURSTS = {{0.46f, 0.11f, 34}, {0.56f, 0.06f, 24}, {0.62f, 0.16f, 20}};
     private static final int[] DIWALI_COLORS = {0xFFFFD27A, 0xFFFF7AB6, 0xFF8FE3FF};
     private static final float[][] NEW_YEAR_BURSTS = {{0.45f, 0.12f, 46}, {0.56f, 0.06f, 30}, {0.63f, 0.17f, 26},
@@ -227,12 +200,8 @@ final class Festive extends View {
     private static final int[] DEEPMALA_LIGHTS = {0xFFFFF1D0};
     private static final int[] CHRISTMAS_LIGHTS = {0xFFFF453A, 0xFF30D158, 0xFFFFD60A, 0xFF0A84FF};
 
-    /**
-     * Each scene still builds its gradients as it draws: they follow the animation, and they're
-     * small next to a frame's drawing. The constant arrays above and the glow tints are reused.
-     */
     @Override
-    @SuppressLint("DrawAllocation")
+    @SuppressLint("DrawAllocation") // Gradients follow the animation, so scenes build them as they draw.
     protected void onDraw(Canvas c) {
         if (theme == null) return;
         progress = clamp((time - introStart) / INTRO_S);
@@ -321,9 +290,6 @@ final class Festive extends View {
         }
     }
 
-    // ---- Diwali -----------------------------------------------------------------------------
-
-    /** Clay diyas along the bottom edge; their flames catch one after another. */
     private void diyas(Canvas c, float w, float h, int n, int light) {
         float y = h - 30 * u;
         float k = 1.45f;
@@ -339,7 +305,6 @@ final class Festive extends View {
             path.close();
             gradient.setShader(new LinearGradient(0, y - 4 * k * u, 0, y + 9 * k * u, 0xFFD06A2C, 0xFF5E240E, Shader.TileMode.CLAMP));
             c.drawPath(path, gradient);
-            // Painted dots around the bowl, and the lit rim.
             paint.setColor(0xCCFFD27A);
             for (int d = -2; d <= 2; d++) c.drawCircle(x + d * 5 * u, y + 2.2f * u + Math.abs(d) * -1.2f * u, 1.1f * u, paint);
             stroke.setStrokeWidth(1.4f * u);
@@ -361,7 +326,6 @@ final class Festive extends View {
         }
     }
 
-    /** A quarter of a rangoli mandala peeking in from a corner: rings of petals and dots. */
     private void rangoli(Canvas c, float cx, float cy, float delay) {
         float t = easeOut(part(delay, 0.7f));
         if (t <= 0) return;
@@ -396,14 +360,12 @@ final class Festive extends View {
         c.restore();
     }
 
-    /** Bursts of light: rays of dots that fly out from each centre. */
     private void fireworks(Canvas c, float[][] bursts, int[] colors, float finalAlpha) {
         Random random = new Random(5);
         for (int b = 0; b < bursts.length; b++) {
             float cx = getWidth() * bursts[b][0];
             float cy = getHeight() * bursts[b][1];
             float r = bursts[b][2] * u;
-            // Each burst repeats every few seconds: it flies out, glows, then fades away.
             float age = time - introStart - 0.2f - b * 0.45f;
             if (age < 0) continue;
             float phase = (age % 3.6f) / 3.6f;
@@ -427,9 +389,6 @@ final class Festive extends View {
         }
     }
 
-    // ---- Holi -------------------------------------------------------------------------------
-
-    /** Clouds of gulal in the corners and along the edges, thrown outward with a spray of grains. */
     private void gulal(Canvas c, float w, float h) {
         float[][] clouds = {
                 {0.04f, 0.96f, 230}, {0.96f, 0.95f, 250}, {0.50f, 1.06f, 190},
@@ -457,8 +416,6 @@ final class Festive extends View {
         }
     }
 
-    // ---- Lohri, Holika Dahan ----------------------------------------------------------------
-
     private void bonfire(Canvas c, float w, float h) {
         float t = easeOut(part(0, 0.6f));
         float x = w / 2;
@@ -480,7 +437,6 @@ final class Festive extends View {
             gradient.setShader(new LinearGradient(0, base, 0, base - fh, 0xCCFF5A00, 0x00FFD36B, Shader.TileMode.CLAMP));
             c.drawPath(path, gradient);
         }
-        // Two logs, crossed.
         paint.setColor(0xFF2E1C10);
         for (int tilt : new int[]{-10, 10}) {
             c.save();
@@ -504,9 +460,6 @@ final class Festive extends View {
         }
     }
 
-    // ---- Makar Sankranti, Basant Panchami ---------------------------------------------------
-
-    /** Patangs between the clock and the weather, their strings trailing to rooftops off-screen. */
     private void kites(Canvas c, float w, float h) {
         float[][] kites = {
                 {0.47f, 0.10f, 30, -12}, {0.58f, 0.17f, 22, 14}, {0.71f, 0.025f, 13, -22},
@@ -524,7 +477,6 @@ final class Festive extends View {
             float ky = h * kites[i][1] + 60 * u * (1 - t) + 3 * u * wave(0.8f, i * 2f);
             float sway = kites[i][3] + 12 * (float) Math.sin(progress * 9 + i) * (1 - progress) + 5 * wave(1.1f, i);
 
-            // The string sags away towards the rooftops and fades out before it reaches the tiles.
             stroke.setStrokeWidth(0.7f * u);
             stroke.setAlpha(255);
             stroke.setShader(new LinearGradient(kx, ky, kx - 90 * u, ky + 120 * u,
@@ -571,8 +523,6 @@ final class Festive extends View {
         }
     }
 
-    // ---- moon nights ------------------------------------------------------------------------
-
     private void stars(Canvas c, float w, float h, int n) {
         Random random = new Random(21);
         for (int i = 0; i < n; i++) {
@@ -584,7 +534,6 @@ final class Festive extends View {
         }
     }
 
-    /** A full moon rising; for Karwa Chauth it is seen through a decorated chalni. */
     private void moon(Canvas c, float cx, float finalY, float r, boolean chalni) {
         float t = easeOut(part(0, 0.75f));
         float cy = finalY + 70 * u * (1 - t);
@@ -600,7 +549,6 @@ final class Festive extends View {
         float ct = easeOut(part(0.45f, 0.45f));
         if (ct <= 0) return;
         float ring = r * 1.6f;
-        // The sieve's mesh, laid over the moon.
         c.save();
         path.reset();
         path.addCircle(cx, finalY, ring * 0.92f, Path.Direction.CW);
@@ -625,7 +573,6 @@ final class Festive extends View {
         }
     }
 
-    /** A thin crescent (with a star beside it for Eid). */
     private void crescent(Canvas c, float cx, float cy, float r, int color, boolean star) {
         float t = easeOut(part(0, 0.6f));
         glow(c, cx, cy, r * 4f, color, 0.24f * t);
@@ -653,9 +600,6 @@ final class Festive extends View {
         c.drawPath(path, paint);
     }
 
-    // ---- Janmashtami ------------------------------------------------------------------------
-
-    /** A peacock feather sweeping up from the bottom-right corner. */
     private void feather(Canvas c, float w, float h) {
         float t = easeOut(part(0, 0.8f));
         if (t <= 0) return;
@@ -693,7 +637,6 @@ final class Festive extends View {
         path.quadTo(ctrlX, ctrlY, tipX, tipY);
         c.drawPath(path, stroke);
 
-        // The eye, aligned with the shaft at its tip.
         float angle = (float) Math.toDegrees(Math.atan2(bezD(by, ctrlY, tipY, 1), bezD(bx, ctrlX, tipX, 1)));
         c.save();
         c.translate(tipX, tipY);
@@ -720,7 +663,6 @@ final class Festive extends View {
         c.restore();
     }
 
-    /** Krishna's bansuri along the bottom-left, with a little tassel. */
     private void flute(Canvas c, float w, float h) {
         float t = easeOut(part(0.25f, 0.6f));
         if (t <= 0) return;
@@ -753,9 +695,6 @@ final class Festive extends View {
         return 2 * (1 - t) * (b - a) + 2 * t * (c - b);
     }
 
-    // ---- Raksha Bandhan ---------------------------------------------------------------------
-
-    /** A twisted red-and-gold thread across the bottom, unspooling from a flower medallion. */
     private void rakhi(Canvas c, float w, float h) {
         float reveal = easeOut(part(0, 0.6f));
         float y0 = h - 70 * u;
@@ -764,7 +703,7 @@ final class Festive extends View {
         for (int strand = 0; strand < 2; strand++) {
             stroke.setStrokeWidth(1.6f * u);
             stroke.setColor(strand == 0 ? 0xFFD7263D : 0xFFF2C14E);
-            float lastX = 0, lastY = 0;
+            float lastX = Float.NaN, lastY = 0;
             for (int i = 0; i <= steps; i++) {
                 float s = (float) i / steps;
                 if (Math.abs(s - 0.5f) > reveal * 0.5f + 0.001f) {
@@ -773,7 +712,7 @@ final class Festive extends View {
                 }
                 float x = bez(-20 * u, w / 2, w + 20 * u, s);
                 float y = bez(y0, yc, y0, s) + (float) Math.sin(s * 150 + strand * Math.PI) * 1.3f * u;
-                if (i > 0 && !Float.isNaN(lastX)) c.drawLine(lastX, lastY, x, y, stroke);
+                if (!Float.isNaN(lastX)) c.drawLine(lastX, lastY, x, y, stroke);
                 lastX = x;
                 lastY = y;
             }
@@ -810,9 +749,6 @@ final class Festive extends View {
         c.restore();
     }
 
-    // ---- Navratri, Dussehra, Ganesh Chaturthi -----------------------------------------------
-
-    /** Marigold torans with mango leaves, dropping in from the top edge. */
     private void toran(Canvas c, float w) {
         float t = part(0, 0.65f);
         if (t <= 0) return;
@@ -826,7 +762,6 @@ final class Festive extends View {
             float x1 = w * (s + 1) / swags;
             float mid = (x0 + x1) / 2;
             int n = 11;
-            // Mango leaves hang from the garland between every other pair of flowers.
             for (int i = 1; i < n; i += 2) {
                 float f = (i + 0.5f) / n;
                 leaf(c, bez(x0, mid, x1, f), bez(-3 * u, dip * 2, -3 * u, f) + 2 * u, (i == n / 2 ? 30 : 22) * u, (f - 0.5f) * -30f);
@@ -836,7 +771,6 @@ final class Festive extends View {
                 marigold(c, bez(x0, mid, x1, f), bez(-3 * u, dip * 2, -3 * u, f), 7.5f * u, (i + s) % 2 == 0);
             }
         }
-        // Short hanging strands where the swags meet, only in the open space mid-screen.
         for (int s = 2; s <= 3; s++) {
             float x = w * s / swags;
             float sway = (float) Math.sin(progress * 10 + s) * 6 * (1 - progress) + 3 * wave(1.2f, s);
@@ -849,7 +783,6 @@ final class Festive extends View {
         c.restore();
     }
 
-    /** A ruffled marigold: a scalloped ring of petals around a brighter, denser centre. */
     private void marigold(Canvas c, float x, float y, float r, boolean yellow) {
         int outer = yellow ? 0xFFF0A800 : 0xFFE86A00;
         int inner = yellow ? 0xFFFFD84A : 0xFFFFA21C;
@@ -884,9 +817,6 @@ final class Festive extends View {
         c.restore();
     }
 
-    // ---- Chhath -----------------------------------------------------------------------------
-
-    /** The setting sun at the water's edge, with its reflection breaking into ripples. */
     private void sunset(Canvas c, float w, float h) {
         float t = easeOut(part(0, 0.8f));
         float horizon = h - 66 * u;
@@ -912,9 +842,6 @@ final class Festive extends View {
         }
     }
 
-    // ---- lights -----------------------------------------------------------------------------
-
-    /** Strings of bulbs swagged along the top; they light up in sequence. */
     private void lights(Canvas c, float w, int[] colors, float glowAlpha) {
         int swags = 4;
         float dip = 24 * u;
@@ -943,7 +870,6 @@ final class Festive extends View {
         }
     }
 
-    /** Snow across the whole screen, settling as the opening ends, with a few crystal flakes. */
     private void snow(Canvas c, float w, float h) {
         Random random = new Random(12);
         float fall = (1 - easeOut(part(0, 1f))) * 80 * u;
@@ -974,9 +900,6 @@ final class Festive extends View {
         }
     }
 
-    // ---- Eid --------------------------------------------------------------------------------
-
-    /** A fanoos hanging from the top edge; it swings to rest during the opening. */
     private void lantern(Canvas c, float x, float length, float scale, float phase) {
         float t = easeOut(part(phase * 0.05f, 0.4f));
         if (t <= 0) return;
@@ -1024,9 +947,6 @@ final class Festive extends View {
         c.restore();
     }
 
-    // ---- family days ------------------------------------------------------------------------
-
-    /** Balloons rising into place: a bunch between the clock and the weather, another at bottom right. */
     private void balloons(Canvas c, float w, float h) {
         float[][] balloons = {
                 {0.465f, 0.06f, 12}, {0.505f, 0.11f, 16}, {0.55f, 0.065f, 19}, {0.59f, 0.12f, 15}, {0.625f, 0.07f, 13},
@@ -1039,7 +959,6 @@ final class Festive extends View {
             float r = balloons[i][2] * u;
             float x = w * balloons[i][0] + (float) Math.sin(progress * 7 + i) * 8 * u * (1 - progress) + 4 * u * wave(0.7f, i);
             float y = h * balloons[i][1] + h * 0.7f * (1 - t) + 5 * u * wave(0.9f, i * 1.7f);
-            // A wavy string down from the knot.
             stroke.setStrokeWidth(0.8f * u);
             stroke.setColor(0x80FFFFFF);
             path.reset();
@@ -1064,7 +983,6 @@ final class Festive extends View {
         }
     }
 
-    /** Confetti drifting down into place over the whole screen. */
     private void confetti(Canvas c, float w, float h) {
         Random random = new Random(8);
         int[] colors = {0xFFFF375F, 0xFFFFD60A, 0xFF0A84FF, 0xFF30D158, 0xFFBF5AF2, 0xFFFF9F0A};
@@ -1085,7 +1003,6 @@ final class Festive extends View {
         }
     }
 
-    /** Two gold rings drawing together until they interlock, with a glint on one. */
     private void rings(Canvas c, float cx, float cy) {
         float t = easeOut(part(0.15f, 0.7f));
         if (t <= 0) return;
@@ -1093,14 +1010,12 @@ final class Festive extends View {
         float apart = 6 * u + 40 * u * (1 - t);
         glow(c, cx, cy, 90 * u, 0xFFFFD27A, 0.3f * t);
         stroke.setStrokeWidth(3.6f * u);
-        stroke.setAlpha(255);
         stroke.setShader(new LinearGradient(cx - r, cy - r, cx + r, cy + r, 0xFFFFE7A3, 0xFFC8902E, Shader.TileMode.MIRROR));
         stroke.setAlpha(Math.round(255 * t));
         c.drawCircle(cx - apart, cy, r, stroke);
         c.drawCircle(cx + apart, cy, r, stroke);
         stroke.setShader(null);
         stroke.setAlpha(255);
-        // The glint: a four-pointed sparkle on the top of the left ring.
         float gx = cx - apart - r * 0.5f;
         float gy = cy - r * 0.87f;
         float g = 6 * u * part(0.75f, 0.25f) * (0.7f + 0.3f * wave(2.2f, 0));
@@ -1116,7 +1031,6 @@ final class Festive extends View {
         c.drawPath(path, paint);
     }
 
-    /** Hearts floating up into the open spaces. */
     private void hearts(Canvas c, float w, float h) {
         float[][] hearts = {
                 {0.44f, 0.07f, 7}, {0.62f, 0.06f, 9}, {0.60f, 0.19f, 6},
@@ -1139,7 +1053,6 @@ final class Festive extends View {
         }
     }
 
-    /** Rose petals scattered along the bottom edge. */
     private void petals(Canvas c, float w, float h) {
         Random random = new Random(14);
         float t = easeOut(part(0.05f, 0.8f));
@@ -1156,9 +1069,6 @@ final class Festive extends View {
         }
     }
 
-    // ---- national days ----------------------------------------------------------------------
-
-    /** Saffron, white and green ribbons along the bottom, with the chakra turning into place. */
     private void tricolour(Canvas c, float w, float h) {
         float reveal = easeOut(part(0, 0.7f));
         int[] colors = {0xFFFF9933, 0xFFF5F5F7, 0xFF138808};
@@ -1172,7 +1082,7 @@ final class Festive extends View {
             path.reset();
             for (int i = 0; i <= 60; i++) {
                 float x = w * i / 60f;
-                float y = bases[k] + (float) Math.sin(i / 60f * Math.PI * 3.2 + 0.6 + time * 0.8f) * 10 * u;
+                float y = ribbon(bases[k], i / 60f);
                 if (i == 0) path.moveTo(x, y);
                 else path.lineTo(x, y);
             }
@@ -1184,7 +1094,7 @@ final class Festive extends View {
         float ct = easeOut(part(0.35f, 0.6f));
         if (ct <= 0) return;
         float cx = w / 2;
-        float cy = bases[1] + (float) Math.sin(0.5 * Math.PI * 3.2 + 0.6 + time * 0.8f) * 10 * u;
+        float cy = ribbon(bases[1], 0.5f);
         float r = 13 * u;
         c.save();
         c.rotate(-360 * (1 - ct) + time * 20, cx, cy);
@@ -1197,5 +1107,9 @@ final class Festive extends View {
             c.drawLine(cx, cy, cx + (float) Math.cos(a) * r, cy + (float) Math.sin(a) * r, stroke);
         }
         c.restore();
+    }
+
+    private float ribbon(float base, float f) {
+        return base + (float) Math.sin(f * Math.PI * 3.2 + 0.6 + time * 0.8f) * 10 * u;
     }
 }

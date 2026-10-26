@@ -18,11 +18,7 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 
-/**
- * Weather, a short forecast and air quality for the chosen city, from Open-Meteo.
- * No key, no account, no device identifiers: each request carries only the city's coordinates.
- * The raw responses are cached, so the forecast card works offline from the last fetch.
- */
+/** Open-Meteo, with no key, account or device identifiers: requests carry only the city's coordinates. */
 final class Weather {
 
     private static final String FORECAST_URL = "https://api.open-meteo.com/v1/forecast?latitude=%.2f&longitude=%.2f"
@@ -37,67 +33,54 @@ final class Weather {
     static final long AIR_TTL = 60 * 60_000L;
     private static final long STALE_AFTER = 3 * 60 * 60_000L;
 
-    /** Minutes either side of sunrise and sunset that count as golden hour. */
     private static final int GOLDEN_MIN = 45;
-    /** PM2.5 (µg/m³) above which the air is heavy: clear skies read as haze, and no hour is worth airing out. */
+    /** µg/m³: clear skies read as haze, and no hour is worth airing out. */
     static final int HEAVY_PM25 = 90;
-    /** How far ahead, in hours, to look for the cleanest hour to open the windows. */
     static final int CLEAN_AIR_HOURS = 18;
-    /** How far ahead, in hours after the current one, a likely shower is worth mentioning. */
     private static final int RAIN_HOURS = 6;
-    /** A chance of rain, in percent, from which it is called likely. */
     private static final int RAIN_LIKELY = 50;
 
-    /**
-     * An air-quality index: the index range for each category, the 24-hour PM2.5 and PM10
-     * concentrations (µg/m³) at the same breakpoints, and how each category is described.
-     */
+    /** Index values at each category breakpoint, and 24-hour PM2.5 and PM10 (µg/m³) at the same breakpoints. */
     private static final class Scale {
         final double[] aqi;
         final double[] pm25;
         final double[] pm10;
-        /** String resources for each category's name and advice. */
         final int[] names;
-        final int[] colors;
         final int[] advice;
-        /** The 24-hour PM2.5 standard, drawn on the trend chart. */
         final double limit;
 
-        Scale(double[] aqi, double[] pm25, double[] pm10, int[] names, int[] colors, int[] advice, double limit) {
+        Scale(double[] aqi, double[] pm25, double[] pm10, int[] names, int[] advice, double limit) {
             this.aqi = aqi;
             this.pm25 = pm25;
             this.pm10 = pm10;
             this.names = names;
-            this.colors = colors;
             this.advice = advice;
             this.limit = limit;
         }
     }
 
-    // Category colours, softened for a dark background.
     private static final int[] COLORS = {0xFF30D158, 0xFFA4D65E, 0xFFFFD60A, 0xFFFF9F0A, 0xFFFF453A, 0xFFC0394B};
 
-    /** India's National AQI (CPCB), with its health statements shortened. */
+    /** India's National AQI (CPCB). */
     private static final Scale CPCB = new Scale(
             new double[]{0, 50, 100, 200, 300, 400, 500},
             new double[]{0, 30, 60, 90, 120, 250, 380},
             new double[]{0, 50, 100, 250, 350, 430, 510},
             new int[]{R.string.cpcb_good, R.string.cpcb_satisfactory, R.string.cpcb_moderate, R.string.cpcb_poor,
-                    R.string.cpcb_very_poor, R.string.cpcb_severe}, COLORS,
+                    R.string.cpcb_very_poor, R.string.cpcb_severe},
             new int[]{R.string.cpcb_good_advice, R.string.cpcb_satisfactory_advice, R.string.cpcb_moderate_advice,
                     R.string.cpcb_poor_advice, R.string.cpcb_very_poor_advice, R.string.cpcb_severe_advice}, 60);
 
-    /** The US EPA AQI (2024 PM2.5 breakpoints), used everywhere else. */
+    /** US EPA AQI, 2024 PM2.5 breakpoints. */
     private static final Scale EPA = new Scale(
             new double[]{0, 50, 100, 150, 200, 300, 500},
             new double[]{0, 9, 35.4, 55.4, 125.4, 225.4, 325.4},
             new double[]{0, 54, 154, 254, 354, 424, 604},
             new int[]{R.string.epa_good, R.string.epa_moderate, R.string.epa_sensitive, R.string.epa_unhealthy,
-                    R.string.epa_very_unhealthy, R.string.epa_hazardous}, COLORS,
+                    R.string.epa_very_unhealthy, R.string.epa_hazardous},
             new int[]{R.string.epa_good_advice, R.string.epa_moderate_advice, R.string.epa_sensitive_advice,
                     R.string.epa_unhealthy_advice, R.string.epa_very_unhealthy_advice, R.string.epa_hazardous_advice}, 35);
 
-    /** The chosen city's time zone, which every forecast time is in. */
     private static TimeZone zone = TimeZone.getDefault();
 
     Place place = Place.DEFAULT;
@@ -112,7 +95,6 @@ final class Weather {
     long weatherAt;
     private String weatherJson;
 
-    // Hourly forecast from midnight today, and today's extremes.
     String[] hourTime = new String[0];
     double[] hourTemp = new double[0];
     int[] hourCode = new int[0];
@@ -121,7 +103,6 @@ final class Weather {
     double high = Double.NaN;
     double low = Double.NaN;
     double uvMax = Double.NaN;
-    /** Today's sunrise and sunset as "HH:mm", or null. */
     String sunrise;
     String sunset;
 
@@ -134,8 +115,6 @@ final class Weather {
     // Hourly PM2.5 from midnight yesterday to midnight tomorrow; NaN where missing.
     String[] airTime = new String[0];
     double[] airPm25 = new double[0];
-
-    // ---- cache ------------------------------------------------------------------------------
 
     static Weather load(SharedPreferences prefs) {
         Weather w = new Weather();
@@ -178,7 +157,6 @@ final class Weather {
                 .apply();
     }
 
-    /** Forgets everything fetched for the old city, so the next check fetches for the new one. */
     static void clear(SharedPreferences prefs) {
         prefs.edit().remove("w_at").remove("w_json").remove("a_at").remove("a_json").remove("a_aqi").apply();
     }
@@ -203,16 +181,12 @@ final class Weather {
         return now - weatherAt > STALE_AFTER;
     }
 
-    // ---- network ----------------------------------------------------------------------------
-
-    // Downloads block, so they run off the main thread. The main thread reads this object while it
-    // draws, so it takes the answers in itself, with readWeather and readAir.
+    // Downloads run off the main thread; the main thread reads this object while it draws, so only
 
     String downloadWeather() throws IOException {
         return get(url(FORECAST_URL));
     }
 
-    /** Takes in a forecast response, fetched at {@code now}. */
     void readWeather(String body, long now) throws JSONException {
         JSONObject current = new JSONObject(body).getJSONObject("current");
         temp = current.getDouble("temperature_2m");
@@ -228,10 +202,7 @@ final class Weather {
         return get(url(AIR_URL));
     }
 
-    /**
-     * Takes in an air-quality response, fetched at {@code now}. Uses the mean of the last 24 hourly
-     * readings, as both indexes are defined on 24-hour averages.
-     */
+    /** Both indexes are defined on 24-hour averages, hence the mean of the last 24 hourly readings. */
     void readAir(String body, long now) throws JSONException {
         JSONObject json = new JSONObject(body);
         String currentTime = json.getJSONObject("current").getString("time");
@@ -334,7 +305,7 @@ final class Weather {
         return 500;
     }
 
-    /** Open-Meteo's answers are a few tens of kilobytes; anything far bigger is refused. */
+    /** Open-Meteo's answers are a few tens of kilobytes. */
     private static final int MAX_RESPONSE = 1 << 20;
 
     static String get(String url) throws IOException {
@@ -361,16 +332,12 @@ final class Weather {
         }
     }
 
-    // ---- time -------------------------------------------------------------------------------
-
-    /** The city's local time as Open-Meteo writes it, e.g. "2026-10-25T17:42". */
     static String isoNow() {
         SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.US);
         f.setTimeZone(zone);
         return f.format(new Date(Dates.nowMillis()));
     }
 
-    /** The index of the latest entry in {@code times} at or before {@code iso}, or -1. */
     static int indexAt(String[] times, String iso) {
         int found = -1;
         for (int i = 0; i < times.length; i++) {
@@ -379,14 +346,12 @@ final class Weather {
         return found;
     }
 
-    /** A moment as "5:26 PM", the city's time. */
     static String clockAt(Resources r, long millis) {
         SimpleDateFormat f = new SimpleDateFormat("HH:mm", Locale.US);
         f.setTimeZone(zone);
         return clock(r, f.format(new Date(millis)), true);
     }
 
-    /** An hour of the forecast, "2026-10-25T19:00", as "7 PM". */
     static String hour(Resources r, String iso) {
         return clock(r, clockPart(iso), false);
     }
@@ -399,7 +364,6 @@ final class Weather {
         return Integer.parseInt(hhmm.substring(0, 2)) * 60 + Integer.parseInt(hhmm.substring(3, 5));
     }
 
-    /** "17:00" → "5 PM"; "06:31" → "6:31 AM". */
     static String clock(Resources r, String hhmm, boolean withMinutes) {
         int h = Integer.parseInt(hhmm.substring(0, 2));
         String m = hhmm.substring(3, 5);
@@ -408,9 +372,6 @@ final class Weather {
         return r.getString(h < 12 ? R.string.clock_am : R.string.clock_pm, time);
     }
 
-    // ---- things worth knowing today ---------------------------------------------------------
-
-    /** "Rain likely around 7 PM" when this hour or one of the next six is likely to rain, else null. */
     String rainSoon(Resources r) {
         int now = indexAt(hourTime, isoNow());
         if (now < 0) return null;
@@ -422,10 +383,6 @@ final class Weather {
         return null;
     }
 
-    /**
-     * The hour with the least PM2.5 between now and the end of tomorrow morning, as an index into
-     * {@link #airPm25}, or -1. In a North Indian winter this is when to open the windows.
-     */
     int cleanestHour() {
         int from = indexAt(airTime, isoNow());
         if (from < 0) return -1;
@@ -436,7 +393,6 @@ final class Weather {
         return best;
     }
 
-    /** Hour {@code i} of the air series: "now", "7 AM", or "7 AM tomorrow". */
     String airHour(Resources r, int i) {
         String nowIso = isoNow();
         if (i == indexAt(airTime, nowIso)) return r.getString(R.string.air_now);
@@ -444,7 +400,6 @@ final class Weather {
         return airTime[i].startsWith(nowIso.substring(0, 10)) ? when : r.getString(R.string.air_tomorrow, when);
     }
 
-    /** Today's daylight, e.g. "11h 04m", or null. */
     String daylight(Resources r) {
         if (sunrise == null || sunset == null) return null;
         int m = minutes(sunset) - minutes(sunrise);
@@ -458,7 +413,6 @@ final class Weather {
         return r.getString(R.string.uv_label, u, r.getString(level));
     }
 
-    /** Fraction of the lunar cycle, 0 = new moon, 0.5 = full; computed locally from a known new moon. */
     static double moonAge(long now) {
         double synodic = 29.530588853;
         // Days since a known new moon: 6 January 2000, 18:14 UTC.
@@ -470,8 +424,6 @@ final class Weather {
     static String moonName(Resources r, double age) {
         return r.getStringArray(R.array.moon_phases)[(int) Math.floor(age * 8 + 0.5) % 8];
     }
-
-    // ---- presentation -----------------------------------------------------------------------
 
     /** Smog never shows up as a weather code, so clear skies with heavy PM2.5 read as haze. */
     private static boolean hazy(int code, double pm25) {
@@ -487,7 +439,6 @@ final class Weather {
         return id == 0 ? "" : r.getString(id);
     }
 
-    /** The string resource naming the sky, or 0 for a code Open-Meteo doesn't document. */
     private int conditionName() {
         if (hazy()) return R.string.sky_hazy;
         switch (code) {
@@ -519,7 +470,6 @@ final class Weather {
         return glyph(code, day, hazy());
     }
 
-    /** The icon for hour {@code i} of the forecast, hazy when that hour's PM2.5 is heavy. */
     Glyph hourGlyph(int i) {
         int a = indexAt(airTime, hourTime[i]);
         boolean haze = a >= 0 && airTime[a].equals(hourTime[i]) && hazy(hourCode[i], airPm25[a]);
@@ -537,7 +487,6 @@ final class Weather {
         return Glyph.RAIN;
     }
 
-    /** Which category an index value falls in, 0 (best) to 5. */
     private int category(int value) {
         for (int i = 1; i < scale.aqi.length - 1; i++) if (value <= scale.aqi[i]) return i - 1;
         return scale.names.length - 1;
@@ -548,26 +497,21 @@ final class Weather {
     }
 
     int aqiColor() {
-        return scale.colors[category(aqi)];
+        return COLORS[category(aqi)];
     }
 
     String aqiAdvice(Resources r) {
         return r.getString(scale.advice[category(aqi)]);
     }
 
-    /** The category colour for one hour's PM2.5 reading, for the trend chart. */
     int pm25Color(double pm25) {
-        return scale.colors[category(subIndex(pm25, scale.pm25))];
+        return COLORS[category(subIndex(pm25, scale.pm25))];
     }
 
     double pm25Limit() {
         return scale.limit;
     }
 
-    /**
-     * The colour of the soft glow in the top-left of the background, matched to the sky:
-     * rose around sunrise and sunset, blue by day, indigo by night, brown in smog.
-     */
     int glowColor() {
         if (!hasWeather()) return 0xFF3A4A7A;
         if (goldenHour()) return 0xFF7A4E66;
@@ -585,7 +529,6 @@ final class Weather {
         return Math.round(celsius) + "°";
     }
 
-    /** One line for the screensaver, e.g. "24° Clear · AQI 214 Poor". */
     String summary(Resources r) {
         StringBuilder s = new StringBuilder();
         if (hasWeather()) s.append(degrees(temp)).append(' ').append(condition(r));

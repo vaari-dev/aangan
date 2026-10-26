@@ -21,23 +21,13 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * The "Today" sheet that opens from the weather pill: the sky on the left (now, the next five
- * hours, sun, UV and moon) and the air on the right (index, a 36-hour PM2.5 trend, CPCB advice
- * and the cleanest hour to open the windows). Everything comes from the cached weather; opening
- * it makes no network request.
- */
 final class TodayCard {
 
     static final int WIDTH = 700;
 
-    /** The Today card's own surface: a touch lighter than the home screen behind it. */
     private static final int[] SURFACE = {0xFF26272E, 0xFF1A1B20};
-    /** How many hours the forecast strip shows, the current one included. */
     private static final int STRIP_HOURS = 6;
-    /** Rain chances below this, in percent, are noise. */
     private static final int RAIN_SHOWN = 20;
-    /** How many festivals and family days the card lists. */
     private static final int COMING = 4;
 
     private final Context context;
@@ -66,7 +56,17 @@ final class TodayCard {
         return v;
     }
 
-    // ---- layout -----------------------------------------------------------------------------
+    private TextView caps(String s) {
+        TextView t = text(9.5f, 600, Ui.TERTIARY, s.toUpperCase(Locale.getDefault()));
+        t.setLetterSpacing(0.06f);
+        return t;
+    }
+
+    private LinearLayout.LayoutParams leftOf(float left) {
+        LinearLayout.LayoutParams lp = Ui.wrap();
+        lp.leftMargin = dp(left);
+        return lp;
+    }
 
     private View card(Weather w) {
         Resources r = context.getResources();
@@ -81,8 +81,7 @@ final class TodayCard {
         LinearLayout title = ui.row();
         title.setGravity(Gravity.BOTTOM);
         title.addView(text(17, 600, Ui.LABEL, context.getString(R.string.today_in, w.place.name)));
-        View spacer = new View(context);
-        title.addView(spacer, new LinearLayout.LayoutParams(0, 1, 1));
+        title.addView(new View(context), new LinearLayout.LayoutParams(0, 1, 1));
         if (w.hasWeather()) {
             title.addView(text(11, 400, Ui.TERTIARY,
                     context.getString(R.string.updated_at, Weather.clockAt(r, Math.max(w.weatherAt, w.airAt)))));
@@ -114,7 +113,6 @@ final class TodayCard {
         return card;
     }
 
-    /** Now, the next five hours, then sunrise, sunset, daylight, UV and the moon. */
     private View sky(Weather w) {
         LinearLayout col = ui.column();
         if (!w.hasWeather()) {
@@ -129,9 +127,7 @@ final class TodayCard {
         hero.addView(glyph, new LinearLayout.LayoutParams(dp(40), dp(40)));
         TextView temp = text(44, 300, Ui.LABEL, Weather.degrees(w.temp));
         temp.setFontFeatureSettings("tnum");
-        LinearLayout.LayoutParams tempLp = Ui.wrap();
-        tempLp.leftMargin = dp(12);
-        hero.addView(temp, tempLp);
+        hero.addView(temp, leftOf(12));
         LinearLayout lines = ui.column();
         lines.addView(text(15, 500, Ui.LABEL, w.condition(context.getResources())));
         StringBuilder range = new StringBuilder();
@@ -140,9 +136,7 @@ final class TodayCard {
         }
         range.append(context.getString(R.string.feels_like, Weather.degrees(w.feels)));
         lines.addView(text(12.5f, 400, Ui.SECONDARY, range.toString()), ui.wrap(4));
-        LinearLayout.LayoutParams linesLp = Ui.wrap();
-        linesLp.leftMargin = dp(14);
-        hero.addView(lines, linesLp);
+        hero.addView(lines, leftOf(14));
         col.addView(hero);
 
         String rain = w.rainSoon(context.getResources());
@@ -195,18 +189,14 @@ final class TodayCard {
         bottom.setPadding(0, dp(12), 0, 0);
         if (!Double.isNaN(w.uvMax)) bottom.addView(fact(r.getString(R.string.uv_peak), Weather.uvLabel(r, w.uvMax), null), Ui.share(1));
         double age = Weather.moonAge(Dates.nowMillis());
-        MoonGlyph moon = new MoonGlyph(context, age);
-        bottom.addView(fact(r.getString(R.string.moon), Weather.moonName(r, age), moon), Ui.share(2));
+        bottom.addView(fact(r.getString(R.string.moon), Weather.moonName(r, age), new MoonGlyph(context, age)), Ui.share(2));
         grid.addView(bottom);
         return grid;
     }
 
-    /** The next few festivals and family days; anything coming soon is picked out in marigold. */
     private View festivals(List<Festival> coming) {
         LinearLayout col = ui.column();
-        TextView heading = text(9.5f, 600, Ui.TERTIARY, context.getString(R.string.coming_up).toUpperCase(Locale.getDefault()));
-        heading.setLetterSpacing(0.06f);
-        col.addView(heading);
+        col.addView(caps(context.getString(R.string.coming_up)));
         LinearLayout row = ui.row();
         LocalDate today = Festival.today();
         for (Festival f : coming) {
@@ -223,9 +213,7 @@ final class TodayCard {
 
     private View fact(String label, String value, View icon) {
         LinearLayout col = ui.column();
-        TextView l = text(9.5f, 600, Ui.TERTIARY, label.toUpperCase(Locale.getDefault()));
-        l.setLetterSpacing(0.06f);
-        col.addView(l);
+        col.addView(caps(label));
         LinearLayout valueRow = ui.row();
         valueRow.setGravity(Gravity.CENTER_VERTICAL);
         if (icon != null) {
@@ -238,7 +226,6 @@ final class TodayCard {
         return col;
     }
 
-    /** Index and category, the PM2.5 trend, CPCB's advice and the cleanest hour ahead. */
     private View air(Weather w) {
         Resources r = context.getResources();
         LinearLayout col = ui.column();
@@ -254,12 +241,8 @@ final class TodayCard {
         head.addView(dot, new LinearLayout.LayoutParams(dp(10), dp(10)));
         TextView index = text(26, 400, Ui.LABEL, r.getString(R.string.aqi_value, w.aqi));
         index.setFontFeatureSettings("tnum");
-        LinearLayout.LayoutParams indexLp = Ui.wrap();
-        indexLp.leftMargin = dp(10);
-        head.addView(index, indexLp);
-        LinearLayout.LayoutParams catLp = Ui.wrap();
-        catLp.leftMargin = dp(10);
-        head.addView(text(15, 600, w.aqiColor(), w.aqiCategory(r)), catLp);
+        head.addView(index, leftOf(10));
+        head.addView(text(15, 600, w.aqiColor(), w.aqiCategory(r)), leftOf(10));
         col.addView(head);
 
         col.addView(text(11.5f, 400, Ui.SECONDARY,
@@ -279,7 +262,6 @@ final class TodayCard {
         int clean = w.cleanestHour();
         if (clean >= 0) {
             long pm = Math.round(w.airPm25[clean]);
-            // When even the best hour is heavy, there is nothing to recommend.
             String line = pm > Weather.HEAVY_PM25
                     ? r.getQuantityString(R.plurals.no_clean_air, Weather.CLEAN_AIR_HOURS, Weather.CLEAN_AIR_HOURS)
                     : r.getString(R.string.air_out, w.airHour(r, clean), pm);
@@ -288,12 +270,6 @@ final class TodayCard {
         return col;
     }
 
-    // ---- drawings ---------------------------------------------------------------------------
-
-    /**
-     * Hourly PM2.5 from 24 hours ago to 12 hours ahead. Each stretch is coloured by its CPCB
-     * category, the forecast is dashed, and a dotted line marks the 24-hour safe limit (60 in India, 35 elsewhere).
-     */
     private static final class AirTrend extends View {
 
         private final double[] values;
@@ -356,22 +332,15 @@ final class TodayCard {
             label.setTextAlign(Paint.Align.RIGHT);
             c.drawText(limitLabel, w, limitY + 11 * density, label);
 
-            // A soft wash under the past readings, in today's colour.
             Path area = new Path();
             boolean started = false;
             float lastX = 0;
             for (int i = 0; i <= now; i++) {
                 if (Double.isNaN(values[i])) continue;
-                float x = i * step;
-                float yv = y(values[i], max, top, bottom);
-                if (!started) {
-                    area.moveTo(x, bottom);
-                    area.lineTo(x, yv);
-                    started = true;
-                } else {
-                    area.lineTo(x, yv);
-                }
-                lastX = x;
+                lastX = i * step;
+                if (!started) area.moveTo(lastX, bottom);
+                started = true;
+                area.lineTo(lastX, y(values[i], max, top, bottom));
             }
             if (started) {
                 area.lineTo(lastX, bottom);
@@ -419,7 +388,7 @@ final class TodayCard {
         }
     }
 
-    /** The moon as it looks tonight from the northern hemisphere: lit on the right while waxing. */
+    /** As seen from the northern hemisphere: lit on the right while waxing. */
     private static final class MoonGlyph extends View {
         private final double age;
         private final Paint dark = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -444,9 +413,8 @@ final class TodayCard {
             float side = waxing ? 1 : -1;
             Path p = new Path();
             p.moveTo(cx, cy - r);
-            // The lit limb, top to bottom...
+            // The lit limb, then back up the terminator: an ellipse whose width follows the phase.
             p.arcTo(new RectF(cx - r, cy - r, cx + r, cy + r), -90, waxing ? 180 : -180);
-            // ...then back up along the terminator, an ellipse whose width follows the phase.
             for (int i = 0; i <= 24; i++) {
                 double t = Math.PI / 2 - Math.PI * i / 24;
                 p.lineTo(cx + side * (float) (r * k * Math.cos(t)), cy + (float) (r * Math.sin(t)));

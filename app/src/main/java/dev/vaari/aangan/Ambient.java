@@ -10,10 +10,6 @@ import android.widget.ImageView;
 
 import java.util.Random;
 
-/**
- * A soft pool of light behind the focused tile, in that app's own colour, as if the card were
- * lighting the room. It glides and re-tints only when focus moves; at rest it is a static image.
- */
 final class Ambient extends ImageView {
 
     static final int WIDTH = 560;
@@ -28,11 +24,10 @@ final class Ambient extends ImageView {
         super(context);
         setScaleType(ScaleType.FIT_XY);
         setImageBitmap(mask(384));
-        setColorFilter(color, PorterDuff.Mode.SRC_IN);
+        setTint(color);
         setAlpha(0f);
     }
 
-    /** Moves the light so it centres on (cx, cy) in the parent, and fades it to that colour. */
     void glow(float cx, float cy, int target, float strength) {
         boolean wasHidden = getAlpha() == 0f;
         float x = cx - getWidth() / 2f;
@@ -64,10 +59,7 @@ final class Ambient extends ImageView {
         setColorFilter(c, PorterDuff.Mode.SRC_IN);
     }
 
-    /**
-     * A circular falloff, (1 - r²)², with a little noise so the scaled-up gradient doesn't band.
-     * Stretched to an ellipse by the view's size.
-     */
+    /** (1 - r²)² falloff, with noise so the scaled-up gradient doesn't band. */
     private static Bitmap mask(int size) {
         int[] px = new int[size * size];
         Random random = new Random(11);
