@@ -1,16 +1,6 @@
-# Every push and pull request: test, lint and build the app, check the build is reproducible, start
-# it on Android TV and Google TV emulators, build the website, and audit these workflows with
-# zizmor. On main: publish the website, and when versionName in app/build.gradle.kts has no release
-# yet, release it.
-#
-# Supply chain: every action is pinned to a full commit (Dependabot proposes updates after a week's
-# cooldown), Gradle checks every dependency against gradle/verification-metadata.xml, checkouts
-# don't keep the token, each job gets only the permissions it needs, the release build uses no
-# cache, and it fails unless the APK and the bundle are signed with the known certificate.
-#
-# Releasing runs in the "release" environment, which waits for an owner's approval and alone holds
-# the signing key (AANGAN_KEYSTORE_B64, AANGAN_KEY_PASS). It publishes the GitHub release, and also
-# uploads to Google Play's internal track once a PLAY_SERVICE_ACCOUNT_JSON secret exists.
+# On main, a versionName with no tag yet is released. The "release" environment needs an owner's
+# approval and alone holds the signing secrets (AANGAN_KEYSTORE_B64, AANGAN_KEY_PASS,
+# PLAY_SERVICE_ACCOUNT_JSON).
 name: CI
 
 on:
@@ -38,7 +28,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # Full history: the sitemap dates each page by its last change.
+          # The sitemap dates each page from git history.
           fetch-depth: 0
       - uses: ./.github/actions/setup
 
@@ -54,8 +44,6 @@ jobs:
             echo "unreleased=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # Unit tests, Android Lint and javac -Xlint, all with warnings as errors; then the release
-      # APK and bundle, minified, signed with the runner's debug key.
       - name: Test, lint and build
         run: ./gradlew check assembleRelease bundleRelease
 
@@ -89,9 +77,6 @@ jobs:
         with:
           path: build/site
 
-  # Installs the minified release build on the TV versions Aangan is checked on, makes it the home
-  # screen, plays festival scenes, starts the screensaver, opens it in Hindi, and fails on any crash
-  # or "isn't responding".
   tv:
     needs: build
     runs-on: ubuntu-latest
@@ -104,8 +89,7 @@ jobs:
             api-level: 33
             target: android-tv
             arch: x86
-          # Only an x86 image exists, and its emulator's graphics crash on GitHub's runners part way
-          # through: it runs, but doesn't hold up the build.
+          # Only an x86 image exists, and its graphics crash part way on GitHub's runners.
           - name: Google TV 14
             api-level: 34
             target: google-tv
@@ -137,7 +121,7 @@ jobs:
           api-level: ${{ matrix.api-level }}
           target: ${{ matrix.target }}
           arch: ${{ matrix.arch }}
-          # A 1080p TV screen; without it the emulator is a small portrait phone.
+          # Without it the emulator is a portrait phone.
           profile: tv_1080p
           disable-animations: true
           script: tools/tv-smoke-test.sh apk/aangan-release.apk screenshots
@@ -161,7 +145,6 @@ jobs:
           advanced-security: false
           annotations: true
 
-  # The website doesn't wait for the emulators: it describes the app, and changes on its own too.
   website:
     needs: build
     if: github.ref == 'refs/heads/main'
@@ -184,7 +167,7 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: write
-      # For the build provenance attestation.
+      # Build provenance.
       id-token: write
       attestations: write
     environment:
@@ -193,25 +176,23 @@ jobs:
     env:
       TAG: ${{ needs.build.outputs.tag }}
       VERSION: ${{ needs.build.outputs.version }}
-      # The release certificate; a build signed with anything else must not be published.
       CERT_SHA256: 7f905b6d3cfbcc92cd2da7203c5b6cf365b65d67cb3d162a4c54d4043caa1484
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # No Gradle cache: nothing another job wrote may run while the signing key is here.
+      # No Gradle cache: nothing another job wrote may run beside the signing key.
       - uses: ./.github/actions/setup
         with:
           cache: "false"
 
-      # Release files keep their old names, so the "latest/download/aangan.apk" link still works.
+      # The "latest/download/aangan.apk" link depends on these file names.
       - name: Build, signed for release
         env:
           KEYSTORE_B64: ${{ secrets.AANGAN_KEYSTORE_B64 }}
           AANGAN_KEY_PASS: ${{ secrets.AANGAN_KEY_PASS }}
         run: |
           export AANGAN_KEYSTORE="$RUNNER_TEMP/release.jks"
-          # Readable only by this user, and deleted however the step ends.
           umask 077
           trap 'rm -f "$AANGAN_KEYSTORE"' EXIT
           echo "$KEYSTORE_B64" | base64 -d > "$AANGAN_KEYSTORE"
@@ -224,8 +205,10 @@ jobs:
         run: |
           apksigner="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner"
           "$apksigner" verify --print-certs build/aangan.apk | grep -q "SHA-256 digest: $CERT_SHA256"
-          # The bundle is a signed JAR: every entry must verify, with the same certificate.
-          jarsigner -verify build/aangan.aab > /dev/null
+          # The bundle is a JAR: every entry must be signed, with the same certificate.
+          verified="$(jarsigner -verify build/aangan.aab)"
+          grep -q "^jar verified" <<< "$verified"
+          if grep -q "unsigned entries" <<< "$verified"; then exit 1; fi
           keytool -printcert -jarfile build/aangan.aab | sed -n 's/^\s*SHA256: //p' | tr -d ':' | tr 'A-F' 'a-f' \
             | grep -qx "$CERT_SHA256"
 
@@ -248,7 +231,8 @@ jobs:
             echo
             echo "Build provenance: \`gh attestation verify aangan.apk --repo $GITHUB_REPOSITORY\`"
           } > notes.md
-          gh release create "$TAG" build/aangan.apk build/aangan.aab \
+          # Already there when re-running after a failed Play upload.
+          gh release view "$TAG" > /dev/null 2>&1 || gh release create "$TAG" build/aangan.apk build/aangan.aab \
             --title "Aangan $VERSION" --notes-file notes.md --target "$GITHUB_SHA"
 
       - name: Is Google Play set up?
@@ -257,8 +241,8 @@ jobs:
           CONFIGURED: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
         run: echo "configured=$CONFIGURED" >> "$GITHUB_OUTPUT"
 
-      # Until the app's first production release, Play accepts only drafts; then set the
-      # PLAY_RELEASE_STATUS variable to "completed" to roll out to testers straight away.
+      # Play accepts only drafts until the first production release; then set
+      # PLAY_RELEASE_STATUS=completed.
       - name: Upload to Google Play (internal testing)
         if: steps.play.outputs.configured == 'true'
         uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5

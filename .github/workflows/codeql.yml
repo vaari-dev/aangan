@@ -1,5 +1,3 @@
-# Static security analysis of the app's Java and of these workflows, on every pull request, on
-# main, and weekly as CodeQL's checks improve. Findings appear under the repository's Security tab.
 name: CodeQL
 
 on:
@@ -25,7 +23,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # The Java is read from source, without a build.
       - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
           languages: ${{ matrix.language }}

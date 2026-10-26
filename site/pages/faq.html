@@ -6,74 +6,74 @@
 </div>
 <div class="wrap" style="padding-bottom:96px"><div class="prose faq" style="max-width:780px">
   <details open><summary>What is Aangan?</summary><div>
-    <p>A home screen, or launcher, for TVs running Android TV or Google TV. It replaces the stock home screen, with its rows of ads and recommendations, with your apps, the weather and air quality, and a countdown to festivals and family birthdays. It's free and open source, and sends nothing to its makers.</p>
+    <p>A home screen (launcher) for Android TV and Google TV. It replaces the stock screen's ads and recommendations with your apps, the weather and air quality, and countdowns to festivals and family birthdays. Free, open source, and it sends nothing to its makers.</p>
   </div></details>
   <details><summary>Does it remove the ads from my TV's home screen?</summary><div>
-    <p>It replaces the screen they're on. With Aangan as your home screen, you see your apps and nothing promoted. Apps themselves, such as streaming services, still show whatever they show inside them.</p>
+    <p>It replaces the screen they're on. Apps such as streaming services still show what they show inside them.</p>
   </div></details>
   <details><summary>Which TVs does it work on?</summary><div>
-    <p>It should work on any TV or streaming box with Android TV or Google TV 9 (Pie) or later: Sony Bravia, TCL, Hisense, Philips, Sharp, Xiaomi Mi TV and Mi Box, Chromecast with Google TV, Nvidia Shield and others. It's developed on Sony Bravia TVs (Android TV 9 and Google TV 12), and each release is also checked on Google's emulators for Android TV 13, Google TV 14 and Google TV 16, the newest. It doesn't run on Samsung (Tizen), LG (webOS), Roku or Fire TV; <a href="#samsung">here's why</a>.</p>
+    <p>Any TV or box with Android TV or Google TV 9 (Pie) or later: Sony Bravia, TCL, Hisense, Philips, Sharp, Xiaomi Mi TV and Mi Box, Chromecast with Google TV, Nvidia Shield and others. It's developed on Sony Bravia (Android TV 9, Google TV 12) and each release is checked on emulators for Android TV 13, Google TV 14 and Google TV 16. Not Samsung (Tizen), LG (webOS), Roku or Fire TV; <a href="#samsung">here's why</a>.</p>
   </div></details>
   <details><summary>Why is there no Screensaver option on my TV?</summary><div>
-    <p>Recent Google TV devices only offer Google's own Ambient mode and don't let you choose another screensaver, so Aangan leaves the option out of Settings there. On TVs that do let you choose, pick <b>Aangan clock</b>.</p>
+    <p>Recent Google TVs allow only Google's Ambient mode, so Aangan hides the option there. Elsewhere, choose <b>Aangan clock</b>.</p>
   </div></details>
   <details id=samsung><summary>Why doesn't it work on Samsung TVs?</summary><div>
-    <p>Samsung's smart TVs don't run Android. They run Samsung's own system, Tizen, and it doesn't allow this kind of customisation:</p>
+    <p>Samsung TVs run Tizen, not Android, and it doesn't allow this:</p>
     <ul>
-      <li><b>No Android apps.</b> Tizen apps are web or .NET apps written specifically for Tizen, so Aangan, like any Android app, can't be installed.</li>
-      <li><b>The home screen belongs to Samsung.</b> Smart Hub, the bar of apps and Samsung TV Plus recommendations, is part of the system. Tizen has no setting to choose a different home screen and no way for an app to become one.</li>
-      <li><b>So does the Home button.</b> Tizen apps can ask for some remote keys, such as the coloured and media buttons, but the Home button goes to the TV itself. There's no equivalent of the Android feature Aangan uses to answer it.</li>
-      <li><b>No easy installs.</b> Apps from outside Samsung's store need the TV's developer mode, a computer with Samsung's developer tools and a signing certificate, and they can't replace anything that ships with the TV.</li>
+      <li><b>No Android apps.</b> Tizen apps are web or .NET apps written for Tizen.</li>
+      <li><b>The home screen is Samsung's.</b> Smart Hub is part of the system, with no way to choose another.</li>
+      <li><b>So is the Home button.</b> Apps can claim some keys, but never Home.</li>
+      <li><b>No easy installs.</b> Outside apps need developer mode, Samsung's tools and a certificate, and still can't replace built-in ones.</li>
     </ul>
-    <p>LG's webOS and Roku are closed in the same way. Amazon's Fire TV is built on Android, but Amazon has blocked other home screens since a 2022 update.</p>
-    <p><b>What you can do:</b> plug a Google TV or Android TV streamer, such as Google TV Streamer, Chromecast with Google TV or Xiaomi TV Box, into the Samsung's HDMI port, and install Aangan on that. Turn on Anynet+ (HDMI-CEC) in the TV's settings so one remote controls both, and the streamer becomes your home screen. <a href="install.html#other-tvs">More on the install page.</a></p>
+    <p>LG's webOS and Roku are closed the same way. Fire TV is Android, but Amazon has blocked other home screens since 2022.</p>
+    <p><b>Instead:</b> plug in a Google TV or Android TV streamer (Google TV Streamer, Chromecast with Google TV, Xiaomi TV Box) and install Aangan there. Turn on Anynet+ (HDMI-CEC) so one remote controls both. <a href="install.html#other-tvs">More on the install page.</a></p>
   </div></details>
   <details><summary>Do I need developer mode or a computer?</summary><div>
-    <p>No. Install it with the free Downloader app, and use the welcome's <b>Open with Home</b> to make the Home button bring it up. <a href="install.html">See how.</a></p>
+    <p>No. Install with the free Downloader app, then use the welcome's <b>Open with Home</b>. <a href="install.html">See how.</a></p>
   </div></details>
   <details><summary>Why does it need an accessibility service?</summary><div>
-    <p>Most TVs offer no setting to choose a different home screen. The accessibility service is the only way, without a computer, for an app to answer the Home button. Aangan's service watches the Home key and the moment the TV's own home screen appears, and does nothing else: other buttons pass straight through, and it can't read anything on screen. It's optional; the <a href="privacy.html#accessibility">privacy policy</a> has the details.</p>
+    <p>Most TVs can't choose a different home screen, and without a computer this is the only way for an app to answer the Home button. The service watches only the Home key and the TV's own home screen appearing; other buttons pass through, and it can't read the screen. It's optional; see the <a href="privacy.html#accessibility">privacy policy</a>.</p>
   </div></details>
   <details><summary>Will it slow my TV down?</summary><div>
-    <p>No. Aangan is about 150 KB, has no libraries, and on an ordinary day nothing on its screen moves, so it uses no processor time while it sits there or while you watch something else. The weather is fetched only while the home screen is showing, at most every 30 minutes.</p>
+    <p>No. It's about 150 KB with no libraries, and on an ordinary day nothing moves, so it uses no processor time. Weather is fetched only while the home screen is showing, at most every 30 minutes.</p>
   </div></details>
   <details id=not-secure><summary>My phone says the setup page is "not secure". Is it safe?</summary><div>
-    <p>Yes, on your home Wi-Fi. Browsers warn about any page that doesn't use HTTPS. The setup page is served by the TV itself, and a device on a home network can't get an HTTPS certificate without routing through a cloud service, which Aangan avoids on purpose. Choose to continue; most browsers then remember that choice for the TV's address. The page and what you type never leave your network, and the page stops the moment you leave Settings on the TV.</p>
+    <p>Yes, on your home Wi-Fi. Browsers warn about any page without HTTPS, and a TV can't get a certificate without a cloud service, which Aangan avoids. Choose to continue. What you type never leaves your network, and the page stops when you leave Settings.</p>
   </div></details>
   <details><summary>The QR code doesn't open on my phone.</summary><div>
-    <p>Make sure the phone is on the same Wi-Fi as the TV, not on mobile data or a guest network. Keep Aangan's Settings open on the TV while you use the page. Some routers isolate devices from each other; if so, add the dates on the TV instead.</p>
+    <p>Put the phone on the TV's Wi-Fi, not mobile data or a guest network, and keep Settings open on the TV. Some routers isolate devices; then use the TV instead.</p>
   </div></details>
   <details><summary>Why doesn't it use my location?</summary><div>
-    <p>It doesn't need to. You choose your city once, and Aangan has no permission to find out where the TV is. The forecast request sends your city's coordinates rounded to about a kilometre.</p>
+    <p>It doesn't need it. You choose your city, and the forecast sends its coordinates rounded to about a kilometre.</p>
   </div></details>
   <details><summary>Where are my family's birthdays stored?</summary><div>
-    <p>Only on the TV, in Aangan's private storage, which is excluded from cloud backup. There's no account and no copy anywhere else. Uninstalling Aangan deletes them.</p>
+    <p>Only on the TV, in Aangan's private storage, excluded from cloud backup. Uninstalling deletes them. To move them, export a backup from the phone page.</p>
   </div></details>
   <details><summary>Our family celebrates a festival on a different day.</summary><div>
-    <p>Move it. In Settings or on the phone page, choose the festival and change its date, or hide it for the year. <a href="guide.html#move">See how.</a></p>
+    <p>Move it, or hide it for the year, in Settings or on the phone page. <a href="guide.html#move">See how.</a></p>
   </div></details>
   <details><summary>Can I add my own festival or a regional one?</summary><div>
-    <p>Not in the app yet. Suggest it on <a href="{{REPO}}/issues">GitHub</a>, or add it to the calendar file yourself; it's one line. Meanwhile, you can add any yearly day as an anniversary.</p>
+    <p>Not in the app. Suggest it on <a href="{{REPO}}/issues">GitHub</a>, or add the one line to the calendar yourself. Meanwhile, add it as an anniversary.</p>
   </div></details>
   <details><summary>How do I hide an app or change the dock?</summary><div>
-    <p>Hold <kbd>OK</kbd> on the app and choose <b>Put in the dock</b> or <b>Hide</b>. You can also set the dock in Settings, or from your phone. Hidden apps come back from the Settings tile's menu. <a href="guide.html#apps">More in the guide.</a></p>
+    <p>Hold <kbd>OK</kbd> on the app and choose <b>Put in the dock</b> or <b>Hide</b>, or use Settings or your phone. Hidden apps come back from the Settings tile's menu. <a href="guide.html#apps">More.</a></p>
   </div></details>
   <details><summary>Does Aangan send crash reports?</summary><div>
-    <p>No. If it ever crashes, it keeps a short note on the TV (the app and Android versions, the TV model, and where in the code it failed) and Settings says so. To report it, open the phone page: it shows the whole note, and a link opens a GitHub issue with the note filled in, for you to read and send yourself. Or delete it. Nothing leaves the TV unless you send it.</p>
+    <p>No. A crash leaves a short note on the TV (app and Android versions, TV model, where in the code it failed), and Settings says so. The phone page shows it and can open a pre-filled GitHub issue for you to send yourself, or delete it.</p>
   </div></details>
   <details><summary>How do I go back to the TV's own home screen?</summary><div>
-    <p>Uninstall Aangan from <b>Settings → Apps</b>, or switch off its Home-button service in the accessibility settings. Aangan doesn't change or disable anything on your TV, so the stock home screen is exactly as you left it.</p>
+    <p>Uninstall Aangan from <b>Settings → Apps</b>, or switch off its service in accessibility settings. Aangan changes nothing on your TV.</p>
   </div></details>
   <details><summary>Is it on Google Play?</summary><div>
-    <p>It's being prepared for Google Play. Until then, install it with Downloader. Both are signed with the same key, so you'll be able to switch without losing anything.</p>
+    <p>Not yet; until then, use Downloader. Both are signed with the same key, so you can switch without losing anything.</p>
   </div></details>
   <details><summary>Who makes it, and how is it free?</summary><div>
-    <p>It's made by Vaari as an open-source project, originally for a family's own TVs. It costs nothing to run because there are no servers: your TV does all the work. There's nothing to sell, including your data.</p>
+    <p>Vaari, as open source, first for a family's own TVs. With no servers it costs nothing to run, and there's nothing to sell, including your data.</p>
   </div></details>
   <details><summary>Can I trust a download from GitHub?</summary><div>
-    <p>Every release is built from the public source and signed with the same key, whose fingerprint is on the <a href="install.html#verify">install page</a>. Android refuses an update signed with any other key, so a tampered copy can't replace yours.</p>
+    <p>Every release is built from the public source and signed with one key, whose fingerprint is on the <a href="install.html#verify">install page</a>. Android refuses updates signed with any other key.</p>
   </div></details>
   <details><summary>How can I help?</summary><div>
-    <p>Report problems and suggest festivals on <a href="{{REPO}}/issues">GitHub</a>, try it on a TV we haven't, or send a pull request. The <a href="developers.html">developer guide</a> is the place to start.</p>
+    <p>Report problems or suggest festivals on <a href="{{REPO}}/issues">GitHub</a>, try a TV we haven't, or send a pull request; start with the <a href="developers.html">developer guide</a>.</p>
   </div></details>
 </div></div>

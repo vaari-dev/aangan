@@ -1,123 +1,90 @@
-# Contributing to Aangan
+# Contributing
 
-Thank you for helping. Aangan is a small, private home screen for Android TV and Google TV, and it should stay
-small and private. This page explains how to build it, test it, and send a change.
+Aangan should stay small and private. For anything large, open an issue first.
 
-For anything large, open an issue first, so we can agree on the shape before you write the code.
+## Build
 
-## Setting up
-
-You need:
-
-- **JDK 17** or later.
-- **The Android SDK.** Point Gradle at it with `ANDROID_HOME`, or with `sdk.dir=/path/to/sdk` in a
-  `local.properties` file at the top of the repository (don't commit it).
-
-Then:
+JDK 17+ and the Android SDK (`ANDROID_HOME`, or `sdk.dir` in an uncommitted `local.properties`).
 
     ./gradlew assembleDebug    # app/build/outputs/apk/debug/aangan-debug.apk
-    ./gradlew installDebug     # install it over adb (set ANDROID_SERIAL when several devices are connected)
-    ./gradlew check            # unit tests, Android Lint and javac warnings
+    ./gradlew installDebug     # over adb; set ANDROID_SERIAL if several devices are connected
+    ./gradlew check            # unit tests (Robolectric), Android Lint, javac -Xlint:all; warnings are errors
 
-`check` runs the unit tests (Robolectric, in `app/src/test/java/dev/vaari/aangan/`), Android Lint, and
-`javac -Xlint:all`. Every warning is an error. Please run it before you open a pull request.
+Run `check` before opening a pull request. `assembleRelease bundleRelease` signs with the release key when
+`AANGAN_KEYSTORE` and `AANGAN_KEY_PASS` are set, otherwise with the debug key, which can't update a real install.
 
-`./gradlew assembleRelease bundleRelease` builds a release APK and bundle, shrunk with R8. Without the release key
-they're signed with your local debug key, which is fine for trying them but can't update an install from GitHub or
-Google Play.
-
-Gradle checks every file it downloads (the Android Gradle plugin, the test libraries and their own dependencies)
-against the checksums in [`gradle/verification-metadata.xml`](gradle/verification-metadata.xml), so a tampered
-download fails the build. After changing a version in `gradle/libs.versions.toml`, update the checksums, and look over
-the diff before committing:
+Gradle verifies every download against [`gradle/verification-metadata.xml`](gradle/verification-metadata.xml).
+After changing `gradle/libs.versions.toml`, regenerate it and review the diff:
 
     ./gradlew --write-verification-metadata sha256 help check assembleRelease bundleRelease
 
-## Where things are
+## Layout
 
-- `app/src/main/java/dev/vaari/aangan/`: all the code. The [source map](https://vaari-dev.github.io/aangan/developers.html#map)
-  says what each file does.
-- `app/src/main/assets/festivals.csv`: the festival calendar.
-- `app/src/main/assets/phone/`: the phone page's stylesheet, font and logo.
+- `app/src/main/java/dev/vaari/aangan/`: the code ([source map](https://vaari-dev.github.io/aangan/developers.html#map)).
+- `app/src/main/assets/`: `festivals.csv`, festival-name translations, and the phone page's stylesheet, font and logo.
 - `app/src/main/res/values/strings.xml`: the app's text.
-- `app/src/test/java/dev/vaari/aangan/`: the unit tests.
-- `site/`: the website. `python3 tools/site.py` builds it into `build/site/`.
+- `app/src/test/java/dev/vaari/aangan/`: unit tests.
+- `site/`: the website; `python3 tools/site.py` builds it into `build/site/`.
 
-## Code style
+## Rules
 
-- **Match the surrounding code**: its names, layout and idiom. Aangan is plain Java on the Android framework.
-- **Comments explain why**, not what. Every file starts with a comment saying what it is and why it exists.
-- **No libraries.** The app has no runtime dependencies at all, and that's deliberate: it keeps it small, easy to
-  read, and easy to trust. If you think one is needed, open an issue to discuss it first.
-- **No work while people watch.** Nothing should animate, poll or touch the network while another app is in front.
-- Add or update a unit test when you change behaviour that can be tested off a TV.
-
-## Privacy
-
-Aangan's promise is that nothing leaves the TV except the forecast request for the city the family chose. So:
-
-- No analytics, crash reporting, advertising or tracking of any kind.
-- No new network requests and no new permissions without discussing them in an issue first. A new kind of request
-  means a change to the [privacy policy](site/pages/privacy.html), made before the code.
+- Match the surrounding code. Plain Java on the Android framework.
+- Comments explain why, not what.
+- No libraries. The app has no runtime dependencies; propose one in an issue first.
+- No work while people watch: nothing animates, polls or touches the network while another app is in front.
+- No analytics, crash reporting, ads or tracking. A new network request or permission needs an issue first, and a
+  [privacy policy](site/pages/privacy.html) change before the code.
+- Add a unit test when you change behaviour that can be tested off a TV.
 
 ## Festivals
 
-The calendar is [`app/src/main/assets/festivals.csv`](app/src/main/assets/festivals.csv), one line per festival day:
+[`app/src/main/assets/festivals.csv`](app/src/main/assets/festivals.csv), one line per festival day:
 
     # date,name,greeting,scene[,expected]
     2026-11-08,Diwali,Happy Diwali,DIWALI
     2027-03-10,Eid al-Fitr,Eid Mubarak,EID,expected
 
-- **date** is `YYYY-MM-DD`. Dates follow [Drik Panchang](https://www.drikpanchang.com/calendars/indian/indiancalendar.html)
-  for New Delhi; national holidays and Eid follow the Government of India's list.
-- **scene** is a name from `Festive.Theme`, or `PLAIN` for the greeting alone.
-- **expected** marks a date that depends on a moon sighting and may move by a day.
-- Changing a line's date or name drops any family's move or hide for that festival, because those are keyed by the
-  original date and name. Correct a line only when it's wrong.
+- **date**: `YYYY-MM-DD`, from [Drik Panchang](https://www.drikpanchang.com/calendars/indian/indiancalendar.html)
+  for New Delhi; national holidays and Eid from the Government of India's list.
+- **scene**: a `Festive.Theme` name, or `PLAIN` for the greeting alone. Days between two entries with the same
+  scene, up to 9 days apart, share it.
+- **expected**: the date depends on a moon sighting and may move by a day.
+- Families' moves and hides are keyed by the original date and name, so changing either drops them. Correct a line
+  only when it's wrong.
 
-The [developer guide](https://vaari-dev.github.io/aangan/developers.html#calendar) has the full format. To suggest a
-date without editing the file, use the **Festival date** issue form and include your source.
-
-To preview a festival's scene on a connected TV or emulator:
+Without editing the file, use the **Festival date** issue form. Preview a scene:
 
     adb shell am start -n dev.vaari.aangan/.HomeActivity --es festival Diwali
 
-Press Home to clear it.
-
 ## Translating
 
-Aangan's text is in [`app/src/main/res/values/strings.xml`](app/src/main/res/values/strings.xml).
+1. Copy `app/src/main/res/values/strings.xml` to `values-XX/strings.xml` and translate it, keeping placeholders
+   such as `%1$s`.
+2. Translate festival names and greetings in `app/src/main/assets/festival-names/XX.csv`
+   (`name,localised name,localised greeting`; `name` must match `festivals.csv` exactly).
+3. Check it on a TV in that language: long words can overflow tiles and buttons.
 
-1. Copy it to `app/src/main/res/values-XX/strings.xml`, where `XX` is the language code (`hi` for Hindi, `ta` for
-   Tamil, and so on), and translate each string. Keep any placeholders, such as `%1$s`, as they are.
-2. Festival names and greetings are translated separately, in `app/src/main/assets/festival-names/XX.csv`, with the
-   columns `name,localised name,localised greeting`. `name` is the English name exactly as it appears in
-   `festivals.csv`, which is how each line is matched.
-3. Check it on a TV or emulator with the system language set to yours: long words can overflow tiles and buttons.
+The Hindi draft (`values-hi`) needs a native speaker's review.
 
-There's a first draft of Hindi (`values-hi`) that still needs a native speaker's review. Corrections are very
-welcome.
+## Testing on a TV
 
-## Testing on a TV or emulator
+- Emulator: an Android TV or Google TV image in Android Studio's Device Manager. Arrow keys and Enter are the D-pad.
+- Real TV: enable developer options and USB or network debugging, then `adb connect <address>`.
+- Make Aangan home: `adb shell cmd package set-home-activity dev.vaari.aangan/.HomeActivity`.
+- Everything must work with a D-pad alone.
 
-- **Emulator:** in Android Studio's Device Manager, create an Android TV or Google TV device with a TV system
-  image. Use the arrow keys and Enter as the D-pad.
-- **A real TV:** turn on developer options and USB or network debugging, then `adb connect <the TV's address>`.
-- Install with `./gradlew installDebug`, then make Aangan the home screen:
+## Releasing
 
-      adb shell cmd package set-home-activity dev.vaari.aangan/.HomeActivity
-
-- Everything must work with a D-pad alone: check focus moves sensibly, and nothing needs a touchscreen.
-- Say which TV or emulator you tested on in the pull request. Real TVs differ, so a real model is especially useful.
+1. Raise `versionName` and `versionCode` in [`app/build.gradle.kts`](app/build.gradle.kts) and add the version to [`CHANGELOG.md`](CHANGELOG.md).
+2. Push to `main`. After an owner approves the `release` environment, CI signs the build, checks the certificate,
+   publishes the GitHub release and uploads to Play's internal track ([`store/README.md`](store/README.md)).
 
 ## Pull requests
 
-- Keep each pull request to one change, and explain what it does and why.
-- Add a line to [`CHANGELOG.md`](CHANGELOG.md) for anything a family would notice, in the same plain style.
-- Include screenshots for anything that changes how a screen looks.
-- CI must pass. It runs `./gradlew check`, builds the app, checks the build is reproducible, runs a smoke test on
-  Android TV 13, Google TV 14 and Google TV 16 emulators, audits the workflows with zizmor, and runs CodeQL.
-- By contributing, you agree to license your work under the [MIT licence](LICENSE).
+- One change each, saying what and why.
+- A [`CHANGELOG.md`](CHANGELOG.md) line for anything a family would notice.
+- Screenshots for visual changes, and which TV or emulator you tested on.
+- CI must pass: `check`, a reproducible-build check, emulator smoke tests, zizmor and CodeQL.
+- Contributions are licensed under the [MIT licence](LICENSE).
 
-Security problems shouldn't go in a public issue: see [`SECURITY.md`](SECURITY.md). Everyone taking part is
-expected to follow the [code of conduct](CODE_OF_CONDUCT.md).
+Security problems: [`SECURITY.md`](SECURITY.md). Conduct: [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).

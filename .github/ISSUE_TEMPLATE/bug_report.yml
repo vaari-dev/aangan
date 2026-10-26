@@ -5,8 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank you for taking the time. The more we know about your TV, the easier it is to find the cause.
-        Security problems shouldn't go here: please see the [security policy](https://github.com/vaari-dev/aangan/security/policy).
+        Security problems: see the [security policy](https://github.com/vaari-dev/aangan/security/policy) instead.
   - type: input
     id: tv
     attributes:
@@ -18,13 +17,13 @@ body:
     id: android
     attributes:
       label: Android TV or Google TV version
-      description: Usually in the TV's Settings, under About.
+      description: TV Settings → About.
       placeholder: e.g. Google TV, Android 12
   - type: input
     id: version
     attributes:
       label: Aangan version
-      description: Aangan's Settings shows it.
+      description: In Aangan's Settings.
       placeholder: e.g. 1.2
     validations:
       required: true
@@ -42,7 +41,7 @@ body:
     id: what
     attributes:
       label: What happened
-      description: What you saw, and what you expected instead.
+      description: What you saw, and what you expected.
     validations:
       required: true
   - type: textarea
@@ -56,4 +55,4 @@ body:
     id: screenshot
     attributes:
       label: Screenshot or photo
-      description: A photo of the TV screen is fine. Please blur any names you'd rather not share.
+      description: A photo of the screen is fine. Blur names you'd rather not share.

@@ -2,7 +2,7 @@
 <div class="wrap page-head">
   <p class=eyebrow>Developers</p>
   <h1>Small enough to read in an afternoon.</h1>
-  <p class=lede>Aangan is about 7,400 lines of plain Java with no third-party libraries. It builds with the standard Android Gradle tools. Here's how it fits together.</p>
+  <p class=lede>About 7,400 lines of plain Java, no third-party libraries, a standard Gradle build.</p>
 </div>
 <div class="wrap doc">
   <nav class=toc aria-label="On this page"><b>On this page</b>
@@ -11,30 +11,29 @@
   <div class=prose>
     <h2 id=principles>Principles</h2>
     <ul>
-      <li><b>No dependencies.</b> Only the Android framework and <code>org.json</code>. Even the QR code encoder is ours, in 268 lines.</li>
-      <li><b>No work while you watch.</b> Nothing animates on an ordinary day; scenes and the focus glow run only while the home screen is showing; the network is touched only while it's on screen.</li>
-      <li><b>No data leaves the TV</b> except a forecast request for a city the user chose. A new kind of request is a privacy-policy change, made first.</li>
-      <li><b>Drawn, not downloaded.</b> Scenes, weather icons and the logo are drawn in code or as vectors, which keeps the app around 150 KB.</li>
-      <li><b>Readable over clever.</b> Every file starts with a comment saying what it is and why.</li>
+      <li><b>No dependencies.</b> Only the Android framework and <code>org.json</code>; even the QR encoder is ours.</li>
+      <li><b>No work while you watch.</b> Nothing animates on an ordinary day; scenes, the focus glow and the network run only while the home screen is showing.</li>
+      <li><b>No data leaves the TV</b> except requests to Open-Meteo. A new kind of request needs a privacy-policy change first.</li>
+      <li><b>Drawn, not downloaded.</b> Scenes, icons and the logo are code or vectors, so the app is about 150 KB.</li>
+      <li><b>Readable over clever.</b></li>
     </ul>
 
     <h2 id=build>Building</h2>
-    <p>You need JDK 17 or later and the Android SDK. Gradle finds the SDK through <code>ANDROID_HOME</code>, or <code>sdk.dir</code> in <code>local.properties</code>, and downloads the rest itself.</p>
+    <p>JDK 17+ and the Android SDK (<code>ANDROID_HOME</code>, or <code>sdk.dir</code> in <code>local.properties</code>).</p>
 <pre><code>git clone {{REPO}}
 cd aangan
 ./gradlew assembleDebug    # app/build/outputs/apk/debug/aangan-debug.apk
 ./gradlew installDebug     # and install it over adb (set ANDROID_SERIAL with several devices)
 ./gradlew check            # unit tests, Android Lint and javac warnings</code></pre>
-    <p><code>check</code> runs the unit tests (with Robolectric, from <code>app/src/test/</code>), Android Lint and <code>javac -Xlint:all</code>, and treats every warning as an error. CI runs it on every push and pull request, along with an Android TV emulator smoke test and CodeQL.</p>
-    <p>To preview a festival's scene on a connected TV:</p>
+    <p>Every warning is an error. CI also runs emulator smoke tests and CodeQL. Preview a scene:</p>
 <pre><code>adb shell am start -n dev.vaari.aangan/.HomeActivity --es festival Diwali</code></pre>
-    <p>Any festival name from the calendar works, as does a family day such as <code>"Asha's birthday"</code>. Press <kbd>Home</kbd> to clear it.</p>
+    <p>Any calendar name works, or a family day such as <code>"Asha's birthday"</code>. <kbd>Home</kbd> clears it.</p>
 
     <h2 id=release>Releases</h2>
-    <p>Release builds are signed with the project's key, kept off any repository:</p>
+    <p>Signed with the project's key:</p>
 <pre><code>AANGAN_KEYSTORE=~/keys/aangan-release.jks AANGAN_KEY_PASS=… ./gradlew assembleRelease bundleRelease</code></pre>
-    <p>This writes <code>app/build/outputs/apk/release/aangan-release.apk</code> and <code>app/build/outputs/bundle/release/aangan-release.aab</code>, shrunk with R8. Without those variables, release builds are signed with the local debug key: fine for trying one, but it can't update a real install.</p>
-    <p>The same key signs the APK on GitHub Releases and is the Google Play app-signing key, so either can update the other. For each release, raise <code>versionCode</code> and <code>versionName</code> in <code>app/build.gradle.kts</code> and add a section to <code>CHANGELOG.md</code>; pushing that to main starts the release, once an owner approves it.</p>
+    <p>Output: <code>app/build/outputs/apk/release/aangan-release.apk</code> and <code>app/build/outputs/bundle/release/aangan-release.aab</code>, shrunk with R8. Without those variables they're debug-signed and can't update a real install.</p>
+    <p>The same key signs GitHub releases and Google Play, so either can update the other. To release, raise <code>versionCode</code> and <code>versionName</code> in <code>app/build.gradle.kts</code>, add a <code>CHANGELOG.md</code> section, and push to main; an owner approves the release.</p>
 
     <h2 id=map>Source map</h2>
     <div class=table><table>
@@ -51,9 +50,9 @@ cd aangan
       <tr><td><code>PhoneSetup</code>, <code>QrCode</code></td><td>The phone setup page's tiny HTTP server and pages, and the QR encoder.</td></tr>
       <tr><td><code>HomeButton</code></td><td>The accessibility service that answers the Home button.</td></tr>
       <tr><td><code>ClockDream</code></td><td>The screensaver.</td></tr>
-      <tr><td><code>Crash</code></td><td>The app's <code>Application</code>: if Aangan crashes, it writes a short note to <code>files/crash.txt</code> on the TV (versions, TV model, stack trace) and sends nothing. Settings and the phone page offer to report it on GitHub, which the person does themselves, or delete it.</td></tr>
+      <tr><td><code>Crash</code></td><td>The <code>Application</code>: on a crash, writes a note to <code>files/crash.txt</code> (versions, TV model, stack trace) and sends nothing. Settings and the phone page offer to report or delete it.</td></tr>
     </table></div>
-    <p>The Java files are in <code>app/src/main/java/dev/vaari/aangan/</code>. Other files, under <code>app/src/main/</code>: <code>assets/festivals.csv</code> (the calendar), <code>assets/festival-names/</code> (festival names in other languages), <code>assets/phone/</code> (the phone page's stylesheet, font, logo and the small script that suggests cities as you type), <code>res/values/strings.xml</code> (the app's text, for translation), <code>res/drawable/</code> (the icon and banner) and <code>res/xml/home_button.xml</code> (the service's limits).</p>
+    <p>Java is in <code>app/src/main/java/dev/vaari/aangan/</code>. Under <code>app/src/main/</code>: <code>assets/festivals.csv</code> (the calendar), <code>assets/festival-names/</code> (translations), <code>assets/phone/</code> (the phone page's stylesheet, font, logo and script), <code>res/values/strings.xml</code> (the app's text), <code>res/drawable/</code> (icon and banner) and <code>res/xml/home_button.xml</code> (the service's limits).</p>
 
     <h2 id=calendar>The festival calendar</h2>
     <p><code>app/src/main/assets/festivals.csv</code> has one line per festival day:</p>
@@ -63,22 +62,22 @@ cd aangan
     <ul>
       <li><b>scene</b> is a name from <code>Festive.Theme</code>, or <code>PLAIN</code> for the greeting alone.</li>
       <li><b>expected</b> marks a date that depends on a moon sighting.</li>
-      <li>Days between two entries with the same scene, up to nine days apart, share it, so Diwali week and Navratri glow throughout.</li>
-      <li>Dates follow Drik Panchang for New Delhi; national days and Eid follow the Government of India's list. Add each year once the calendars are published.</li>
-      <li>A family's moves and hides are keyed by the original date and name, so they survive calendar updates as long as that line doesn't change.</li>
+      <li>Days between two entries with the same scene, up to nine days apart, share it.</li>
+      <li>Dates follow Drik Panchang for New Delhi; national days and Eid, the Government of India's list.</li>
+      <li>Families' moves and hides are keyed by the original date and name, so changing either drops them.</li>
     </ul>
-    <p>The <a href="festivals.html">festival page</a> on this site is generated from the same file.</p>
+    <p>The <a href="festivals.html">festival page</a> is generated from this file.</p>
 
     <h2 id=scenes>Adding a scene</h2>
     <ol>
       <li>Add a value to <code>Festive.Theme</code> with its glow and accent colours.</li>
-      <li>Add a <code>case</code> to the drawing switch in <code>Festive</code>, composed from the existing pieces (stars, moon, diyas, lights, toran and so on) or a new drawing method.</li>
-      <li>Use the timing helpers: <code>part()</code> for the opening, <code>sway()</code> and <code>flicker()</code> for the loop. Keep the clock, date, weather pill and app tiles clear.</li>
+      <li>Add a <code>case</code> to the drawing switch in <code>Festive</code>, from existing pieces (stars, moon, diyas, lights, toran…) or a new method.</li>
+      <li>Time it with <code>part()</code> for the opening and <code>sway()</code>, <code>flicker()</code> for the loop. Keep the clock, date, weather pill and tiles clear.</li>
       <li>Use the scene in <code>festivals.csv</code>, preview it with <code>am start … --es festival</code>, and add it to <code>SCENES</code> in <code>tools/site.py</code>.</li>
     </ol>
 
     <h2 id=storage>Stored settings</h2>
-    <p>Everything lives in one <code>SharedPreferences</code> file, <code>aangan</code>, with backup disabled:</p>
+    <p>One <code>SharedPreferences</code> file, <code>aangan</code>, with backup disabled:</p>
     <div class=table><table>
       <tr><th>Key</th><th>Holds</th></tr>
       <tr><td><code>dock</code></td><td>JSON list of four package names, left to right; <code>""</code> for an empty place</td></tr>
@@ -94,42 +93,41 @@ cd aangan
     <h3>The phone setup page</h3>
     <ul>
       <li><b>Lifetime:</b> a server socket on port 8737 (or any free port) opens in <code>SetupActivity.onResume</code> and closes in <code>onPause</code>.</li>
-      <li><b>Authorisation:</b> every path is under a 10-character secret drawn from a 32-letter alphabet with <code>SecureRandom</code> (50 bits), new each time Settings opens and shown only on the TV. Anything else gets a plain "link expired" page that links to nothing.</li>
-      <li><b>Input:</b> bodies are capped at 8 KB; names at 40 characters; dates are validated, and festival moves are limited to a year either side of the calendar's date. All output is HTML-escaped.</li>
-      <li><b>Reach:</b> the server listens only on the TV's home-network address, not on every interface (such as a VPN or a public IPv6 address). It refuses any request that doesn't name that address as its host, which stops a web page elsewhere from pointing its own domain at the TV ("DNS rebinding").</li>
-      <li><b>Limits:</b> a request's line and headers are capped at 8 KB, its body at 8 KB, and the whole request must arrive within 10 seconds, so a slow or endless sender can't hold the server. City searches are capped at 100 characters and recent ones are cached. A city from the phone must have real coordinates and a known time zone, and there can be at most 200 family days.</li>
-      <li><b>Headers:</b> <code>Cache-Control: no-store</code>, <code>Referrer-Policy: no-referrer</code>, <code>X-Content-Type-Options: nosniff</code>, and a Content Security Policy that lets the page load only the TV's own stylesheet, font, logo and script, and send forms and requests only to the TV. No cookies and no outside resources.</li>
-      <li><b>Script:</b> one small file of the page's own, for city suggestions and the dock's choices. It builds everything with <code>textContent</code>, never HTML, and the page works without it.</li>
-      <li><b>Transport:</b> plain HTTP on the local network. The threat model assumes a trusted home network; an attacker who can watch it during setup could see what's entered there, but not reach the page later.</li>
+      <li><b>Authorisation:</b> every path is under a 10-character <code>SecureRandom</code> secret from a 32-letter alphabet (50 bits), new each time Settings opens and shown only on the TV. Anything else gets a bare "link expired" page.</li>
+      <li><b>Input:</b> names are capped at 40 characters; dates are validated, and festival moves limited to a year either side. All output is HTML-escaped.</li>
+      <li><b>Reach:</b> it listens only on the TV's home-network address, not every interface (a VPN, a public IPv6 address), and refuses requests naming any other host, which stops DNS rebinding.</li>
+      <li><b>Limits:</b> request line and headers 8 KB, body 8 KB, whole request within 10 seconds. City searches are capped at 100 characters and cached. A city from the phone needs real coordinates and a known time zone; at most 200 family days.</li>
+      <li><b>Headers:</b> <code>Cache-Control: no-store</code>, <code>Referrer-Policy: no-referrer</code>, <code>X-Content-Type-Options: nosniff</code>, and a CSP allowing only the TV's own resources, forms and requests. No cookies.</li>
+      <li><b>Script:</b> one small file, for city suggestions and the dock. It uses <code>textContent</code>, never HTML, and the page works without it.</li>
+      <li><b>Transport:</b> plain HTTP; the network is assumed trusted. Someone watching it during setup could see what's entered, but not reach the page later.</li>
     </ul>
     <h3>The Home-button service</h3>
     <ul>
-      <li>Key filtering consumes <code>KEYCODE_HOME</code> only and returns every other key unhandled.</li>
+      <li>Consumes <code>KEYCODE_HOME</code> only; every other key passes through.</li>
       <li>Window events are limited by <code>android:packageNames</code> to the stock launchers (Google TV, Android TV, Leanback, PatchWall).</li>
-      <li><code>canRetrieveWindowContent="false"</code>: it can't read any screen.</li>
-      <li>It starts one activity, Aangan's, and does nothing else.</li>
+      <li><code>canRetrieveWindowContent="false"</code>.</li>
+      <li>It starts Aangan's activity and nothing else.</li>
     </ul>
     <h3>Network</h3>
     <ul>
-      <li><code>usesCleartextTraffic="false"</code>: outgoing requests must use HTTPS.</li>
-      <li>Coordinates are rounded to two decimals before they're sent.</li>
+      <li><code>usesCleartextTraffic="false"</code>.</li>
+      <li>Coordinates are rounded to two decimals.</li>
     </ul>
-    <p>Found a problem? Please report it privately through <a href="{{REPO}}/security/advisories/new">GitHub's vulnerability reporting</a>.</p>
+    <p>Report problems privately through <a href="{{REPO}}/security/advisories/new">GitHub's vulnerability reporting</a>.</p>
 
     <h2 id=art>Icon and website</h2>
     <ul>
-      <li><code>python3 tools/icon.py</code> draws the icon and banner and writes <code>app/src/main/res/drawable/icon.xml</code>, <code>banner.xml</code> and the SVGs. The wordmark is Fraunces, as a path in <code>tools/wordmark.txt</code>.</li>
-      <li><code>python3 tools/site.py</code> builds this website from <code>site/</code> into <code>build/site/</code>; CI publishes it to GitHub Pages on every push to main.</li>
+      <li><code>python3 tools/icon.py</code> draws the icon and banner (<code>res/drawable/icon.xml</code>, <code>banner.xml</code> and the SVGs). The wordmark is Fraunces, as a path in <code>tools/wordmark.txt</code>.</li>
+      <li><code>python3 tools/site.py</code> builds this site into <code>build/site/</code>; CI publishes it on every push to main.</li>
     </ul>
 
     <h2 id=contributing>Contributing</h2>
     <ul>
-      <li>Open an issue first for anything large, so we can agree on the shape.</li>
-      <li>Keep to the principles above: no libraries, no tracking, no work while watching.</li>
-      <li>Match the surrounding code: names, comments and idiom.</li>
-      <li>Test on a real TV if you can, and say which one in the pull request.</li>
-      <li><code>./gradlew check</code> must pass. <a href="{{REPO}}/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a> has the details, including how to translate.</li>
-      <li>By contributing, you agree to license your work under the MIT licence.</li>
+      <li>Open an issue first for anything large.</li>
+      <li>Keep to the principles above and match the surrounding code.</li>
+      <li>Test on a real TV if you can, and say which.</li>
+      <li><code>./gradlew check</code> must pass. Details, including translating, in <a href="{{REPO}}/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>.</li>
+      <li>Contributions are MIT-licensed.</li>
     </ul>
   </div>
 </div>

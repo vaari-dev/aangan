@@ -1,7 +1,5 @@
-# Weekly pull requests for the Gradle build (the Android Gradle plugin, Gradle's own wrapper, and
-# the test libraries; the app itself has no dependencies) and for the pinned GitHub Actions. Each new
-# version waits a week first, so a compromised release is likely to be caught and pulled before it's
-# proposed here. A Gradle update also needs gradle/verification-metadata.xml updated (see CONTRIBUTING.md).
+# The week's cooldown gives a compromised release time to be caught and pulled. A Gradle update also
+# needs gradle/verification-metadata.xml updated (see CONTRIBUTING.md).
 version: 2
 updates:
   - package-ecosystem: gradle

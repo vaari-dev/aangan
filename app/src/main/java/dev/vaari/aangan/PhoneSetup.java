@@ -57,7 +57,6 @@ final class PhoneSetup {
     /** A request's body is read up to this many bytes: room for a backup file, and far more than any form. */
     static final int MAX_BODY = 65_536;
     /** A larger upload is read up to this many bytes and thrown away, so the browser hears why it failed. */
-    private static final int MAX_DISCARD = 1 << 20;
     /** The request line and headers together; a browser's are well under this. */
     private static final int MAX_HEAD = 8192;
     /** How long one request may take, from connecting to the end of its body. */
@@ -232,10 +231,9 @@ final class PhoneSetup {
         }
         String route = path.substring(base.length());
         if (length > MAX_BODY) {
-            // Too big for anything the page sends. Read on (to a limit) before answering: closing
-            // with the upload unread would reset the connection, and the browser wouldn't say why.
-            read(socket, in, deadline, Math.min(length, MAX_DISCARD), false);
             redirect(out, base, route.equals("/import") ? "notbackup" : null, route.equals("/import") ? "backup" : null);
+            // Closing with the upload unread would reset the connection before the browser sees the answer.
+            discard(socket, in, deadline, length);
             return;
         }
         // Lengths are bytes, so the body is read as bytes and decoded whole: a name in Hindi has
@@ -347,6 +345,18 @@ final class PhoneSetup {
      * Reads the request's head, up to its blank line ({@code head}), or exactly {@code limit} bytes of
      * body. Fails if the head runs past {@code limit} or the deadline passes.
      */
+    private static void discard(Socket socket, InputStream in, long deadline, int length) throws IOException {
+        byte[] buffer = new byte[8192];
+        while (length > 0) {
+            long left = deadline - System.currentTimeMillis();
+            if (left <= 0) throw new SocketTimeoutException("too slow");
+            socket.setSoTimeout((int) left);
+            int n = in.read(buffer, 0, Math.min(buffer.length, length));
+            if (n < 0) return;
+            length -= n;
+        }
+    }
+
     private static byte[] read(Socket socket, InputStream in, long deadline, int limit, boolean head) throws IOException {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         int matched = 0;

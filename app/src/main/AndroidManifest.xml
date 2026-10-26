@@ -2,18 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Network use is limited to: weather and air quality from Open-Meteo (the city's coordinates,
-         no identifiers, only while the home screen is on show); city search when you ask for it; and
-         the phone-setup page, served on the home network only while Settings is open. -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- To find the TV's address on the home network for the phone-setup QR code. -->
+    <!-- The TV's home-network address, for the phone page's QR code. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- A TV app: Google Play offers it to TVs only. -->
     <uses-feature android:name="android.software.leanback" android:required="true" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
-    <!-- Package visibility (Android 11+): only apps that can be launched. -->
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -23,7 +18,7 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
-        <!-- To open the right Settings page: the standard ones, or the TV's own (see Ui.openSettings). -->
+        <!-- Some TVs lack the standard Settings pages (see Ui.openSettings). -->
         <intent>
             <action android:name="android.settings.SETTINGS" />
         </intent>
@@ -41,8 +36,7 @@
         </intent>
     </queries>
 
-    <!-- No backup on any version: allowBackup and fullBackupContent up to Android 11, dataExtractionRules from 12.
-         Crash keeps a note on the TV if Aangan crashes; nothing is ever sent. -->
+    <!-- No backup: allowBackup and fullBackupContent up to Android 11, dataExtractionRules from 12. -->
     <application
         android:name=".Crash"
         android:label="@string/app_name"
@@ -69,7 +63,6 @@
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
-            <!-- LEANBACK_LAUNCHER puts Aangan in the TV's own app list, so it can be opened after installing. -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

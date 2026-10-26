@@ -14,19 +14,18 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def version():
-    """versionName from app/build.gradle.kts."""
     with open(os.path.join(REPO_ROOT, "app", "build.gradle.kts"), encoding="utf-8") as f:
         return re.search(r'^\s*versionName = "([^"]+)"', f.read(), re.M).group(1)
 
 
 def tag(name=None):
-    """The Git tag for a version: "1.3" is v1.3.0, and "1.3.1" is v1.3.1."""
+    """"1.3" is v1.3.0; "1.3.1" is v1.3.1."""
     name = name or version()
     return "v" + name + (".0" if name.count(".") == 1 else "")
 
 
 def changelog():
-    """[(version, date or "", [bullet, ...])], newest first. Headings read "## 1.1 · 25 October 2026"."""
+    """[(version, date or "", [bullet, ...])], newest first, from headings like "## 1.1 · 25 October 2026"."""
     entries = []
     with open(os.path.join(REPO_ROOT, "CHANGELOG.md"), encoding="utf-8") as f:
         for line in f:
@@ -47,7 +46,7 @@ def notes(name=None):
 
 
 def inline_html(markdown):
-    """The little Markdown the changelog uses: **bold**, `code` and [links](url)."""
+    """Only **bold**, `code` and [links](url)."""
     s = html.escape(markdown, quote=False)
     s = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", s)
     s = re.sub(r"`(.+?)`", r"<code>\1</code>", s)

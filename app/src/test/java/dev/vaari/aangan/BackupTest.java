@@ -113,6 +113,13 @@ public class BackupTest {
     }
 
     @Test
+    public void aNameIsCutBetweenCharacters() {
+        String name = "A".repeat(People.MAX_NAME - 1) + "\uD83E\uDE94";  // ending in an emoji, two chars
+        assertTrue(Backup.restore(prefs, "{\"app\":\"Aangan\",\"format\":1,\"people\":[{\"m\":5,\"d\":4,\"who\":\"" + name + "\"}]}"));
+        assertEquals("A".repeat(People.MAX_NAME - 1), People.load(prefs).get(0).who);
+    }
+
+    @Test
     public void nestingIsCountedWithoutParsing() {
         assertEquals(0, Backup.depth("\"[[[\""));
         assertEquals(2, Backup.depth("{\"a\":[1,\"]\\\"[\"]}"));

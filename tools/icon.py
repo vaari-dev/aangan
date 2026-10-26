@@ -1,45 +1,27 @@
 #!/usr/bin/env python3
-"""Draws Aangan's icon and TV banner. From the repository root:
+"""Draws the icon and TV banner as SVGs and vector drawables: python3 tools/icon.py
 
-    python3 tools/icon.py
-
-It writes the icon as docs/icon.svg (for the website and README) and app/src/main/assets/phone/mark.svg (for the
-phone setup page), the banner as docs/banner.svg, and both as the Android vector drawables
-app/src/main/res/drawable/icon.xml and banner.xml.
-
-The mark is the nine: eight houses around a sunlit courtyard, which is also a grid of apps with one
-in focus. tools/wordmark.txt holds "Aangan" set in Fraunces (SIL Open Font Licence) at opsz 72,
-wght 520, SOFT 50, as one SVG path in font units (first line: advance, units per em, cap height).
-
-Each drawing is a list of shapes, (kind, paint, path), where kind is "fill" (paint is a colour),
-"linear" (paint is x1, y1, x2, y2, stops) or "radial" (paint is cx, cy, r, stops), and stops are
-(offset, colour) pairs. Colours are "#RRGGBB" or "#AARRGGBB".
+tools/wordmark.txt is "Aangan" in Fraunces (opsz 72, wght 520, SOFT 50) as one SVG path in font
+units; its first line is advance, units per em, cap height.
 """
 import os
 import re
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# The plaster of the courtyard walls, top to bottom, and the ink of the name.
 CHALK = ("#F4EDE1", "#EBE1D0")
 INK = "#A9492A"
-# The houses' terracotta, lit from the top left.
 TONES = ["#C8673C", "#BC5832", "#B04D2C", "#A4472A", "#963F25"]
 
 ICON_TEXT = "Aangan's icon: eight houses around a sunlit courtyard, which is also a grid of apps with one in focus."
 BANNER_TEXT = ("Aangan's TV banner: the icon's nine, and the name set in Fraunces (SIL Open Font Licence), "
                "drawn as paths.")
 
-
-# ---- colours and paths ----------------------------------------------------------------------
-
 def argb(colour):
-    """"#RRGGBB" as opaque "#FFRRGGBB"; "#AARRGGBB" unchanged."""
     return colour if len(colour) == 9 else "#FF" + colour[1:]
 
 
 def opacity(colour):
-    """The alpha of "#AARRGGBB" from 0 to 1; "#RRGGBB" is opaque."""
     return int(colour[1:3], 16) / 255 if len(colour) == 9 else 1
 
 
@@ -55,7 +37,7 @@ def circle(cx, cy, r):
 
 
 def scale_path(d, s, dx, dy):
-    """An SVG path of absolute M, L, H, V, Q, C and Z commands, scaled by s and moved by (dx, dy)."""
+    """Absolute M, L, H, V, Q, C and Z commands only."""
     number = r"-?\d+\.?\d*(?:e-?\d+)?"
     out = []
     for cmd, args in re.findall(r"([MLHVQCZ])([^MLHVQCZ]*)", d):
@@ -65,22 +47,18 @@ def scale_path(d, s, dx, dy):
         elif cmd == "V":
             values = [y * s + dy for y in values]
         else:
-            # Coordinate pairs: x at even positions, y at odd.
             values = [v * s + (dx if i % 2 == 0 else dy) for i, v in enumerate(values)]
         out.append(cmd + " ".join(f"{v:.2f}" for v in values))
     return "".join(out)
 
-
-# ---- the drawings ---------------------------------------------------------------------------
 
 def background(w, h):
     return ("linear", (0, 0, 0, h, [(0, argb(CHALK[0])), (1, argb(CHALK[1]))]), f"M0,0H{w}V{h}H0Z")
 
 
 def mark(ox, oy, s):
-    """The nine: eight houses around a lit courtyard. The grid is 62 units at s=1, top-left at (ox, oy)."""
+    """The grid is 62 units across at s=1."""
     cx, cy = ox + 31 * s, oy + 31 * s
-    # The courtyard's glow spills a little onto the floor between the houses, under them.
     shapes = [("radial", (cx, cy, 20 * s, [(0.45, "#73F6B544"), (1, "#00F6B544")]), circle(cx, cy, 20 * s))]
     for row in range(3):
         for col in range(3):
@@ -90,8 +68,6 @@ def mark(ox, oy, s):
     shapes.append(("radial", (cx, cy, 11 * s, [(0, "#FFFFD27A"), (1, "#FFE8962A")]), circle(cx, cy, 10.5 * s)))
     return shapes
 
-
-# ---- writing SVG and Android vector drawables -----------------------------------------------
 
 def svg_stops(stops):
     return "".join(f'<stop offset="{o}" stop-color="#{c[-6:]}" stop-opacity="{opacity(c):.2f}"/>' for o, c in stops)
@@ -163,11 +139,9 @@ def main():
         metrics, word = f.read().split("\n")[:2]
     cap = int(metrics.split()[2])
 
-    # The icon: 100x100, rounded like the TV's own tiles.
     icon = [background(100, 100)] + mark(19, 19, 1)
     icon_clip = rounded_rect(0, 0, 100, 100, 22)
 
-    # The banner: 160x90, the mark at the left and the name beside it, centred on the mark.
     mark_scale = 36 / 62
     word_scale = 0.01356
     mark_x, mark_y = 11.5, 27

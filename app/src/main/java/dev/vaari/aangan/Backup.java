@@ -100,8 +100,11 @@ final class Backup {
             for (int i = 0; i < people.length() && out.length() < People.MAX; i++) {
                 People.Day d = People.Day.fromJson(people.optJSONObject(i));
                 if (d == null) continue;
-                String who = d.who.length() > People.MAX_NAME
-                        ? d.who.substring(0, d.who.offsetByCodePoints(0, d.who.codePointCount(0, People.MAX_NAME))) : d.who;
+                String who = d.who;
+                if (who.length() > People.MAX_NAME) {
+                    // Without splitting a character that takes two chars, such as an emoji.
+                    who = who.substring(0, Character.isHighSurrogate(who.charAt(People.MAX_NAME - 1)) ? People.MAX_NAME - 1 : People.MAX_NAME);
+                }
                 out.put(new JSONObject().put("m", d.month).put("d", d.day).put("birthday", d.birthday).put("who", who.trim()));
             }
         } catch (JSONException e) {

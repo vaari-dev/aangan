@@ -1,5 +1,4 @@
-# OpenSSF Scorecard: checks the project's security practices (pinned actions, branch protection,
-# code review, signed releases and more) and publishes the score for the README badge.
+# Publishes the score for the README badge.
 name: Scorecard
 
 on:

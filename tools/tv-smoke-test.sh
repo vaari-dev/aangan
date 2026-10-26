@@ -1,5 +1,6 @@
 #!/bin/bash
-# Drives Aangan on a TV or emulator and fails if a step doesn't show Aangan, or it crashes or hangs.
+# Drives Aangan on an emulator and fails if a step doesn't show Aangan, or it crashes or hangs.
+# Not for a real TV: it replaces the accessibility services and screensaver, and adds a birthday.
 #
 #   tools/tv-smoke-test.sh path/to/aangan.apk [screenshot-dir]
 #
@@ -90,6 +91,8 @@ for festival in Diwali Holi "Karwa Chauth" Christmas Lohri; do
 done
 
 adb shell input keyevent KEYCODE_HOME
+# Keys sent before Aangan's window is back are dropped.
+sleep 2
 adb shell input keyevent KEYCODE_DPAD_UP
 adb shell input keyevent KEYCODE_DPAD_CENTER
 shot 5-today
@@ -124,15 +127,17 @@ shot 8-hindi 5
 expect_front hindi .HomeActivity
 adb shell cmd locale set-app-locales "$PKG" --locales ""
 
-if adb logcat -d -b crash | grep -q "$PKG"; then
+CRASHES=$(adb logcat -d -b crash)
+if grep -q "$PKG" <<< "$CRASHES"; then
     echo "Aangan crashed:" >&2
-    adb logcat -d -b crash >&2
+    echo "$CRASHES" >&2
     exit 1
 fi
 # "Does not have a focused window" is the emulator being slow to show a window; Google's apps get it too.
-if adb logcat -d -b events | grep "am_anr" | grep "$PKG" | grep -vq "does not have a focused window"; then
+ANRS=$(adb logcat -d -b events | grep "am_anr" || true)
+if grep "$PKG" <<< "$ANRS" | grep -v "does not have a focused window" > /dev/null; then
     echo "Aangan stopped responding:" >&2
-    adb logcat -d -b events | grep "am_anr" >&2
+    echo "$ANRS" >&2
     exit 1
 fi
 echo "Aangan passed."

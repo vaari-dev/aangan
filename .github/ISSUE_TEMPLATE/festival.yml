@@ -5,8 +5,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        Aangan's dates follow [Drik Panchang](https://www.drikpanchang.com/calendars/indian/indiancalendar.html) for New Delhi; national holidays and Eid follow the Government of India's list.
-        If your family simply keeps a festival on another day, you can [move it on your TV](https://vaari-dev.github.io/aangan/guide.html#move).
+        Dates follow [Drik Panchang](https://www.drikpanchang.com/calendars/indian/indiancalendar.html) for New Delhi; national holidays and Eid follow the Government of India's list.
+        If only your family keeps it on another day, [move it on your TV](https://vaari-dev.github.io/aangan/guide.html#move).
   - type: dropdown
     id: kind
     attributes:
@@ -27,7 +27,7 @@ body:
     id: dates
     attributes:
       label: Date or dates
-      description: For a festival over several days, give each day that should be marked.
+      description: For several days, list each one.
       placeholder: e.g. 2027-09-12
     validations:
       required: true
@@ -42,17 +42,17 @@ body:
     id: source
     attributes:
       label: Source
-      description: A link to Drik Panchang, a government holiday list, or another calendar we can check.
+      description: A link to Drik Panchang, a government holiday list, or another checkable calendar.
     validations:
       required: true
   - type: input
     id: region
     attributes:
       label: Region or tradition
-      description: Where, or by whom, it's kept on this date, if that differs.
+      description: Where, or by whom, it's kept on this date.
       placeholder: e.g. Kerala; or Bengali tradition
   - type: textarea
     id: notes
     attributes:
       label: Anything else
-      description: For example a greeting you'd like to see, or which scene would suit it.
+      description: E.g. a greeting, or which scene would suit it.

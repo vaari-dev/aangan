@@ -1,39 +1,34 @@
-# Releasing Aangan on Google Play
+# Google Play runbook
 
-Everything needed for the Play Console, in order. The listing text is in [`listing.md`](listing.md), and the
-graphics are in [`graphics/`](graphics/).
+Listing text: [`listing.md`](listing.md). Graphics: [`graphics/`](graphics/).
 
 ## 1. Account
 
-- Create a developer account at https://play.google.com/console ($25 once, plus identity verification).
-- **Organisation or personal?** A *personal* account created after November 2023 must run a closed test
-  with at least 12 testers for 14 days before it can publish to production. An *organisation* account
-  ("Vaari") skips that, but needs a D-U-N-S number (free, takes about one to two weeks).
-- Play requires a public support email on the listing. Use a role address rather than a personal one.
+- https://play.google.com/console ($25 once, plus identity verification).
+- A *personal* account created after November 2023 needs a closed test with 12+ testers for 14 days before
+  production. An *organisation* account ("Vaari") skips that but needs a D-U-N-S number (free, one to two weeks).
+- Support email: a role address, not a personal one.
 
 ## 2. Create the app
 
-- Name `Aangan: Private TV Launcher`, default language English (India) – en-IN, App, Free.
-- Package name: `dev.vaari.aangan`, fixed by the first upload.
+- Name `Aangan: Private TV Launcher`; default language English (India) – en-IN; App; Free.
+- Package `dev.vaari.aangan` (fixed by the first upload).
 
 ## 3. Signing: keep the existing key
 
-Phones and TVs that already have Aangan from GitHub must accept Play's updates, so Play has to sign
-with **our existing key**, not a new one Google generates.
+GitHub installs must accept Play's updates, so Play signs with our key.
 
-1. In *Test and release → Setup → App signing*, choose **Use a different key → Export and upload a key
-   from Java keystore**.
-2. Download Google's `pepk.jar` and encryption key from that page, then run:
+1. *Test and release → Setup → App signing* → **Use a different key → Export and upload a key from Java keystore**.
+2. Download `pepk.jar` and the encryption key from that page, then:
 
        java -jar pepk.jar --keystore=$HOME/.android-keys/aangan-release.jks --alias=aangan \
            --output=aangan-signing-key.zip --include-cert --rsa-aes-encryption \
            --encryption-key-path=encryption_public_key.pem
 
 3. Upload `aangan-signing-key.zip`, then delete it.
-4. **Upload key:** the same key can sign uploads. That's simplest, but a separate upload key is safer,
-   because Google can reset a lost upload key while the app-signing key stays put.
+4. **Upload key:** a separate one is safer (Google can reset a lost upload key); reusing the signing key is simpler.
 
-Then check that the SHA-256 Play shows for the app-signing key is
+Play's app-signing SHA-256 must be
 `7F:90:5B:6D:3C:FB:CC:92:CD:2D:A7:20:3C:5B:6C:F3:65:B6:5D:67:CB:3D:16:2A:4C:54:D4:04:3C:AA:14:84`.
 
 ## 4. Build the bundle
@@ -41,9 +36,8 @@ Then check that the SHA-256 Play shows for the app-signing key is
     AANGAN_KEYSTORE=$HOME/.android-keys/aangan-release.jks \
     AANGAN_KEY_PASS="$(security find-generic-password -s aangan-release-key -w)" ./gradlew bundleRelease
 
-This writes `app/build/outputs/bundle/release/aangan-release.aab`. Without both variables the bundle is signed
-with the local debug key, and Play will refuse it. Upload it to *Internal testing* first, install it on a TV from Play, and
-check it there before promoting it.
+Output: `app/build/outputs/bundle/release/aangan-release.aab`. Without both variables it's debug-signed and Play
+refuses it.
 
 ## 5. App content (Policy → App content)
 
@@ -51,42 +45,41 @@ check it there before promoting it.
 |---|---|
 | Privacy policy | https://vaari-dev.github.io/aangan/privacy.html |
 | App access | All functionality is available without special access |
-| Ads | No, the app doesn't contain ads |
-| Content rating | Run the IARC questionnaire with the category *All other app types*. Answer **No** to everything (violence, sexuality, language, controlled substances, gambling, user interaction and content sharing, sharing location with other users, digital purchases, unrestricted web access). Expected result: **Everyone / 3+ / PEGI 3**. |
-| Target audience | **13 and over**. The app suits everyone, but choosing under-13 brings in the Families policy's extra requirements and review, which don't add anything here. |
+| Ads | No |
+| Content rating | IARC, category *All other app types*. **No** to everything (violence, sexuality, language, controlled substances, gambling, user interaction and content sharing, sharing location with other users, digital purchases, unrestricted web access). Expect **Everyone / 3+ / PEGI 3**. |
+| Target audience | **13 and over** (under-13 brings in the Families policy for no benefit). |
 | News app | No |
 | Government app | No |
 | Financial features | None |
-| Health | None. Air quality is general information, not a health app. |
-| Data safety | See section 6 |
-| Accessibility API | See section 7 |
+| Health | None (air quality is general information). |
+| Data safety | Section 6 |
+| Accessibility API | Section 7 |
 
 ## 6. Data safety
 
-Aangan's developers receive no data. The form also covers data the app itself sends to third parties,
-though, and the forecast request sends the chosen city's coordinates to Open-Meteo.
+Developers receive nothing, but the form covers data the app sends to third parties: the city's coordinates go
+to Open-Meteo.
 
 | Question | Answer |
 |---|---|
 | Does your app collect or share any of the required user data types? | **Yes** |
 | Is all data encrypted in transit? | **Yes** (HTTPS only; `usesCleartextTraffic="false"`) |
-| Do you provide a way for users to request that their data is deleted? | Data isn't kept off the device. Answer **No**, and explain in the policy that everything is on the TV and is deleted by clearing data or uninstalling. |
+| Do you provide a way for users to request that their data is deleted? | **No**. Nothing is kept off the device; the policy says data is deleted by clearing data or uninstalling. |
 | Data type | **Location → Approximate location** |
-| Collected? | **Yes**: the city's coordinates, rounded to about 1 km, are sent to Open-Meteo for the forecast. |
-| Shared? | **No**: it's sent only to provide the forecast the user asked for, which Play treats as user-initiated rather than sharing. |
-| Processed ephemerally? | **No**. We can't promise how Open-Meteo handles requests. |
+| Collected? | **Yes**: the city's coordinates, rounded to about 1 km, sent to Open-Meteo. |
+| Shared? | **No**: sent only to provide the user's forecast, which Play treats as user-initiated. |
+| Processed ephemerally? | **No** (we can't vouch for Open-Meteo). |
 | Required or optional? | **Required**: the weather needs a city (Gurgaon by default). |
 | Purpose | **App functionality** |
 
-City search text is also sent to Open-Meteo when the user searches. Add it as **App activity → Other
-user-generated content**: collected, not shared, optional, for app functionality. The privacy policy's
-"Google Play's data safety" section lists both, so the form and the policy say the same thing.
+Also add **App activity → Other user-generated content** (city search text): collected, not shared, optional, app
+functionality. The privacy policy's "Google Play's data safety" section matches both.
 
-Nothing else is collected. Family names and dates, the app list and settings never leave the TV.
+Nothing else: family days, the app list and settings never leave the TV.
 
 ## 7. Accessibility API declaration
 
-Aangan isn't an accessibility tool (`isAccessibilityTool` isn't set), so Play needs a declaration.
+Not an accessibility tool (`isAccessibilityTool` unset), so a declaration is needed.
 
 - **Core functionality:** *Aangan is a home screen (launcher) for Android TV and Google TV. Most TVs
   provide no way to change the default home screen, so Aangan offers an optional accessibility service
@@ -97,50 +90,39 @@ Aangan isn't an accessibility tool (`isAccessibilityTool` isn't set), so Play ne
   from the stock launcher packages listed in its configuration. It has canRetrieveWindowContent=false
   and reads nothing on screen. It starts exactly one activity, Aangan's home screen, and collects,
   stores and transmits no data.*
-- **Prominent disclosure:** shown before Aangan opens Android's accessibility settings, from the welcome
-  and from Settings, with **Agree and continue** and **Not now**
-  (`HomeButton.askToTurnOn`, screenshot `graphics/disclosure.png`).
-- **Video:** upload `disclosure.mp4` (67 seconds, 1280×720, recorded on a Sony Android 9 TV) as an
-  unlisted YouTube video and paste the link. It shows, on a TV with no other copy of Aangan: the home
-  screen, Aangan's Settings with **Open with the Home button** off, the disclosure, **Agree and
-  continue**, Android's accessibility list with Aangan in it, Android's own "Use Aangan?" warning, and
-  Aangan switched on.
+- **Prominent disclosure:** shown before opening Android's accessibility settings, from the welcome and from
+  Settings, with **Agree and continue** and **Not now** (`HomeButton.askToTurnOn`; screenshot `graphics/disclosure.png`).
+- **Video:** `disclosure.mp4` (67 s, 1280×720, Sony Android 9 TV) as an unlisted YouTube link. It shows the home
+  screen, Settings with **Open with the Home button** off, the disclosure, **Agree and continue**, Android's
+  accessibility list, Android's "Use Aangan?" warning, and Aangan switched on.
 
 ## 8. Release
 
-1. Internal testing: upload `app/build/outputs/bundle/release/aangan-release.aab`, add yourself as a tester, install on a TV from Play.
-2. Personal account: closed testing with 12 or more testers for 14 days.
-3. Production: Play reviews TV apps against the
-   [TV app quality guidelines](https://developer.android.com/docs/quality-guidelines/tv-app-quality).
-   Aangan has the banner, the leanback launcher entry, no touchscreen requirement, D-pad navigation
-   throughout, and `android.software.leanback` required, so Play offers it only to TVs.
-4. Each later release: raise `versionCode` (it must always increase) and `versionName` in
-   `app/build.gradle.kts`, build the bundle, upload, and add release notes from `CHANGELOG.md`.
+1. Internal testing: upload the `.aab`, add yourself as tester, install on a TV from Play and check it.
+2. Personal account only: closed testing, 12+ testers, 14 days.
+3. Production, reviewed against the [TV app quality guidelines](https://developer.android.com/docs/quality-guidelines/tv-app-quality):
+   banner, leanback launcher entry, no touchscreen requirement, D-pad throughout, `android.software.leanback`
+   required (TVs only).
+4. Later releases: raise `versionCode` and `versionName`, build, upload, notes from `CHANGELOG.md`.
 
 ## Notes for review
 
-- The Play screenshots come from Google's Google TV emulator on Android 16, the newest version, so the
-  only app tiles in them are Google's own preinstalled apps (YouTube, Live TV, Play Store, Play Games):
-  no other companies' logos. The website's pictures, from a real TV, show more apps.
-- The app sends no data to its developers and has no server. The privacy policy covers the Open-Meteo
-  requests, the phone setup page and the accessibility service in detail.
+- Play screenshots are from the Google TV 16 emulator, so the only app tiles are Google's (YouTube, Live TV, Play
+  Store, Play Games): no other companies' logos.
+- No developer server; the privacy policy covers Open-Meteo, the phone page and the accessibility service.
 
 ## 9. Automatic uploads from CI
 
-Every release CI publishes can also go to Play's internal track. The step stays dormant until it's
-set up:
+CI uploads each release to the internal track once set up:
 
-1. Upload the first bundle by hand (step 8). Play only accepts API uploads for an app that already exists.
-2. In Google Cloud, create a service account in any project and download a JSON key for it. Enable the
-   *Google Play Android Developer API* for that project.
-3. In Play Console → *Users and permissions*, invite the service account's email and give it
-   *Release to testing tracks* for Aangan.
-4. Store the key as a secret of the approval-gated `release` environment, then delete the file:
+1. Upload the first bundle by hand (step 8); the API only accepts existing apps.
+2. Google Cloud: create a service account, download a JSON key, enable the *Google Play Android Developer API*.
+3. Play Console → *Users and permissions*: invite the service account with *Release to testing tracks* for Aangan.
+4. Store the key in the `release` environment, then delete the file:
 
        gh secret set PLAY_SERVICE_ACCOUNT_JSON --env release --repo vaari-dev/aangan < key.json
 
-5. Until the first production release, Play takes drafts only, so CI uploads drafts that you roll out in
-   the Console. Afterwards, set `gh variable set PLAY_RELEASE_STATUS --body completed --repo vaari-dev/aangan`
-   to release to testers straight away.
+5. Until the first production release Play takes drafts only, rolled out in the Console. Afterwards:
+   `gh variable set PLAY_RELEASE_STATUS --body completed --repo vaari-dev/aangan`.
 
-Promoting from internal testing to production stays a deliberate step in the Console.
+Promotion to production stays manual.

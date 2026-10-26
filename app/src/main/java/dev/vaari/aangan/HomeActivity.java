@@ -619,8 +619,8 @@ public class HomeActivity extends Activity {
             String airBody = air;
             handler.post(() -> {
                 fetching = false;
-                if (target != weather) {
-                    // Fetched for a city or cache that has since been replaced: start again for the current one.
+                if (target != weather || !resumed) {
+                    // The city may have changed meanwhile (onResume reloads it), so this answer is dropped.
                     maybeRefreshWeather();
                     return;
                 }
