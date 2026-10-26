@@ -22,7 +22,6 @@ import java.time.LocalDateTime;
 @RunWith(RobolectricTestRunner.class)
 public class WeatherTest {
 
-    /** The moment the tests run at: a Sunday afternoon in Gurgaon, the default city. */
     private static final String NOW = "2026-10-25T14:30";
 
     private Resources r;

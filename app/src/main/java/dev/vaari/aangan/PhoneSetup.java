@@ -42,34 +42,21 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/**
- * A small page on the home network for setting the city, the family's birthdays and anniversaries
- * and the festival dates from a phone, which is far easier than typing with a remote. It runs only
- * while Settings is on screen, answers only at an address with a fresh secret in it, loads nothing
- * from the internet (its stylesheet, font and logo come from the TV), and keeps everything on the TV.
- */
 final class PhoneSetup {
 
     private static final int PORT = 8737;
-    /** The secret in the page's address: ten characters, avoiding ones easily misread (l, o, 0, 1). */
     private static final String SECRET_ALPHABET = "abcdefghijkmnpqrstuvwxyz23456789";
     private static final int SECRET_LENGTH = 10;
-    /** A request's body is read up to this many bytes: room for a backup file, and far more than any form. */
     static final int MAX_BODY = 65_536;
-    /** A larger upload is read up to this many bytes and thrown away, so the browser hears why it failed. */
-    /** The request line and headers together; a browser's are well under this. */
     private static final int MAX_HEAD = 8192;
-    /** How long one request may take, from connecting to the end of its body. */
     private static final int TIMEOUT_MS = 10_000;
-    /** Days ahead within which the page says "in 9 days"; it lists the whole year, so this reaches further than the home screen. */
     private static final int WHEN_DAYS = 60;
-    /** The festival list shows this many months in full; the rest of the year is behind a tap. */
     private static final int OPEN_MONTHS = 3;
-    /** What the page says after each kind of change. */
     private static final Map<String, Integer> DONE = new HashMap<>();
-    /** Everything the page uses comes from the TV itself, and only its own script runs. */
     private static final String POLICY = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; "
             + "font-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'";
+    private static final String HTML = "text/html; charset=utf-8";
+    private static final String JSON = "application/json; charset=utf-8";
 
     static {
         DONE.put("added", R.string.done_added);
@@ -94,10 +81,9 @@ final class PhoneSetup {
     private final SharedPreferences prefs;
     private final Runnable onChange;
     private final Handler main = new Handler(Looper.getMainLooper());
-    /** The page's secret address; package-private for the tests. */
     final String secret;
+    private final String base;
     private ServerSocket server;
-    /** "192.168.1.20:8737", the address in the QR code; requests naming any other host are refused. */
     volatile String host;
 
     PhoneSetup(Context context, SharedPreferences prefs, Runnable onChange) {
@@ -108,9 +94,9 @@ final class PhoneSetup {
         StringBuilder s = new StringBuilder();
         for (int i = 0; i < SECRET_LENGTH; i++) s.append(SECRET_ALPHABET.charAt(random.nextInt(SECRET_ALPHABET.length())));
         secret = s.toString();
+        base = "/" + secret;
     }
 
-    /** Starts serving and returns the page's address, or null when the TV has no network. */
     String start() {
         String ip = localAddress(context);
         if (ip == null) return null;
@@ -122,7 +108,6 @@ final class PhoneSetup {
             try {
                 server.bind(new InetSocketAddress(address, PORT));
             } catch (IOException taken) {
-                // Something else has the usual port: let the system pick one.
                 server.close();
                 server = new ServerSocket();
                 server.bind(new InetSocketAddress(address, 0));
@@ -135,14 +120,13 @@ final class PhoneSetup {
         Thread thread = new Thread(this::serve, "phone-setup");
         thread.setDaemon(true);
         thread.start();
-        return "http://" + host + "/" + secret;
+        return "http://" + host + base;
     }
 
     void stop() {
         try {
             if (server != null) server.close();
         } catch (IOException ignored) {
-            // Closing is best effort.
         }
         server = null;
     }
@@ -170,29 +154,22 @@ final class PhoneSetup {
                     if (a instanceof Inet4Address && a.isSiteLocalAddress()) return a.getHostAddress();
                 }
             }
-        } catch (IOException e) {
-            // No address, so no phone page.
+        } catch (IOException ignored) {
         }
         return null;
     }
-
-    // ---- HTTP -------------------------------------------------------------------------------
 
     private void serve() {
         ServerSocket s = server;
         while (s != null && !s.isClosed()) {
             try (Socket socket = s.accept()) {
                 handle(socket, System.currentTimeMillis() + TIMEOUT_MS);
-            } catch (IOException | RuntimeException | StackOverflowError e) {
-                // A closed server ends the loop; a broken or malformed request is just dropped.
+            } catch (IOException | RuntimeException | StackOverflowError ignored) {
             }
         }
     }
 
-    /**
-     * Answers one request. Everything about it is bounded, since anyone on the network can connect:
-     * its size, and its time in total (a slow sender can't hold the one-at-a-time server).
-     */
+    /** Anyone on the network can connect, so size and total time are bounded: a slow sender can't hold the server. */
     void handle(Socket socket, long deadline) throws IOException {
         InputStream in = new BufferedInputStream(socket.getInputStream());
         String[] head = new String(read(socket, in, deadline, MAX_HEAD, true), StandardCharsets.UTF_8).split("\r\n");
@@ -212,10 +189,9 @@ final class PhoneSetup {
         // then name that domain, not the TV's address, and get nothing.
         if (!hostHeader.equals(host)) {
             send(out, "421 Misdirected Request", "text/plain; charset=utf-8", "no-store", null,
-                    context.getString(R.string.page_wrong_address).getBytes(StandardCharsets.UTF_8));
+                    utf8(context.getString(R.string.page_wrong_address)));
             return;
         }
-        String base = "/" + secret;
         String path = parts[1];
         String query = "";
         int q = path.indexOf('?');
@@ -223,15 +199,14 @@ final class PhoneSetup {
             query = path.substring(q + 1);
             path = path.substring(0, q);
         }
-        boolean post = parts[0].equals("POST");
-
         if (!path.equals(base) && !path.startsWith(base + "/")) {
             respond(out, "404 Not Found", expired());
             return;
         }
         String route = path.substring(base.length());
         if (length > MAX_BODY) {
-            redirect(out, base, route.equals("/import") ? "notbackup" : null, route.equals("/import") ? "backup" : null);
+            boolean upload = route.equals("/import");
+            redirect(out, upload ? "notbackup" : null, upload ? "backup" : null);
             // Closing with the upload unread would reset the connection before the browser sees the answer.
             discard(socket, in, deadline, length);
             return;
@@ -256,80 +231,70 @@ final class PhoneSetup {
                 asset(out, "phone/page.js", "text/javascript; charset=utf-8");
                 return;
             case "/city.json":
-                send(out, "200 OK", "application/json; charset=utf-8", "no-store", null,
-                        cityJson(parseForm(query).getOrDefault("q", "")).getBytes(StandardCharsets.UTF_8));
+                send(out, "200 OK", JSON, "no-store", null, utf8(cityJson(parseForm(query).getOrDefault("q", ""))));
                 return;
             case "/export":
-                send(out, "200 OK", "application/json; charset=utf-8", "no-store",
+                send(out, "200 OK", JSON, "no-store",
                         "Content-Disposition: attachment; filename=\"aangan-backup-" + Dates.today() + ".json\"",
-                        Backup.export(prefs).getBytes(StandardCharsets.UTF_8));
+                        utf8(Backup.export(prefs)));
                 return;
             default:
                 break;
         }
-        if (!post) {
+        if (!parts[0].equals("POST")) {
             Integer done = DONE.get(parseForm(query).get("s"));
-            respond(out, "200 OK", home(base, done == null ? null : context.getString(done, People.MAX)));
+            respond(out, "200 OK", home(done == null ? null : context.getString(done, People.MAX)));
             return;
         }
         switch (route) {
             case "/add": {
                 People.Day day = day(form);
-                String result = day == null ? "invalid" : People.add(prefs, day) ? changed("added") : "full";
-                redirect(out, base, result, "family");
+                redirect(out, day == null ? "invalid" : People.add(prefs, day) ? changed("added") : "full", "family");
                 break;
             }
             case "/edit": {
                 People.Day day = day(form);
-                String result = day == null ? "invalid"
-                        : People.update(prefs, form.getOrDefault("d", ""), day) ? changed("saved") : "gone";
-                redirect(out, base, result, "family");
+                redirect(out, day == null ? "invalid"
+                        : People.update(prefs, form.getOrDefault("d", ""), day) ? changed("saved") : "gone", "family");
                 break;
             }
             case "/remove":
-                redirect(out, base, People.remove(prefs, form.getOrDefault("d", "")) ? changed("removed") : "gone", "family");
+                redirect(out, People.remove(prefs, form.getOrDefault("d", "")) ? changed("removed") : "gone", "family");
                 break;
             case "/city":
-                respond(out, "200 OK", cityResults(base, form.getOrDefault("q", "")));
+                respond(out, "200 OK", cityResults(form.getOrDefault("q", "")));
                 break;
-            case "/city/set":
-            {
+            case "/city/set": {
                 Place place = Place.of(form.get("name"), form.get("region"), form.get("lat"), form.get("lon"),
                         form.get("tz"), form.get("cc"));
-                // A malformed form leaves the city as it was.
-                if (place != null) {
-                    place.save(prefs);
-                    Weather.clear(prefs);
-                }
-                redirect(out, base, place == null ? "nocity" : changed("city"), "city");
-            }
+                if (place != null) place.save(prefs);
+                redirect(out, place == null ? "nocity" : changed("city"), "city");
                 break;
+            }
             case "/dock":
-                redirect(out, base, dock(form), "dock");
+                redirect(out, dock(form), "dock");
                 break;
             case "/crash/delete":
                 Crash.delete(context);
-                redirect(out, base, changed("crash"), null);
+                redirect(out, changed("crash"), null);
                 break;
             case "/festival/move":
             case "/festival/hide":
             case "/festival/show":
             case "/festival/restore":
-                redirect(out, base, festival(route, form), "festivals");
+                redirect(out, festival(route, form), "festivals");
                 break;
             case "/import": {
                 String file = multipart ? multipartFile(body, type) : null;
                 boolean restored = file != null && Backup.restore(prefs, file);
-                if (restored) changed();
-                redirect(out, base, restored ? "imported" : "notbackup", restored ? null : "backup");
+                redirect(out, restored ? changed("imported") : "notbackup", restored ? null : "backup");
                 break;
             }
             default:
-                redirect(out, base, null, null);
+                redirect(out, null, null);
         }
     }
 
-    /** Saves the dock from the page's four choices. The page swaps choices rather than repeat one; without its script, an app chosen twice keeps only its first place. */
     private String dock(Map<String, String> form) {
         Map<String, Apps.App> apps = Apps.load(context);
         List<String> dock = new ArrayList<>();
@@ -341,65 +306,29 @@ final class PhoneSetup {
         return changed("dock");
     }
 
-    /**
-     * Reads the request's head, up to its blank line ({@code head}), or exactly {@code limit} bytes of
-     * body. Fails if the head runs past {@code limit} or the deadline passes.
-     */
-    private static void discard(Socket socket, InputStream in, long deadline, int length) throws IOException {
-        byte[] buffer = new byte[8192];
-        while (length > 0) {
-            long left = deadline - System.currentTimeMillis();
-            if (left <= 0) throw new SocketTimeoutException("too slow");
-            socket.setSoTimeout((int) left);
-            int n = in.read(buffer, 0, Math.min(buffer.length, length));
-            if (n < 0) return;
-            length -= n;
-        }
-    }
-
-    private static byte[] read(Socket socket, InputStream in, long deadline, int limit, boolean head) throws IOException {
-        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-        int matched = 0;
-        while (bytes.size() < limit || head) {
-            long left = deadline - System.currentTimeMillis();
-            if (left <= 0) throw new SocketTimeoutException("too slow");
-            socket.setSoTimeout((int) left);
-            int b = in.read();
-            if (b < 0) break;
-            if (head && bytes.size() >= limit) throw new IOException("head too long");
-            bytes.write(b);
-            // The head ends at the first CR LF CR LF.
-            matched = b == (matched % 2 == 0 ? '\r' : '\n') ? matched + 1 : b == '\r' ? 1 : 0;
-            if (head && matched == 4) return Arrays.copyOf(bytes.toByteArray(), bytes.size() - 4);
-        }
-        if (head) throw new IOException("no end to the head");
-        return bytes.toByteArray();
-    }
-
-    /** Applies a change to a festival day and says which, or returns null if nothing changed. */
     private String festival(String route, Map<String, String> form) {
         Festival f = Festival.byKey(form.getOrDefault("k", ""));
         if (f == null) return null;
         switch (route) {
             case "/festival/move":
+                LocalDate date;
                 try {
-                    LocalDate date = LocalDate.parse(form.getOrDefault("date", ""));
-                    if (!f.canMoveTo(date)) return null;
-                    Festival.move(prefs, f, date);
+                    date = LocalDate.parse(form.getOrDefault("date", ""));
                 } catch (DateTimeParseException e) {
                     return null;
                 }
-                changed();
-                return "moved";
+                if (!f.canMoveTo(date)) return null;
+                Festival.move(prefs, f, date);
+                return changed("moved");
             case "/festival/hide":
+                Festival.hide(prefs, f, true);
+                return changed("hidden");
             case "/festival/show":
-                Festival.hide(prefs, f, route.endsWith("hide"));
-                changed();
-                return route.endsWith("hide") ? "hidden" : "shown";
+                Festival.hide(prefs, f, false);
+                return changed("shown");
             default:
                 Festival.move(prefs, f, f.original);
-                changed();
-                return "restored";
+                return changed("restored");
         }
     }
 
@@ -411,13 +340,8 @@ final class PhoneSetup {
         return new People.Day(month, day, !"anniversary".equals(form.get("kind")), who);
     }
 
-    private void changed() {
-        main.post(onChange);
-    }
-
-    /** Tells the TV something changed, and passes on what the page should say about it. */
     private String changed(String done) {
-        changed();
+        main.post(onChange);
         return done;
     }
 
@@ -429,10 +353,38 @@ final class PhoneSetup {
         }
     }
 
-    /**
-     * The first file in a multipart/form-data body, as text, or null. Enough for the one upload the
-     * page has: a single small file, sent by a browser.
-     */
+    private static void until(Socket socket, long deadline) throws IOException {
+        long left = deadline - System.currentTimeMillis();
+        if (left <= 0) throw new SocketTimeoutException("too slow");
+        socket.setSoTimeout((int) left);
+    }
+
+    private static void discard(Socket socket, InputStream in, long deadline, int length) throws IOException {
+        byte[] buffer = new byte[8192];
+        while (length > 0) {
+            until(socket, deadline);
+            int n = in.read(buffer, 0, Math.min(buffer.length, length));
+            if (n < 0) return;
+            length -= n;
+        }
+    }
+
+    private static byte[] read(Socket socket, InputStream in, long deadline, int limit, boolean head) throws IOException {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        int matched = 0;
+        while (bytes.size() < limit || head) {
+            until(socket, deadline);
+            int b = in.read();
+            if (b < 0) break;
+            if (head && bytes.size() >= limit) throw new IOException("head too long");
+            bytes.write(b);
+            matched = b == (matched % 2 == 0 ? '\r' : '\n') ? matched + 1 : b == '\r' ? 1 : 0;
+            if (head && matched == 4) return Arrays.copyOf(bytes.toByteArray(), bytes.size() - 4);
+        }
+        if (head) throw new IOException("no end to the head");
+        return bytes.toByteArray();
+    }
+
     static String multipartFile(String body, String contentType) {
         int b = contentType.indexOf("boundary=");
         if (b < 0) return null;
@@ -465,23 +417,26 @@ final class PhoneSetup {
             try {
                 form.put(URLDecoder.decode(pair.substring(0, eq), "UTF-8"), URLDecoder.decode(pair.substring(eq + 1), "UTF-8"));
             } catch (IOException | IllegalArgumentException ignored) {
-                // Skip anything that isn't valid form encoding.
             }
         }
         return form;
     }
 
+    private static byte[] utf8(String s) {
+        return s.getBytes(StandardCharsets.UTF_8);
+    }
+
     private static void respond(OutputStream out, String status, String html) throws IOException {
-        send(out, status, "text/html; charset=utf-8", "no-store", null, html.getBytes(StandardCharsets.UTF_8));
+        send(out, status, HTML, "no-store", null, utf8(html));
     }
 
     private static void send(OutputStream out, String status, String type, String cache, String extra, byte[] bytes)
             throws IOException {
-        out.write(("HTTP/1.1 " + status + "\r\nContent-Type: " + type + "\r\nContent-Length: " + bytes.length
+        out.write(utf8("HTTP/1.1 " + status + "\r\nContent-Type: " + type + "\r\nContent-Length: " + bytes.length
                 + "\r\nCache-Control: " + cache + "\r\nReferrer-Policy: no-referrer\r\nX-Content-Type-Options: nosniff"
                 + "\r\nContent-Security-Policy: " + POLICY
                 + (extra != null ? "\r\n" + extra : "")
-                + "\r\nConnection: close\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+                + "\r\nConnection: close\r\n\r\n"));
         out.write(bytes);
     }
 
@@ -494,46 +449,51 @@ final class PhoneSetup {
         send(out, "200 OK", type, "private, max-age=86400", null, bytes.toByteArray());
     }
 
-    /** Back to the page after a change, scrolled to {@code section}, with a word about what happened. */
-    private static void redirect(OutputStream out, String base, String done, String section) throws IOException {
+    private void redirect(OutputStream out, String done, String section) throws IOException {
         String to = base + (done != null ? "?s=" + done : "") + (section != null ? "#" + section : "");
-        out.write(("HTTP/1.1 303 See Other\r\nLocation: " + to + "\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
-                .getBytes(StandardCharsets.UTF_8));
+        out.write(utf8("HTTP/1.1 303 See Other\r\nLocation: " + to + "\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"));
     }
 
-    // ---- pages ------------------------------------------------------------------------------
-
-    /** A string in the TV's language, escaped for the page. */
     private String text(int id, Object... args) {
         return esc(context.getString(id, args));
     }
 
-    private String home(String base, String done) {
+    private String plural(int id, int n, Object... args) {
+        return esc(context.getResources().getQuantityString(id, n, args));
+    }
+
+    private String note(int id) {
+        return "<p class=note>" + text(id) + "</p>";
+    }
+
+    private String post(String route) {
+        return " method=post action='" + base + route + "'";
+    }
+
+    private String home(String done) {
         LocalDate today = Festival.today();
         String[] months = Dates.months(TextStyle.FULL);
         StringBuilder h = new StringBuilder();
         h.append("<div><h1>").append(text(R.string.page_title)).append("</h1>")
                 .append("<p class=lede>").append(text(R.string.page_lede)).append("</p></div>");
 
-        // The city.
         Place place = Place.load(prefs);
         h.append("<section id=city><h2>").append(text(R.string.page_city)).append("</h2><div class='card city'><div>")
                 .append("<div class=label>").append(text(R.string.page_city_label)).append("</div>")
                 .append("<div class=name>").append(esc(place.name)).append("</div>")
                 .append("<div class=region>").append(esc(place.region)).append("</div></div>")
-                .append("<form class=search method=post action='").append(base).append("/city'")
+                .append("<form class=search").append(post("/city"))
                 .append(" data-searching='").append(text(R.string.city_searching))
                 .append("' data-failed='").append(text(R.string.search_failed))
                 .append("' data-none='").append(text(R.string.no_places, "{q}"))
-                .append("' data-one='").append(esc(context.getResources().getQuantityString(R.plurals.places_found, 1, 1)))
-                .append("' data-many='").append(esc(context.getResources().getQuantityString(R.plurals.places_found, 2, "{n}")))
+                .append("' data-one='").append(plural(R.plurals.places_found, 1, 1))
+                .append("' data-many='").append(plural(R.plurals.places_found, 2, "{n}"))
                 .append("'>")
                 .append("<input type=search name=q placeholder='").append(text(R.string.page_city_search))
                 .append("' aria-label='").append(text(R.string.city)).append("' required ")
                 .append("autocomplete=off enterkeyhint=search><button>").append(text(R.string.search))
                 .append("</button></form></div></section>");
 
-        // A note from the last crash, if there is one.
         String crash = Crash.report(context);
         if (crash != null) {
             h.append("<section id=crash><h2>").append(text(R.string.crash_title)).append("</h2><div class='card crash'>")
@@ -542,16 +502,15 @@ final class PhoneSetup {
                     .append(esc(crash)).append("</pre></details>")
                     .append("<div class=actions><a class=button href='").append(esc(Crash.issueLink(crash)))
                     .append("' target=_blank rel=noopener>").append(text(R.string.page_crash_report)).append("</a>")
-                    .append("<form method=post action='").append(base).append("/crash/delete'>")
+                    .append("<form").append(post("/crash/delete")).append(">")
                     .append("<button class=quiet>").append(text(R.string.delete)).append("</button></form></div></div></section>");
         }
 
-        // The dock.
         Map<String, Apps.App> apps = Apps.load(context);
         List<Apps.App> sorted = Apps.sorted(apps.values());
         List<String> dock = Dock.load(prefs, apps, Prefs.list(prefs, HomeActivity.HIDDEN));
-        h.append("<section id=dock><h2>").append(text(R.string.dock)).append("</h2><form class='card dock' method=post action='")
-                .append(base).append("/dock'>");
+        h.append("<section id=dock><h2>").append(text(R.string.dock)).append("</h2><form class='card dock'")
+                .append(post("/dock")).append(">");
         for (int i = 0; i < Dock.SIZE; i++) {
             h.append("<label class=slot><span class=n aria-hidden=true>").append(i + 1).append("</span>")
                     .append("<select name=s").append(i).append(" aria-label='").append(text(R.string.page_dock_place, i + 1)).append("'>")
@@ -563,16 +522,14 @@ final class PhoneSetup {
             h.append("</select></label>");
         }
         h.append("<button class=wide>").append(text(R.string.save)).append("</button></form>")
-                .append("<p class=note>").append(text(R.string.page_dock_note)).append("</p></section>");
+                .append(note(R.string.page_dock_note)).append("</section>");
 
-        // The family's days.
         List<People.Day> days = People.load(prefs);
         h.append("<section id=family><h2>").append(text(R.string.welcome_family));
         if (!days.isEmpty()) h.append(" <small>").append(days.size()).append("</small>");
         h.append("</h2><ul class='card list'>");
         for (int i = 0; i < days.size(); i++) {
             People.Day d = days.get(i);
-            long until = ChronoUnit.DAYS.between(today, d.next(today));
             String tone = d.birthday ? new String[]{"t1", "", "t3"}[i % 3] : "ring";
             h.append("<li><details><summary class=item>")
                     .append("<span class='badge ").append(tone).append("' aria-hidden=true>")
@@ -580,9 +537,9 @@ final class PhoneSetup {
                     .append("<span class=text><span class=title>").append(esc(d.who)).append("</span>")
                     .append("<span class=sub>").append(text(d.birthday ? R.string.birthday : R.string.anniversary)).append(" · ")
                     .append(d.day).append(' ').append(esc(months[d.month - 1])).append("</span></span>")
-                    .append(when(until))
+                    .append(when(ChronoUnit.DAYS.between(today, d.next(today))))
                     .append("<span class=chev aria-hidden=true></span></summary>")
-                    .append("<form class=edit method=post action='").append(base).append("/edit'>")
+                    .append("<form class=edit").append(post("/edit")).append(">")
                     .append(hidden("d", d.key()))
                     .append(dayFields("e" + i, d, months))
                     .append("<div class=actions><button>").append(text(R.string.save)).append("</button>")
@@ -592,13 +549,12 @@ final class PhoneSetup {
         }
         h.append("<li><details class=add").append(days.isEmpty() ? " open" : "").append(">")
                 .append("<summary><span class=badge aria-hidden=true>+</span>").append(text(R.string.add_day)).append("</summary>")
-                .append("<form class=edit method=post action='").append(base).append("/add'>")
+                .append("<form class=edit").append(post("/add")).append(">")
                 .append(dayFields("new", null, months))
                 .append("<button class=wide>").append(text(R.string.add)).append("</button></form></details></li></ul>")
-                .append("<p class=note>").append(text(R.string.page_family_note)).append("</p>")
+                .append(note(R.string.page_family_note))
                 .append("</section>");
 
-        // The festivals, a year ahead, by month.
         h.append("<section id=festivals><h2>").append(text(R.string.festivals)).append(" <small>")
                 .append(text(R.string.page_next_12_months)).append("</small></h2><ul class='card list'>");
         String month = "";
@@ -606,12 +562,12 @@ final class PhoneSetup {
         boolean folded = false;
         for (int i = 0; i < coming.size(); i++) {
             Festival f = coming.get(i);
-            // The next three months in full; the rest of the year behind a tap.
             if (!folded && f.date.isAfter(today.plusMonths(OPEN_MONTHS))) {
                 folded = true;
+                int rest = coming.size() - i;
                 h.append("<li><details class=more><summary>")
-                        .append(esc(context.getResources().getQuantityString(R.plurals.page_show_more, coming.size() - i,
-                                coming.size() - i, Dates.month(coming.get(coming.size() - 1).date.getMonth(), TextStyle.FULL))))
+                        .append(plural(R.plurals.page_show_more, rest, rest,
+                                Dates.month(coming.get(coming.size() - 1).date.getMonth(), TextStyle.FULL)))
                         .append("</summary><ul class=list>");
             }
             String m = Dates.month(f.date.getMonth(), TextStyle.FULL) + " " + f.date.getYear();
@@ -619,6 +575,7 @@ final class PhoneSetup {
                 h.append("<li class=month>").append(esc(m)).append("</li>");
                 month = m;
             }
+            String key = hidden("k", f.key());
             h.append("<li").append(f.hidden ? " class=hidden-day" : "").append("><details><summary class=item>")
                     .append("<span class=date><b>").append(f.date.getDayOfMonth()).append("</b><span>")
                     .append(esc(Dates.weekday(f.date.getDayOfWeek(), TextStyle.SHORT))).append("</span></span>")
@@ -635,19 +592,19 @@ final class PhoneSetup {
             }
             h.append("</span>").append(f.hidden ? "" : when(ChronoUnit.DAYS.between(today, f.date)))
                     .append("<span class=chev aria-hidden=true></span></summary><div class=edit>")
-                    .append("<form class=actions method=post action='").append(base).append("/festival/move'>")
-                    .append(hidden("k", f.key()))
+                    .append("<form class=actions").append(post("/festival/move")).append(">")
+                    .append(key)
                     .append("<input type=date name=date aria-label='").append(text(R.string.page_new_date))
                     .append("' required value=").append(f.date)
                     .append(" min=").append(f.clampMove(LocalDate.MIN))
                     .append(" max=").append(f.clampMove(LocalDate.MAX)).append(">")
                     .append("<button>").append(text(R.string.page_move)).append("</button></form><div class=actions>")
-                    .append("<form method=post action='").append(base).append(f.hidden ? "/festival/show'>" : "/festival/hide'>")
-                    .append(hidden("k", f.key())).append("<button class=ghost>")
+                    .append("<form").append(post(f.hidden ? "/festival/show" : "/festival/hide")).append(">")
+                    .append(key).append("<button class=ghost>")
                     .append(text(f.hidden ? R.string.page_show_again : R.string.page_hide_year)).append("</button></form>");
             if (f.moved()) {
-                h.append("<form method=post action='").append(base).append("/festival/restore'>")
-                        .append(hidden("k", f.key())).append("<button class=quiet>")
+                h.append("<form").append(post("/festival/restore")).append(">")
+                        .append(key).append("<button class=quiet>")
                         .append(text(R.string.back_to, Dates.dayMonth(f.original))).append("</button></form>");
             }
             h.append("</div>");
@@ -657,21 +614,19 @@ final class PhoneSetup {
             h.append("</div></details></li>");
         }
         if (folded) h.append("</ul></details></li>");
-        h.append("</ul><p class=note>").append(text(R.string.page_festival_note)).append("</p></section>");
+        h.append("</ul>").append(note(R.string.page_festival_note)).append("</section>");
 
-        // A backup to keep on the phone, and to restore on a new TV.
         h.append("<section id=backup><h2>").append(text(R.string.page_backup)).append("</h2><div class='card backup'>")
-                .append("<p class=note>").append(text(R.string.page_backup_about)).append("</p>")
+                .append(note(R.string.page_backup_about))
                 .append("<a class=button href='").append(base).append("/export' download>")
                 .append(text(R.string.page_export)).append("</a>")
-                .append("<form class=actions method=post action='").append(base).append("/import' enctype=multipart/form-data>")
+                .append("<form class=actions").append(post("/import")).append(" enctype=multipart/form-data>")
                 .append("<input type=file name=file accept='.json,application/json' required aria-label='")
                 .append(text(R.string.page_backup_file)).append("'><button class=ghost>").append(text(R.string.page_import))
                 .append("</button></form><p class=hint>").append(text(R.string.page_import_note)).append("</p></div></section>");
-        return page(base, context.getString(R.string.app_name), h.toString(), done);
+        return page(context.getString(R.string.app_name), h.toString(), done);
     }
 
-    /** Name, birthday or anniversary, and the date, for adding or editing a family day. */
     private String dayFields(String id, People.Day d, String[] months) {
         boolean birthday = d == null || d.birthday;
         StringBuilder h = new StringBuilder()
@@ -695,18 +650,22 @@ final class PhoneSetup {
         return h.append("</select></div>").toString();
     }
 
-    private String cityResults(String base, String query) {
+    private List<Place> search(String query) throws Exception {
+        return Place.search(query, Place.load(prefs).country);
+    }
+
+    private String cityResults(String query) {
         StringBuilder h = new StringBuilder("<div><a class=back href='").append(base).append("#city'>‹ ")
                 .append(text(R.string.page_back)).append("</a>")
                 .append("<h1>").append(text(R.string.choose_city)).append("</h1></div><section><ul class='card list'>");
         try {
-            List<Place> places = Place.search(query, Place.load(prefs).country);
+            List<Place> places = search(query);
             if (places.isEmpty()) {
                 h.append("<li class=item><span class=text>").append(text(R.string.no_places, query.trim()))
                         .append("</span></li>");
             }
             for (Place p : places) {
-                h.append("<li><form method=post action='").append(base).append("/city/set'>")
+                h.append("<li><form").append(post("/city/set")).append(">")
                         .append(hidden("name", p.name)).append(hidden("region", p.region))
                         .append(hidden("lat", String.valueOf(p.lat))).append(hidden("lon", String.valueOf(p.lon)))
                         .append(hidden("tz", p.timezone)).append(hidden("cc", p.country))
@@ -718,15 +677,14 @@ final class PhoneSetup {
             h.append("<li class=item><span class=text>").append(text(R.string.search_failed)).append("</span></li>");
         }
         h.append("</ul></section>");
-        return page(base, context.getString(R.string.choose_city), h.toString(), null);
+        return page(context.getString(R.string.choose_city), h.toString(), null);
     }
 
-    /** Places matching {@code query}, for the page's suggestions as you type; null if the search failed. */
     private String cityJson(String query) {
         if (query.trim().length() < 2) return "[]";
         try {
             JSONArray a = new JSONArray();
-            for (Place p : Place.search(query, Place.load(prefs).country)) {
+            for (Place p : search(query)) {
                 a.put(new JSONObject().put("name", p.name).put("region", p.region).put("about", p.describe(context.getResources()))
                         .put("lat", p.lat).put("lon", p.lon).put("tz", p.timezone).put("cc", p.country));
             }
@@ -736,7 +694,6 @@ final class PhoneSetup {
         }
     }
 
-    /** "Today", "Tomorrow" or "in 9 days", for anything within {@link #WHEN_DAYS}; otherwise nothing. */
     private String when(long days) {
         if (days > WHEN_DAYS) return "";
         return "<span class='when" + (Dates.soon(days) ? " soon" : "") + "'>"
@@ -756,20 +713,19 @@ final class PhoneSetup {
         return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("'", "&#39;").replace("\"", "&quot;");
     }
 
-    /**
-     * Shown for any address without the current secret. It links to nothing and loads nothing, so it
-     * gives nothing away.
-     */
+    private static String doctype() {
+        return "<!doctype html><html lang=" + Locale.getDefault().toLanguageTag();
+    }
+
     private String expired() {
-        return "<!doctype html><html lang=" + Locale.getDefault().toLanguageTag() + "><meta charset=utf-8>"
+        return doctype() + "><meta charset=utf-8>"
                 + "<meta name=viewport content='width=device-width,initial-scale=1'><title>" + text(R.string.page_expired_title)
                 + "</title><h1>" + text(R.string.page_expired_title) + "</h1><p>" + text(R.string.page_expired_body) + "</p></html>";
     }
 
-    /** A whole page; {@code title} and {@code done} are plain text, escaped here. */
-    private String page(String base, String title, String body, String done) {
+    private String page(String title, String body, String done) {
         String tv = Settings.Global.getString(context.getContentResolver(), "device_name");
-        return "<!doctype html><html lang=" + Locale.getDefault().toLanguageTag() + "><head><meta charset=utf-8>"
+        return doctype() + "><head><meta charset=utf-8>"
                 + "<meta name=viewport content='width=device-width,initial-scale=1,viewport-fit=cover'>"
                 + "<meta name=theme-color content='#f5eee2' media='(prefers-color-scheme: light)'>"
                 + "<meta name=theme-color content='#14100d' media='(prefers-color-scheme: dark)'>"

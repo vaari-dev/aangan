@@ -1,4 +1,3 @@
-/* The phone setup page, served by the TV itself (see PhoneSetup.java). No outside requests. */
 @font-face {
   font-family: Fraunces;
   src: url(fraunces.woff2) format("woff2");
@@ -59,7 +58,6 @@ main {
   gap: 28px;
 }
 
-/* ---- masthead ---- */
 .mast { display: flex; align-items: center; gap: 12px; }
 .mast img { width: 44px; height: 44px; border-radius: 11px; box-shadow: var(--shadow); }
 .mast b { display: block; font: 600 24px/1 var(--serif); letter-spacing: -.01em; color: var(--terra-deep); }
@@ -67,14 +65,12 @@ main {
 h1 { font: 500 34px/1.08 var(--serif); letter-spacing: -.02em; margin: 6px 0 0; text-wrap: balance; }
 .lede { margin: 8px 0 0; color: var(--muted); max-width: 36ch; }
 
-/* ---- sections ---- */
 section { display: grid; gap: 12px; }
 h2 { font: 500 22px/1.2 var(--serif); margin: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 h2 small { font: 400 13px/1 var(--sans); color: var(--muted); }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
 .note { margin: 0; color: var(--muted); font-size: 14px; }
 
-/* ---- the city ---- */
 .city { padding: 18px; display: grid; gap: 14px; }
 .city .label { font-size: 13px; color: var(--muted); }
 .city .name { font: 500 30px/1.05 var(--serif); letter-spacing: -.01em; }
@@ -82,7 +78,6 @@ h2 small { font: 400 13px/1 var(--sans); color: var(--muted); }
 .search { display: flex; gap: 8px; }
 .search input { flex: 1; min-width: 0; }
 
-/* ---- fields and buttons ---- */
 input, select, button { font: inherit; color: inherit; }
 input[type=text], input[type=search], input[type=date], select {
   width: 100%;
@@ -120,7 +115,6 @@ button.ghost { background: transparent; color: var(--terra-deep); border: 1px so
 button.quiet { background: transparent; color: var(--muted); font-weight: 500; padding-inline: 4px; }
 button.wide { width: 100%; }
 
-/* ---- lists of days ---- */
 .list { list-style: none; margin: 0; padding: 0; }
 .list > li + li { border-top: 1px solid var(--line); }
 details > summary { list-style: none; cursor: pointer; }
@@ -135,7 +129,6 @@ details[open] > summary .item, details[open] > summary.item { background: var(--
 .chev { width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); margin: -4px 4px 0 0; transition: transform .2s; flex: none; }
 details[open] .chev { transform: rotate(-135deg); margin-top: 4px; }
 
-/* A family day's badge: a house tile from the icon, with the initial. */
 .badge {
   flex: none;
   width: 42px;
@@ -151,7 +144,6 @@ details[open] .chev { transform: rotate(-135deg); margin-top: 4px; }
 .badge.t3 { background: var(--tile-3); }
 .badge.ring { background: var(--haldi); color: #3a2208; }
 
-/* A festival's date block. */
 .date { flex: none; width: 42px; text-align: center; }
 .date b { display: block; font: 500 24px/1 var(--serif); font-variant-numeric: lining-nums; }
 .date span { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-top: 3px; }
@@ -161,11 +153,9 @@ details[open] .chev { transform: rotate(-135deg); margin-top: 4px; }
 .tag.moved { color: var(--terra-deep); }
 .hidden-day .title, .hidden-day .date b { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1px; }
 
-/* The rest of the year, folded away. */
 .more > summary { padding: 14px 16px; text-align: center; color: var(--terra-deep); font-weight: 600; border-top: 1px solid var(--line); }
 .more[open] > summary { display: none; }
 
-/* ---- forms that open under an item ---- */
 .edit { padding: 4px 16px 16px; display: grid; gap: 10px; background: var(--field); }
 .edit input[type=text], .edit input[type=date], .edit select { background-color: var(--card); }
 .row { display: grid; grid-template-columns: 1fr 1.6fr; gap: 8px; }
@@ -173,7 +163,6 @@ details[open] .chev { transform: rotate(-135deg); margin-top: 4px; }
 .actions > button:first-child, .actions > form:first-child, .actions > input[type=date] { flex: 1; min-width: 0; }
 .hint { font-size: 13px; color: var(--muted); margin: 0; }
 
-/* Birthday or anniversary, as a two-way switch. */
 .kind { display: grid; grid-template-columns: 1fr 1fr; padding: 3px; gap: 3px; border-radius: 12px; background: var(--line); }
 .kind input { position: absolute; opacity: 0; pointer-events: none; }
 .kind label { text-align: center; padding: 9px 6px; border-radius: 9px; font-weight: 500; color: var(--muted); cursor: pointer; }
@@ -183,16 +172,14 @@ details[open] .chev { transform: rotate(-135deg); margin-top: 4px; }
 .add > summary { display: flex; align-items: center; gap: 14px; padding: 14px 16px; color: var(--terra-deep); font-weight: 600; }
 .add > summary .badge { background: transparent; border: 1.5px dashed var(--terra); color: var(--terra-deep); font: 400 24px/1 var(--sans); }
 
-/* ---- city results ---- */
 .place { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: left; background: transparent; color: var(--ink); border-radius: 0; padding: 14px 16px; font-weight: 400; }
 .place b { display: block; font-weight: 600; color: var(--ink); }
 .place span { display: block; font-size: 14px; color: var(--muted); }
 .back { color: var(--terra-deep); font-weight: 600; text-decoration: none; }
 
-/* Backup: export to the phone, import on a new TV. */
 .backup { padding: 18px; display: grid; gap: 14px; }
 a.button {
-  display: flex; align-items: center; justify-content: center; min-height: 46px; padding: 10px 18px;
+  display: inline-flex; align-items: center; justify-content: center; flex: 1; min-height: 46px; padding: 10px 18px;
   border-radius: 12px; background: var(--terra); color: var(--on-terra); font-weight: 600; text-decoration: none;
 }
 input[type=file] { flex: 1; min-width: 0; font-size: 14px; color: var(--muted); }
@@ -201,7 +188,6 @@ input[type=file]::file-selector-button {
   border: 1px solid var(--line); background: var(--field); color: var(--ink); cursor: pointer;
 }
 
-/* ---- the confirmation after a change ---- */
 .toast {
   position: fixed;
   left: 50%;
@@ -233,21 +219,16 @@ input[type=file]::file-selector-button {
 footer { color: var(--muted); font-size: 13px; text-align: center; display: grid; gap: 4px; padding-top: 4px; }
 footer img { width: 22px; height: 22px; border-radius: 6px; margin: 0 auto 6px; opacity: .9; }
 
-/* The dock: four numbered places, each a choice of app. */
 .dock { padding: 14px 16px; display: grid; gap: 10px; }
 .dock .slot { display: flex; align-items: center; gap: 12px; }
 .dock .n { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); }
 .dock button { margin-top: 4px; }
 
-/* City suggestions under the search box, and the arrow on each place. */
 .suggest { margin-top: 10px; }
 .chev.go { transform: rotate(-45deg); }
-/* Read by screen readers, not shown. */
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
-/* A note from the last crash: what happened, the note itself, and what to do with it. */
 .crash { padding: 16px; display: grid; gap: 12px; }
 .crash p { margin: 0; }
-.crash pre { margin: 10px 0 0; padding: 12px; overflow-x: auto; font-size: 12px; line-height: 1.45; background: var(--field, rgba(0,0,0,.04)); border-radius: 10px; white-space: pre; }
+.crash pre { margin: 10px 0 0; padding: 12px; overflow-x: auto; font-size: 12px; line-height: 1.45; background: var(--field); border-radius: 10px; white-space: pre; }
 .crash summary { cursor: pointer; color: var(--muted); }
-a.button { display: inline-flex; align-items: center; justify-content: center; flex: 1; min-height: 46px; padding: 10px 18px; border-radius: 12px; background: var(--terra); color: var(--on-terra); font-weight: 600; text-decoration: none; }

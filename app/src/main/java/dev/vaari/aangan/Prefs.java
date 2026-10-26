@@ -12,12 +12,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Aangan's one preferences file, and the small formats kept in it: JSON for the city, the family's
- * days, festival changes and the dock, and comma-separated package names for hidden apps.
- *
  * Every write uses apply(): it updates the in-memory copy at once, so the next read anywhere in the
- * app (the home screen, Settings, or the phone page's thread) already sees the change, and the disk
- * write happens in the background instead of on the main thread.
+ * app (the phone page's thread included) already sees the change, and the disk write happens in
+ * the background instead of on the main thread.
  */
 final class Prefs {
 
@@ -30,7 +27,6 @@ final class Prefs {
         return context.getSharedPreferences(NAME, Context.MODE_PRIVATE);
     }
 
-    /** The JSON object stored at {@code key}, or an empty one if it is missing or damaged. */
     static JSONObject object(SharedPreferences prefs, String key) {
         try {
             return new JSONObject(prefs.getString(key, "{}"));
@@ -39,7 +35,6 @@ final class Prefs {
         }
     }
 
-    /** The JSON array stored at {@code key}, or an empty one if it is missing or damaged. */
     static JSONArray array(SharedPreferences prefs, String key) {
         try {
             return new JSONArray(prefs.getString(key, "[]"));
@@ -48,7 +43,6 @@ final class Prefs {
         }
     }
 
-    /** A comma-separated list, such as the hidden apps' package names. */
     static List<String> list(SharedPreferences prefs, String key) {
         List<String> out = new ArrayList<>();
         for (String s : prefs.getString(key, "").split(",")) if (!s.isEmpty()) out.add(s);

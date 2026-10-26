@@ -20,17 +20,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/**
- * The city whose weather, air and time Aangan shows. Chosen in Settings (or from a phone) and
- * stored on the TV. Searching asks Open-Meteo's geocoder, sending only what was typed.
- */
 final class Place {
 
     static final String KEY = "place";
     private static final int MAX_RESULTS = 8;
-    /** Longer than any place's name; a search or a name beyond it is cut or refused. */
     private static final int MAX_TEXT = 100;
-    /** Recent searches and their results, so typing back over a word doesn't search again. */
     private static final Map<String, List<Place>> RECENT = new LinkedHashMap<String, List<Place>>(16, 0.75f, true) {
         @Override
         protected boolean removeEldestEntry(Map.Entry<String, List<Place>> eldest) {
@@ -40,7 +34,7 @@ final class Place {
     private static final List<String> NOT_TOWNS = Arrays.asList("PPLX", "PPLQ", "PPLW", "PPLH", "PPLCH");
     static final Place DEFAULT = new Place("Gurgaon", "Haryana, India", 28.46, 77.03, "Asia/Kolkata", "IN");
 
-    /** Large Indian cities, to choose without typing. Coordinates as Open-Meteo's geocoder gives them. */
+    /** Coordinates as Open-Meteo's geocoder gives them. */
     static final List<Place> POPULAR = Arrays.asList(
             india("Delhi", "Delhi", 28.65195, 77.23149),
             india("Mumbai", "Maharashtra", 19.07283, 72.88261),
@@ -77,14 +71,12 @@ final class Place {
     }
 
     final String name;
-    /** State and country, for telling apart places with the same name. */
     final String region;
     final double lat;
     final double lon;
     final String timezone;
     /** ISO country code; "IN" selects India's CPCB air-quality scale. */
     final String country;
-    /** For telling search results apart; 0 when unknown, and not stored. */
     final long population;
 
     Place(String name, String region, double lat, double lon, String timezone, String country) {
@@ -101,7 +93,6 @@ final class Place {
         this.population = population;
     }
 
-    /** A place from the phone page's form, or null unless every part is sensible. */
     static Place of(String name, String region, String lat, String lon, String timezone, String country) {
         try {
             double la = Double.parseDouble(lat);
@@ -121,10 +112,8 @@ final class Place {
         return new Place(name, state + ", India", lat, lon, "Asia/Kolkata", "IN");
     }
 
-    /** "Haryana, India · 8.9 lakh people" (or "2.7 million" outside India): where it is, and how big, to tell same-named places apart. */
     String describe(Resources r) {
         if (population <= 0) return region;
-        // Lakh and crore in India, millions elsewhere.
         boolean india = "IN".equals(country);
         String people;
         if (india && population >= 10_000_000) people = r.getString(R.string.people_crore, tenths(population / 1e7));
@@ -134,7 +123,6 @@ final class Place {
         return region + "  ·  " + people;
     }
 
-    /** "8.9", or "2" rather than "2.0". */
     private static String tenths(double n) {
         String s = String.format(Locale.ROOT, "%.1f", n);
         return s.endsWith(".0") ? s.substring(0, s.length() - 2) : s;
@@ -150,16 +138,13 @@ final class Place {
     }
 
     void save(SharedPreferences prefs) {
-        prefs.edit().putString(KEY, toJson().toString()).apply();
-    }
-
-    private JSONObject toJson() {
         try {
-            return new JSONObject().put("name", name).put("region", region).put("lat", lat).put("lon", lon)
-                    .put("timezone", timezone).put("country", country);
+            prefs.edit().putString(KEY, new JSONObject().put("name", name).put("region", region).put("lat", lat)
+                    .put("lon", lon).put("timezone", timezone).put("country", country).toString()).apply();
         } catch (JSONException e) {
             throw new IllegalStateException(e);
         }
+        Weather.clear(prefs);
     }
 
     private static Place fromJson(JSONObject o) throws JSONException {
@@ -167,7 +152,6 @@ final class Place {
                 o.getString("timezone"), o.optString("country", ""));
     }
 
-    /** A place from a backup, or null unless every part is sensible (as {@link #of} checks). */
     static Place fromJsonOrNull(JSONObject o) {
         try {
             return of(o.getString("name"), o.optString("region", ""), String.valueOf(o.getDouble("lat")),
@@ -177,11 +161,6 @@ final class Place {
         }
     }
 
-    /**
-     * Towns and cities matching {@code query}: those in {@code country} first, then the largest.
-     * Airports, districts and the like are left out, as are less-known spellings of a place
-     * already listed. Blocking; call off the main thread.
-     */
     static List<Place> search(String query, String country) throws IOException, JSONException {
         String q = query.trim();
         if (q.length() > MAX_TEXT) q = q.substring(0, MAX_TEXT);
@@ -192,12 +171,11 @@ final class Place {
         }
         List<Place> places = new ArrayList<>();
         String official = ALSO_KNOWN_AS.get(q.toLowerCase(Locale.ROOT));
-        // Just the city itself: the official name's search also finds its neighbourhoods.
         if (official != null) {
             for (Place p : lookUp(official)) if (plain(p.name).equals(plain(official))) places.add(p);
         }
-        // Leave out what's already listed: another spelling of the same place, or, for an older name,
-        // parts of the city it now means ("Bombay" also finds Bandra).
+        // Leave out another spelling of a place listed, or, for an older name, parts of the city it
+        // now means ("Bombay" also finds Bandra).
         for (Place p : lookUp(q)) {
             boolean seen = false;
             for (Place other : places) {
@@ -206,7 +184,6 @@ final class Place {
             }
             if (!seen) places.add(p);
         }
-        // A stable sort: the geocoder's own order breaks ties.
         Collections.sort(places, (a, b) -> {
             boolean ha = a.country.equals(country), hb = b.country.equals(country);
             if (ha != hb) return ha ? -1 : 1;
@@ -241,7 +218,6 @@ final class Place {
         return places;
     }
 
-    /** "Vāranāsi" and "Varanasi" alike: lower case, without accents. */
     private static String plain(String name) {
         return Normalizer.normalize(name, Normalizer.Form.NFD).replaceAll("\\p{M}", "").toLowerCase(Locale.ROOT);
     }

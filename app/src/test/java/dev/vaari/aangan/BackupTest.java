@@ -124,7 +124,7 @@ public class BackupTest {
         assertEquals(0, Backup.depth("\"[[[\""));
         assertEquals(2, Backup.depth("{\"a\":[1,\"]\\\"[\"]}"));
         char[] deep = new char[50_000];
-        java.util.Arrays.fill(deep, '[');
+        Arrays.fill(deep, '[');
         assertFalse(Backup.restore(prefs, new String(deep)));
     }
 

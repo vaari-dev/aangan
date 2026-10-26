@@ -15,21 +15,15 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * Everything the family has set, as one small file: the city, birthdays and anniversaries,
- * festival changes, the dock and the hidden apps. The phone page exports it to the phone and
- * imports it on a new TV; it goes nowhere else. Aangan doesn't use Android's backup, so this is
- * the only way the settings can outlive the TV.
- *
- * Importing replaces each part the file holds, and leaves alone any part it doesn't. Every part is
- * checked first: a damaged or foreign file changes nothing, and a bad entry inside a good file is
- * left out rather than stored.
+ * Everything the family has set, as one file. Importing replaces each part the file holds and
+ * leaves alone any part it doesn't. A damaged or foreign file changes nothing, and a bad entry
+ * inside a good file is left out rather than stored.
  */
 final class Backup {
 
     /** Raised when the format changes in a way older versions can't read. */
     static final int FORMAT = 1;
     private static final String APP = "Aangan";
-    /** Package names, as Android allows them, and Aangan's own tiles such as "__settings__". */
     private static final Pattern PACKAGE = Pattern.compile("[A-Za-z0-9_.]{1,255}");
     /** A backup nests three levels deep; anything far deeper isn't one, and could exhaust the parser's stack. */
     private static final int MAX_DEPTH = 16;
@@ -37,7 +31,6 @@ final class Backup {
     private Backup() {
     }
 
-    /** The backup as JSON, laid out to be readable. */
     static String export(SharedPreferences prefs) {
         try {
             JSONObject o = new JSONObject()
@@ -55,7 +48,6 @@ final class Backup {
         }
     }
 
-    /** Restores a backup; false, changing nothing, if {@code json} isn't one Aangan can read. */
     static boolean restore(SharedPreferences prefs, String json) {
         if (depth(json) > MAX_DEPTH) return false;
         JSONObject o;
@@ -83,40 +75,25 @@ final class Backup {
         JSONArray hidden = o.optJSONArray(HomeActivity.HIDDEN);
         if (hidden != null) edit.putString(HomeActivity.HIDDEN, String.join(",", packages(hidden)));
         edit.apply();
-        if (place != null) {
-            place.save(prefs);
-            Weather.clear(prefs);
-        }
+        if (place != null) place.save(prefs);
         return true;
     }
 
-    /**
-     * The family's days, each as the TV or phone page could have entered it: at most {@link People#MAX},
-     * with names cut to {@link People#MAX_NAME}.
-     */
     private static JSONArray days(JSONArray people) {
         JSONArray out = new JSONArray();
-        try {
-            for (int i = 0; i < people.length() && out.length() < People.MAX; i++) {
-                People.Day d = People.Day.fromJson(people.optJSONObject(i));
-                if (d == null) continue;
-                String who = d.who;
-                if (who.length() > People.MAX_NAME) {
-                    // Without splitting a character that takes two chars, such as an emoji.
-                    who = who.substring(0, Character.isHighSurrogate(who.charAt(People.MAX_NAME - 1)) ? People.MAX_NAME - 1 : People.MAX_NAME);
-                }
-                out.put(new JSONObject().put("m", d.month).put("d", d.day).put("birthday", d.birthday).put("who", who.trim()));
+        for (int i = 0; i < people.length() && out.length() < People.MAX; i++) {
+            People.Day d = People.Day.fromJson(people.optJSONObject(i));
+            if (d == null) continue;
+            String who = d.who;
+            if (who.length() > People.MAX_NAME) {
+                // Without splitting a character that takes two chars, such as an emoji.
+                who = who.substring(0, Character.isHighSurrogate(who.charAt(People.MAX_NAME - 1)) ? People.MAX_NAME - 1 : People.MAX_NAME);
             }
-        } catch (JSONException e) {
-            throw new IllegalStateException(e);
+            out.put(new People.Day(d.month, d.day, d.birthday, who.trim()).toJson());
         }
         return out;
     }
 
-    /**
-     * The festival changes worth keeping: hidden, or moved to a valid date within
-     * {@link Festival#MOVE_DAYS} of the calendar's (which the change's key begins with).
-     */
     private static JSONObject festivalEdits(JSONObject edits) {
         JSONObject out = new JSONObject();
         try {
@@ -145,7 +122,6 @@ final class Backup {
         return out;
     }
 
-    /** The dock's {@link Dock#SIZE} places: a package each, or empty. */
     private static JSONArray dock(JSONArray a) {
         List<String> out = new ArrayList<>();
         for (int i = 0; i < Dock.SIZE; i++) {
@@ -164,7 +140,6 @@ final class Backup {
         return out;
     }
 
-    /** How deeply {@code json}'s objects and arrays nest, counted without parsing it. */
     static int depth(String json) {
         int depth = 0;
         int deepest = 0;

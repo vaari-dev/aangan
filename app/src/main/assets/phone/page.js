@@ -8,7 +8,6 @@
     return e;
   };
 
-  // The dock: choosing an app that's already in another place swaps the two, as on the TV.
   const slots = [...document.querySelectorAll('.dock select')];
   const before = new Map(slots.map(s => [s, s.value]));
   for (const s of slots) {
@@ -22,12 +21,10 @@
     });
   }
 
-  // The city: places appear as you type, from the TV's own search.
   const form = document.querySelector('form.search');
   if (!form) return;
   const input = form.querySelector('input[name=q]');
   const base = form.getAttribute('action').replace(/\/city$/, '');
-  // The words, in the TV's language, come with the page: data-searching, data-failed and so on.
   const say = form.dataset;
   const status = el('p', 'sr');
   status.setAttribute('aria-live', 'polite');

@@ -8,7 +8,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 
-/** The note a crash leaves on the TV, and the GitHub link made from it. */
 @RunWith(RobolectricTestRunner.class)
 public class CrashTest {
 

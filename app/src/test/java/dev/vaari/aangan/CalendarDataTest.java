@@ -23,20 +23,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
-/**
- * Checks on the data files themselves: assets/festivals.csv and its translations. These run in
- * CI on every push, so a calendar about to run out, or a festival without a translation, fails
- * the build rather than quietly reaching TVs.
- */
+/** Run in CI, so a calendar about to run out fails the build rather than quietly reaching TVs. */
 @RunWith(RobolectricTestRunner.class)
 public class CalendarDataTest {
 
-    /**
-     * How far ahead the calendar must reach on the day CI runs. Settings and the phone page list a
-     * year ahead; this leaves time to add the next year and release before TVs run out.
-     */
+    /** Time to add the next year and release before TVs run out. */
     private static final int MONTHS_AHEAD = 6;
-    /** Translations of the festival names, one file per language. */
     private static final String[] LANGUAGES = {"hi"};
 
     private Context context;

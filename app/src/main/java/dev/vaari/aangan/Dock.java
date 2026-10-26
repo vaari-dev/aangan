@@ -12,15 +12,13 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * The four large apps at the top of the home screen. The first time it's needed, the dock is filled
- * from a few popular streaming apps (or the apps pinned in Aangan 1.2 and earlier), then the rest in
- * alphabetical order, and saved. From then on only the person changes it: nothing reorders it, and
- * an app that's uninstalled leaves its slot empty rather than shifting the others along.
+ * The four large apps at the top of the home screen. Once first filled, only the person changes it:
+ * nothing reorders it, and an app that's uninstalled leaves its slot empty rather than shifting the
+ * others along.
  */
 final class Dock {
 
     static final int SIZE = 4;
-    /** An empty slot. */
     static final String EMPTY = "";
 
     static final String KEY = "dock";
@@ -38,7 +36,6 @@ final class Dock {
     private Dock() {
     }
 
-    /** The dock's packages, {@link #SIZE} of them, with {@link #EMPTY} for an empty slot. */
     static List<String> load(SharedPreferences prefs, Map<String, Apps.App> apps, List<String> hidden) {
         List<String> dock = new ArrayList<>();
         if (prefs.contains(KEY)) {
@@ -57,10 +54,6 @@ final class Dock {
         return dock;
     }
 
-    /**
-     * Puts {@code pkg} in {@code slot}. If it was already elsewhere in the dock, the two places swap,
-     * so nothing else drops out.
-     */
     static void put(SharedPreferences prefs, List<String> dock, int slot, String pkg) {
         int was = pkg.equals(EMPTY) ? -1 : dock.indexOf(pkg);
         if (was >= 0) dock.set(was, dock.get(slot));
@@ -75,10 +68,6 @@ final class Dock {
         set(prefs, dock);
     }
 
-    /**
-     * Asks which app goes in {@code slot}, from every app on the TV, or to leave it empty. Choosing
-     * one already in the dock swaps the two places. {@code done} gets the chosen package.
-     */
     static void choose(Activity activity, Map<String, Apps.App> apps, List<String> dock, List<String> hidden, int slot,
                        Consumer<String> done) {
         List<String> choices = new ArrayList<>();
@@ -104,7 +93,6 @@ final class Dock {
                 .show();
     }
 
-    /** Forgets the person's choices; the next {@link #load} fills the dock afresh. */
     static void reset(SharedPreferences prefs) {
         prefs.edit().remove(KEY).apply();
     }

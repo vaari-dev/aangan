@@ -11,14 +11,8 @@ import android.view.accessibility.AccessibilityEvent;
 import android.widget.Toast;
 
 /**
- * Makes Aangan the home screen without adb. Most TVs offer no way to change the default home
- * screen, so once this is switched on (Settings, Accessibility, Aangan) it takes the Home button
- * for Aangan, and opens Aangan if the stock home screen appears anyway (as it does at start-up).
- *
- * The Home button has to be caught before the system sees it: once the system handles Home, it
- * holds back other apps' activities for several seconds, so the stock launcher would win. Every
- * other button is passed through untouched. Window events come from the stock launchers only,
- * as listed in res/xml/home_button.xml, and nothing on screen can be read.
+ * Makes Aangan the home screen without adb. Home is caught before the system sees it: once the
+ * system handles Home, it holds back other apps' activities for seconds, so the stock launcher wins.
  */
 public class HomeButton extends AccessibilityService {
 
@@ -41,13 +35,9 @@ public class HomeButton extends AccessibilityService {
 
     @Override
     public void onInterrupt() {
-        // Nothing to stop: the service gives no spoken or other feedback.
     }
 
-    /**
-     * Says plainly what the service does, and only on agreement opens Android's accessibility
-     * settings to switch it on. Google Play requires this disclosure and consent first.
-     */
+    /** Google Play requires this disclosure and consent before the accessibility settings open. */
     static void askToTurnOn(Activity activity) {
         if (isOn(activity)) {
             openSettings(activity);
@@ -60,10 +50,7 @@ public class HomeButton extends AccessibilityService {
                 .show();
     }
 
-    /**
-     * Android's accessibility settings. Sony's Android 9 TVs don't answer the standard action, but
-     * have the page under their own name; on a TV with neither, main Settings and directions.
-     */
+    /** Sony's Android 9 TVs don't answer the standard action, but have the page under their own name. */
     private static void openSettings(Activity activity) {
         if (!Ui.openSettings(activity, Settings.ACTION_ACCESSIBILITY_SETTINGS,
                 new ComponentName("com.android.tv.settings", "com.sony.dtv.settings.accessibility.AccessibilityActivity"),

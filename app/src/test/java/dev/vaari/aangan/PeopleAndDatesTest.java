@@ -17,6 +17,7 @@ import org.robolectric.annotation.Config;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.TimeZone;
 
 @RunWith(RobolectricTestRunner.class)
 public class PeopleAndDatesTest {
@@ -85,16 +86,16 @@ public class PeopleAndDatesTest {
 
     @Test
     public void todayFollowsTheTvsTimeZoneAsItChanges() {
-        java.util.TimeZone was = java.util.TimeZone.getDefault();
+        TimeZone was = TimeZone.getDefault();
         try {
-            java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("Pacific/Kiritimati"));
+            TimeZone.setDefault(TimeZone.getTimeZone("Pacific/Kiritimati"));
             LocalDate east = Dates.today();
-            java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("Pacific/Pago_Pago"));
+            TimeZone.setDefault(TimeZone.getTimeZone("Pacific/Pago_Pago"));
             LocalDate west = Dates.today();
             // 25 hours apart: never the same day.
             assertTrue(west.isBefore(east));
         } finally {
-            java.util.TimeZone.setDefault(was);
+            TimeZone.setDefault(was);
         }
     }
 }

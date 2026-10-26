@@ -14,20 +14,11 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-/**
- * The first-run welcome: three cards that finish setting up (open with the Home button, the
- * city, the family's days) and a button to start. Shown once, the first time Aangan opens on a
- * TV where pressing Home doesn't yet bring it up.
- */
 public class WelcomeActivity extends Activity {
 
-    /** A finished step's tick. */
     private static final int DONE = 0xFF30D158;
-    /** A step still to do. */
     private static final int TO_DO = 0xFFFFB86B;
     private static final int CARD_FOCUSED = 0xFF34353F;
-    /** The start button when focused: filled white, with dark text. */
-    private static final int BUTTON_FOCUSED = Ui.LABEL;
     private static final int BUTTON_FOCUSED_TEXT = 0xFF1C1B1A;
     private static final String WELCOMED = "welcomed";
 
@@ -70,8 +61,7 @@ public class WelcomeActivity extends Activity {
         root.addView(art, new LinearLayout.LayoutParams(ui.dp(144), ui.dp(81)));
 
         root.addView(ui.text(32, 300, Ui.LABEL, getString(R.string.welcome_title)), ui.wrap(16));
-        root.addView(ui.text(15, 400, Ui.SECONDARY, getString(R.string.welcome_lede)),
-                ui.wrap(8));
+        root.addView(ui.text(15, 400, Ui.SECONDARY, getString(R.string.welcome_lede)), ui.wrap(8));
 
         cards = ui.row();
         cards.setClipChildren(false);
@@ -86,7 +76,7 @@ public class WelcomeActivity extends Activity {
         start.setBackground(pill);
         // Focus fills the button rather than scaling it, so the label stays crisp.
         start.setOnFocusChangeListener((v, hasFocus) -> {
-            pill.setColor(hasFocus ? BUTTON_FOCUSED : Ui.FOCUS_FILL);
+            pill.setColor(hasFocus ? Ui.LABEL : Ui.FOCUS_FILL);
             start.setTextColor(hasFocus ? BUTTON_FOCUSED_TEXT : Ui.LABEL);
         });
         start.setOnClickListener(v -> finish());
@@ -98,8 +88,7 @@ public class WelcomeActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        View focused = getCurrentFocus();
-        int index = focused != null ? cards.indexOfChild(focused) : -1;
+        int index = cards.indexOfChild(getCurrentFocus());
         cards.removeAllViews();
         boolean homeOn = HomeButton.isOn(this);
         card(getString(R.string.welcome_home), getString(homeOn ? R.string.welcome_home_done : R.string.welcome_home_how),

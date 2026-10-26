@@ -2,10 +2,7 @@ package dev.vaari.aangan;
 
 import java.nio.charset.StandardCharsets;
 
-/**
- * A minimal QR code encoder: byte mode, error correction level M, versions 1 to 6. That covers
- * up to 106 bytes, enough for a LAN URL with a token, without pulling in a library.
- */
+/** A minimal QR encoder: byte mode, level M, versions 1 to 6, so up to 106 bytes. */
 final class QrCode {
 
     // Level M, versions 1-6. Every block within a version is the same size up to version 6.
@@ -29,10 +26,6 @@ final class QrCode {
     private QrCode() {
     }
 
-    /**
-     * Encodes text (UTF-8, byte mode, error correction level M) in the smallest version 1-6 that
-     * fits. Throws IllegalArgumentException if it's longer than 106 bytes.
-     */
     static boolean[][] encode(String text) {
         byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
         int version = 1;
@@ -50,7 +43,6 @@ final class QrCode {
         drawFunctionPatterns(modules, function, version);
         drawCodewords(modules, function, codewords);
 
-        // Each of the eight masks is tried, and the one with the lowest penalty score kept.
         boolean[][] best = null;
         int bestPenalty = Integer.MAX_VALUE;
         for (int m = 0; m < 8; m++) {
@@ -74,7 +66,6 @@ final class QrCode {
         byte[] out = new byte[total];
         int bit = put(out, put(out, 0, 0x4, 4), bytes.length, 8);
         for (byte b : bytes) bit = put(out, bit, b & 0xFF, 8);
-        // The terminator, then zero bits up to a byte boundary.
         bit += Math.min(4, total * 8 - bit);
         for (int i = (bit + 7) / 8, pad = 0xEC; i < total; i++, pad ^= 0xEC ^ 0x11) {
             out[i] = (byte) pad;
@@ -192,7 +183,6 @@ final class QrCode {
         f[y][x] = true;
     }
 
-    /** Zigzags up and down two-module columns from the right, skipping the vertical timing line. */
     private static void drawCodewords(boolean[][] m, boolean[][] f, byte[] codewords) {
         int size = m.length;
         int i = 0;

@@ -25,7 +25,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
 
-/** The phone page over a real socket, as anything on the home network could reach it. */
 @RunWith(RobolectricTestRunner.class)
 public class PhoneSetupTest {
 
@@ -82,8 +81,6 @@ public class PhoneSetupTest {
         throw new AssertionError("no redirect in " + response);
     }
 
-    // ---- who gets an answer -----------------------------------------------------------------
-
     @Test
     public void onlyTheTvsOwnAddressIsAnswered() throws IOException {
         String r = exchange("GET /" + setup.secret + " HTTP/1.1\r\nHost: tv.example.com\r\n", new byte[0]);
@@ -112,8 +109,6 @@ public class PhoneSetupTest {
         assertTrue(r, r.contains("<div class=toast role=status>Back to the calendar&#39;s date</div>"));
         assertFalse(r.contains("&amp;#39;"));
     }
-
-    // ---- changes ----------------------------------------------------------------------------
 
     @Test
     public void aNameInHindiIsReadWhole() throws IOException {
@@ -155,8 +150,6 @@ public class PhoneSetupTest {
         Arrays.fill(big, ' ');
         assertTrue(location(upload("{\"app\":\"Aangan\",\"format\":1}" + new String(big))).endsWith("?s=notbackup#backup"));
     }
-
-    // ---- parsing ----------------------------------------------------------------------------
 
     @Test
     public void multipartWithQuotedBoundaryAndOtherFields() {

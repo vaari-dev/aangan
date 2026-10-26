@@ -9,7 +9,6 @@ import static org.junit.Assert.assertTrue;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -32,12 +31,11 @@ public class FestivalTest {
     public void setUp() {
         context = RuntimeEnvironment.getApplication();
         prefs = Prefs.of(context);
-        Festival.load(context, prefs);
+        reload();
     }
 
-    @After
-    public void tearDown() {
-        Testing.resetClock();
+    private void reload() {
+        Festival.load(context, prefs);
     }
 
     private Festival festival(String name) {
@@ -45,19 +43,11 @@ public class FestivalTest {
         throw new AssertionError(name + " is not in the calendar");
     }
 
-    private void reload() {
-        Festival.load(context, prefs);
-    }
-
-    // ---- the calendar file ------------------------------------------------------------------
-
     @Test
     public void csvFieldsHandleQuotesAndCommas() {
         assertArrayEquals(new String[]{"2026-01-01", "A, B", "Say \"hi\"", "PLAIN"},
                 Festival.csvFields("2026-01-01,\"A, B\" ,\"Say \"\"hi\"\"\", PLAIN"));
     }
-
-    // ---- what is celebrated -----------------------------------------------------------------
 
     @Test
     public void aFestivalIsCelebratedOnItsDay() {
@@ -98,8 +88,6 @@ public class FestivalTest {
         assertEquals("Holi", Festival.celebrating(holi.date).name);
     }
 
-    // ---- the family's changes ---------------------------------------------------------------
-
     @Test
     public void movingAFestivalAndMovingItBack() {
         Festival lohri = festival("Lohri");
@@ -133,8 +121,6 @@ public class FestivalTest {
         assertTrue(Festival.editable(today).stream().anyMatch(f -> f.key().equals(christmas.key())));
     }
 
-    // ---- family days ------------------------------------------------------------------------
-
     @Test
     public void aBirthdayComesBeforeAFestivalOnTheSameDay() {
         Festival diwali = festival("Diwali");
@@ -156,8 +142,6 @@ public class FestivalTest {
         Festival march = Festival.celebrating(LocalDate.of(2027, 3, 1));
         assertTrue(march == null || !march.personalDay);
     }
-
-    // ---- wording ----------------------------------------------------------------------------
 
     @Test
     public void headlinesCountDown() {

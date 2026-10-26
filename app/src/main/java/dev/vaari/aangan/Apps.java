@@ -15,7 +15,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** The TV's launchable apps, for the home screen, the dock chooser in Settings and the phone page. */
 final class Apps {
 
     static final class App {
@@ -60,7 +59,6 @@ final class Apps {
         return apps;
     }
 
-    /** {@code apps} in alphabetical order of their names. */
     static List<App> sorted(Collection<App> apps) {
         List<App> list = new ArrayList<>(apps);
         Collections.sort(list, (a, b) -> a.label.compareToIgnoreCase(b.label));

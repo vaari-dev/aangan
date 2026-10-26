@@ -9,7 +9,6 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.text.InputFilter;
@@ -24,7 +23,6 @@ import android.widget.LinearLayout;
 import android.widget.NumberPicker;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
-import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.time.LocalDate;
@@ -33,24 +31,15 @@ import java.time.YearMonth;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
+import java.util.function.BooleanSupplier;
 
-/**
- * Aangan's settings: the city, the dock, opening with the Home button, the screensaver, the family's
- * birthdays and anniversaries, and the festival dates. Everything can also be set from a phone by
- * scanning the QR code.
- */
 public class SetupActivity extends Activity {
 
     private static final ComponentName SONY_SCREENSAVER =
             new ComponentName("com.android.tv.settings", "com.sony.dtv.settings.device.display.daydream.DaydreamActivity");
 
-    /**
-     * How long the screen stays on after Settings opens, or after the last change from the phone.
-     * Using the phone isn't using the TV, so otherwise the screensaver would start, Settings would
-     * pause, and the phone page would stop part way through.
-     */
+    /** Using the phone isn't using the TV: without this the screensaver would start and stop the phone page. */
     private static final long PHONE_AWAKE_MS = 20 * 60_000L;
 
     private final Runnable letScreenSleep = () -> getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -77,15 +66,9 @@ public class SetupActivity extends Activity {
 
         LinearLayout left = ui.column();
         left.addView(ui.text(34, 300, Ui.LABEL, getString(R.string.settings)));
-        ScrollView scroll = new ScrollView(this);
-        scroll.setVerticalScrollBarEnabled(false);
-        // Rows fade out under the title rather than butting against it.
-        scroll.setVerticalFadingEdgeEnabled(true);
-        scroll.setFadingEdgeLength(ui.dp(32));
         rows = ui.column();
         rows.setPadding(0, ui.dp(12), 0, ui.dp(24));
-        scroll.addView(rows);
-        left.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
+        left.addView(ui.scroll(rows), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
         root.addView(left, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1));
 
         phonePanel = ui.column();
@@ -127,28 +110,19 @@ public class SetupActivity extends Activity {
         phonePanel.postDelayed(letScreenSleep, PHONE_AWAKE_MS);
     }
 
-    // ---- views ------------------------------------------------------------------------------
-
-    private void heading(String s) {
-        TextView t = ui.text(12, 600, Ui.TERTIARY, s.toUpperCase(Locale.getDefault()));
-        t.setLetterSpacing(0.08f);
+    private void heading(int title) {
+        TextView t = ui.heading(getString(title));
         t.setPadding(ui.dp(16), ui.dp(20), 0, ui.dp(6));
         rows.addView(t);
     }
 
-    /** A focusable line with a title on the left and its current value on the right. */
     private void row(String title, String value, View.OnClickListener action) {
         LinearLayout row = ui.row();
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(ui.dp(16), ui.dp(12), ui.dp(16), ui.dp(12));
-        row.setFocusable(true);
-        row.setClickable(true);
-        GradientDrawable focused = ui.rounded(Ui.FOCUS_FILL, 12);
-        row.setOnFocusChangeListener((v, hasFocus) -> v.setBackground(hasFocus ? focused : null));
-        row.setOnClickListener(action);
+        ui.selectable(row, action);
         row.addView(ui.text(16, 500, Ui.LABEL, title), Ui.share(1));
         TextView v = ui.text(14, 400, Ui.SECONDARY, value);
-        // One line, leaving the title room: "Netflix, Prime Video, YouTube, YouTube…"
         v.setMaxLines(1);
         v.setMaxWidth(ui.dp(300));
         v.setEllipsize(TextUtils.TruncateAt.END);
@@ -162,8 +136,7 @@ public class SetupActivity extends Activity {
         rows.removeAllViews();
         Festival.load(this, prefs);
 
-        Place place = Place.load(prefs);
-        row(getString(R.string.city), place.name, v -> startActivity(new Intent(this, CityActivity.class)));
+        row(getString(R.string.city), Place.load(prefs).name, v -> startActivity(new Intent(this, CityActivity.class)));
         row(getString(R.string.dock), dockNames(), v -> askDock());
         row(getString(R.string.open_with_home), getString(HomeButton.isOn(this) ? R.string.on : R.string.off),
                 v -> HomeButton.askToTurnOn(this));
@@ -174,25 +147,29 @@ public class SetupActivity extends Activity {
                     v -> Ui.openSettings(this, Settings.ACTION_DREAM_SETTINGS, SONY_SCREENSAVER));
         }
         String crash = Crash.report(this);
-        if (crash != null) row(getString(R.string.crash_title), Crash.when(crash), v -> showCrash());
+        if (crash != null) {
+            row(getString(R.string.crash_title), Crash.when(crash), v -> confirm(getString(R.string.crash_title),
+                    getString(R.string.crash_message), R.string.delete, R.string.keep, () -> Crash.delete(this)));
+        }
 
-        heading(getString(R.string.family_days_heading));
+        heading(R.string.family_days_heading);
         for (People.Day d : People.load(prefs)) {
             row(d.who, getString(d.birthday ? R.string.birthday : R.string.anniversary) + "  ·  " + Dates.dayMonth(d.month, d.day),
                     v -> dialog(d.who).setItems(new String[]{getString(R.string.edit), getString(R.string.remove)}, (dlg, which) -> {
                         if (which == 0) askDay(d);
-                        else confirmRemove(d);
+                        else confirm(getString(d.birthday ? R.string.remove_birthday : R.string.remove_anniversary, d.who),
+                                null, R.string.remove, R.string.keep, () -> People.remove(prefs, d.key()));
                     }).show());
         }
         row(getString(R.string.add_one), "", v -> askDay(null));
 
-        heading(getString(R.string.festivals));
+        heading(R.string.festivals);
         for (Festival f : Festival.editable(Festival.today())) {
             String state = f.hidden ? "  ·  " + getString(R.string.hidden) : f.moved() ? "  ·  " + getString(R.string.moved) : "";
             row(f.title(this), f.shortDate(getResources()) + state, v -> askFestival(f));
         }
 
-        heading(getString(R.string.about));
+        heading(R.string.about);
         row(getString(R.string.version), version(), v -> { });
 
         View target = rows.getChildAt(Math.max(0, Math.min(focus, rows.getChildCount() - 1)));
@@ -221,54 +198,63 @@ public class SetupActivity extends Activity {
         qrLp.topMargin = ui.dp(16);
         qrLp.bottomMargin = ui.dp(14);
         phonePanel.addView(new QrView(this, QrCode.encode(url)), qrLp);
-        TextView how = ui.text(13, 400, Ui.SECONDARY, getString(R.string.phone_how));
-        how.setGravity(Gravity.CENTER_HORIZONTAL);
-        phonePanel.addView(how);
-        TextView link = ui.text(12, 400, Ui.TERTIARY, url.replace("http://", ""));
-        link.setGravity(Gravity.CENTER_HORIZONTAL);
-        link.setPadding(0, ui.dp(10), 0, 0);
-        phonePanel.addView(link);
+        centered(13, Ui.SECONDARY, getString(R.string.phone_how), 0);
+        centered(12, Ui.TERTIARY, url.replace("http://", ""), 10);
         // Browsers warn about any page without HTTPS, and a TV on a home network can't have it.
-        TextView warning = ui.text(12, 400, Ui.TERTIARY, getString(R.string.phone_not_secure));
-        warning.setGravity(Gravity.CENTER_HORIZONTAL);
-        warning.setPadding(0, ui.dp(8), 0, 0);
-        phonePanel.addView(warning);
+        centered(12, Ui.TERTIARY, getString(R.string.phone_not_secure), 8);
     }
 
-    // ---- actions ----------------------------------------------------------------------------
+    private void centered(float sp, int color, String s, int top) {
+        TextView t = ui.text(sp, 400, color, s);
+        t.setGravity(Gravity.CENTER_HORIZONTAL);
+        t.setPadding(0, ui.dp(top), 0, 0);
+        phonePanel.addView(t);
+    }
 
     private AlertDialog.Builder dialog(String title) {
         return Ui.dialog(this, title);
     }
 
-    /** The note kept from the last crash: reported from the phone page, where it can be read in full, or deleted. */
-    private void showCrash() {
-        dialog(getString(R.string.crash_title))
-                .setMessage(getString(R.string.crash_message))
-                .setPositiveButton(getString(R.string.delete), (d, w) -> {
-                    Crash.delete(this);
+    private void confirm(String title, String message, int yes, int no, Runnable action) {
+        dialog(title)
+                .setMessage(message)
+                .setPositiveButton(getString(yes), (d, w) -> {
+                    action.run();
                     showRows();
                 })
-                .setNegativeButton(getString(R.string.keep), null)
+                .setNegativeButton(getString(no), null)
                 .show();
     }
 
-    private List<String> dock(Map<String, Apps.App> apps) {
-        return Dock.load(prefs, apps, Prefs.list(prefs, HomeActivity.HIDDEN));
+    private void ask(String title, View content, int ok, BooleanSupplier save) {
+        LinearLayout box = new LinearLayout(this);
+        box.setPadding(ui.dp(24), ui.dp(8), ui.dp(24), 0);
+        box.addView(content, Ui.fill());
+        dialog(title)
+                .setView(box)
+                .setPositiveButton(getString(ok), (d, w) -> {
+                    if (save.getAsBoolean()) showRows();
+                })
+                .setNegativeButton(getString(R.string.cancel), null)
+                .show();
     }
 
-    /** "Netflix, YouTube, Prime Video, Empty" */
+    private List<String> hidden() {
+        return Prefs.list(prefs, HomeActivity.HIDDEN);
+    }
+
     private String dockNames() {
         Map<String, Apps.App> apps = Apps.load(this);
         List<String> names = new ArrayList<>();
-        for (String pkg : dock(apps)) names.add(apps.containsKey(pkg) ? apps.get(pkg).label : getString(R.string.dock_empty));
+        for (String pkg : Dock.load(prefs, apps, hidden())) {
+            names.add(apps.containsKey(pkg) ? apps.get(pkg).label : getString(R.string.dock_empty));
+        }
         return TextUtils.join(", ", names);
     }
 
-    /** The dock's four places, to change any of them, or to reset it to popular apps. */
     private void askDock() {
         Map<String, Apps.App> apps = Apps.load(this);
-        List<String> dock = dock(apps);
+        List<String> dock = Dock.load(prefs, apps, hidden());
         String[] items = new String[Dock.SIZE + 1];
         for (int i = 0; i < Dock.SIZE; i++) {
             Apps.App app = apps.get(dock.get(i));
@@ -277,25 +263,17 @@ public class SetupActivity extends Activity {
         items[Dock.SIZE] = getString(R.string.dock_reset);
         dialog(getString(R.string.dock_title)).setItems(items, (d, which) -> {
             if (which < Dock.SIZE) {
-                // Back to the four places after each choice, to change another.
-                Dock.choose(this, apps, dock, Prefs.list(prefs, HomeActivity.HIDDEN), which, pkg -> {
+                Dock.choose(this, apps, dock, hidden(), which, pkg -> {
                     showRows();
                     askDock();
                 });
             } else {
-                dialog(getString(R.string.dock_reset_title))
-                        .setMessage(getString(R.string.dock_reset_message))
-                        .setPositiveButton(getString(R.string.reset), (d2, w) -> {
-                            Dock.reset(prefs);
-                            showRows();
-                        })
-                        .setNegativeButton(getString(R.string.keep_mine), null)
-                        .show();
+                confirm(getString(R.string.dock_reset_title), getString(R.string.dock_reset_message),
+                        R.string.reset, R.string.keep_mine, () -> Dock.reset(prefs));
             }
         }).show();
     }
 
-    /** Adds a day when {@code existing} is null, or edits it. */
     private void askDay(People.Day existing) {
         LinearLayout form = ui.column();
         EditText who = new EditText(this);
@@ -310,53 +288,35 @@ public class SetupActivity extends Activity {
 
         RadioGroup kind = new RadioGroup(this);
         kind.setOrientation(RadioGroup.HORIZONTAL);
-        RadioButton birthday = new RadioButton(this);
-        birthday.setText(getString(R.string.birthday));
-        birthday.setId(View.generateViewId());
-        RadioButton anniversary = new RadioButton(this);
-        anniversary.setText(getString(R.string.anniversary));
-        anniversary.setId(View.generateViewId());
-        kind.addView(birthday);
-        kind.addView(anniversary);
+        RadioButton birthday = radio(kind, R.string.birthday);
+        RadioButton anniversary = radio(kind, R.string.anniversary);
         kind.check(existing == null || existing.birthday ? birthday.getId() : anniversary.getId());
         form.addView(kind);
 
-        LinearLayout date = new LinearLayout(this);
-        date.setGravity(Gravity.CENTER);
-        NumberPicker[] dayMonth = dayMonthPickers(date);
-        NumberPicker day = dayMonth[0];
-        NumberPicker month = dayMonth[1];
-        if (existing != null) {
-            day.setValue(existing.day);
-            month.setValue(existing.month);
-        }
+        LinearLayout date = pickers();
+        NumberPicker day = picker(date, 1, 31, existing != null ? existing.day : 1);
+        NumberPicker month = monthPicker(date, existing != null ? existing.month : 1);
         form.addView(date);
 
-        dialog(existing == null ? getString(R.string.add_day) : getString(R.string.edit_day, existing.who))
-                .setView(padded(form))
-                .setPositiveButton(getString(existing == null ? R.string.add : R.string.save), (d, w) -> {
+        ask(existing == null ? getString(R.string.add_day) : getString(R.string.edit_day, existing.who), form,
+                existing == null ? R.string.add : R.string.save, () -> {
                     String name = who.getText().toString().trim();
-                    if (name.isEmpty()) return;
-                    // The day wheel always runs to 31; 31 February becomes the 29th, the month's last.
+                    if (name.isEmpty()) return false;
                     int m = month.getValue();
                     People.Day edited = new People.Day(m, Math.min(day.getValue(), Month.of(m).maxLength()),
                             kind.getCheckedRadioButtonId() == birthday.getId(), name);
                     if (existing == null) People.add(prefs, edited);
                     else People.update(prefs, existing.key(), edited);
-                    showRows();
-                })
-                .setNegativeButton(getString(R.string.cancel), null)
-                .show();
+                    return true;
+                });
     }
 
-    private void confirmRemove(People.Day d) {
-        dialog(getString(d.birthday ? R.string.remove_birthday : R.string.remove_anniversary, d.who))
-                .setPositiveButton(getString(R.string.remove), (dlg, w) -> {
-                    People.remove(prefs, d.key());
-                    showRows();
-                })
-                .setNegativeButton(getString(R.string.keep), null)
-                .show();
+    private RadioButton radio(RadioGroup group, int text) {
+        RadioButton b = new RadioButton(this);
+        b.setText(getString(text));
+        b.setId(View.generateViewId());
+        group.addView(b);
+        return b;
     }
 
     private void askFestival(Festival f) {
@@ -374,55 +334,41 @@ public class SetupActivity extends Activity {
     }
 
     private void askFestivalDate(Festival f) {
-        LinearLayout date = new LinearLayout(this);
-        date.setGravity(Gravity.CENTER);
-        NumberPicker[] dayMonth = dayMonthPickers(date);
-        NumberPicker day = dayMonth[0];
-        NumberPicker month = dayMonth[1];
-        day.setValue(f.date.getDayOfMonth());
-        month.setValue(f.date.getMonthValue());
-        // Only the years a move can reach; Festival.move keeps the date itself within range.
-        NumberPicker year = new NumberPicker(this);
-        year.setMinValue(f.clampMove(LocalDate.MIN).getYear());
-        year.setMaxValue(f.clampMove(LocalDate.MAX).getYear());
-        year.setValue(f.date.getYear());
+        LinearLayout date = pickers();
+        NumberPicker day = picker(date, 1, 31, f.date.getDayOfMonth());
+        NumberPicker month = monthPicker(date, f.date.getMonthValue());
+        NumberPicker year = picker(date, f.clampMove(LocalDate.MIN).getYear(), f.clampMove(LocalDate.MAX).getYear(),
+                f.date.getYear());
         year.setWrapSelectorWheel(false);
-        date.addView(year);
-        dialog(getString(R.string.when_is, f.title(this)))
-                .setView(padded(date))
-                .setPositiveButton(getString(R.string.save), (d, w) -> {
-                    YearMonth ym = YearMonth.of(year.getValue(), month.getValue());
-                    Festival.move(prefs, f, ym.atDay(Math.min(day.getValue(), ym.lengthOfMonth())));
-                    showRows();
-                })
-                .setNegativeButton(getString(R.string.cancel), null)
-                .show();
+        ask(getString(R.string.when_is, f.title(this)), date, R.string.save, () -> {
+            YearMonth ym = YearMonth.of(year.getValue(), month.getValue());
+            Festival.move(prefs, f, ym.atDay(Math.min(day.getValue(), ym.lengthOfMonth())));
+            return true;
+        });
     }
 
-    /** A day wheel (1 to 31) and a month wheel ("Jan" to "Dec"), added to {@code into} in that order. */
-    private NumberPicker[] dayMonthPickers(LinearLayout into) {
-        NumberPicker day = new NumberPicker(this);
-        day.setMinValue(1);
-        day.setMaxValue(31);
-        NumberPicker month = new NumberPicker(this);
-        month.setMinValue(1);
-        month.setMaxValue(12);
-        month.setDisplayedValues(Dates.months(TextStyle.SHORT));
-        into.addView(day);
-        into.addView(month);
-        return new NumberPicker[]{day, month};
+    private LinearLayout pickers() {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER);
+        return row;
     }
 
-    private View padded(View content) {
-        LinearLayout box = new LinearLayout(this);
-        box.setPadding(ui.dp(24), ui.dp(8), ui.dp(24), 0);
-        box.addView(content, Ui.fill());
-        return box;
+    private NumberPicker picker(LinearLayout into, int min, int max, int value) {
+        NumberPicker p = new NumberPicker(this);
+        p.setMinValue(min);
+        p.setMaxValue(max);
+        p.setValue(value);
+        into.addView(p);
+        return p;
     }
 
-    /** A QR code, black on white with the standard four-module quiet zone. */
+    private NumberPicker monthPicker(LinearLayout into, int value) {
+        NumberPicker p = picker(into, 1, 12, value);
+        p.setDisplayedValues(Dates.months(TextStyle.SHORT));
+        return p;
+    }
+
     private static final class QrView extends View {
-        /** The quiet zone around the code, in modules, as the QR standard requires. */
         private static final int QUIET = 4;
         private final boolean[][] modules;
         private final Paint paint = new Paint();
