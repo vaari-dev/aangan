@@ -131,6 +131,9 @@ jobs:
           api-level: ${{ matrix.api-level }}
           target: ${{ matrix.target }}
           arch: ${{ matrix.arch }}
+          # Google TV's own launcher and services use more than the emulator's default memory.
+          ram-size: 4096M
+          heap-size: 512M
           disable-animations: true
           script: tools/tv-smoke-test.sh apk/aangan-release.apk screenshots
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
