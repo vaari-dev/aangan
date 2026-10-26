@@ -157,6 +157,18 @@ final class Ui {
         return lp;
     }
 
+    LinearLayout.LayoutParams leftOf(float left) {
+        LinearLayout.LayoutParams lp = wrap();
+        lp.leftMargin = dp(left);
+        return lp;
+    }
+
+    View divider() {
+        View v = new View(context);
+        v.setBackgroundColor(HAIRLINE);
+        return v;
+    }
+
     static LinearLayout.LayoutParams fill() {
         return new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
     }

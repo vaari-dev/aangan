@@ -50,22 +50,10 @@ final class TodayCard {
         return ui.line(sp, weight, color, s);
     }
 
-    private View hairline() {
-        View v = new View(context);
-        v.setBackgroundColor(Ui.HAIRLINE);
-        return v;
-    }
-
     private TextView caps(String s) {
         TextView t = text(9.5f, 600, Ui.TERTIARY, s.toUpperCase(Locale.getDefault()));
         t.setLetterSpacing(0.06f);
         return t;
-    }
-
-    private LinearLayout.LayoutParams leftOf(float left) {
-        LinearLayout.LayoutParams lp = Ui.wrap();
-        lp.leftMargin = dp(left);
-        return lp;
     }
 
     private View card(Weather w) {
@@ -95,14 +83,14 @@ final class TodayCard {
         LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(ui.hairline(), ViewGroup.LayoutParams.MATCH_PARENT);
         dividerLp.leftMargin = dp(24);
         dividerLp.rightMargin = dp(24);
-        columns.addView(hairline(), dividerLp);
+        columns.addView(ui.divider(), dividerLp);
         columns.addView(air(w), Ui.share(1));
 
         List<Festival> coming = Festival.upcoming(Festival.today(), COMING);
         if (!coming.isEmpty()) {
             LinearLayout.LayoutParams ruleLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ui.hairline());
             ruleLp.topMargin = dp(20);
-            card.addView(hairline(), ruleLp);
+            card.addView(ui.divider(), ruleLp);
             card.addView(festivals(coming), ui.fill(16));
         }
 
@@ -127,7 +115,7 @@ final class TodayCard {
         hero.addView(glyph, new LinearLayout.LayoutParams(dp(40), dp(40)));
         TextView temp = text(44, 300, Ui.LABEL, Weather.degrees(w.temp));
         temp.setFontFeatureSettings("tnum");
-        hero.addView(temp, leftOf(12));
+        hero.addView(temp, ui.leftOf(12));
         LinearLayout lines = ui.column();
         lines.addView(text(15, 500, Ui.LABEL, w.condition(context.getResources())));
         StringBuilder range = new StringBuilder();
@@ -136,7 +124,7 @@ final class TodayCard {
         }
         range.append(context.getString(R.string.feels_like, Weather.degrees(w.feels)));
         lines.addView(text(12.5f, 400, Ui.SECONDARY, range.toString()), ui.wrap(4));
-        hero.addView(lines, leftOf(14));
+        hero.addView(lines, ui.leftOf(14));
         col.addView(hero);
 
         String rain = w.rainSoon(context.getResources());
@@ -241,8 +229,8 @@ final class TodayCard {
         head.addView(dot, new LinearLayout.LayoutParams(dp(10), dp(10)));
         TextView index = text(26, 400, Ui.LABEL, r.getString(R.string.aqi_value, w.aqi));
         index.setFontFeatureSettings("tnum");
-        head.addView(index, leftOf(10));
-        head.addView(text(15, 600, w.aqiColor(), w.aqiCategory(r)), leftOf(10));
+        head.addView(index, ui.leftOf(10));
+        head.addView(text(15, 600, w.aqiColor(), w.aqiCategory(r)), ui.leftOf(10));
         col.addView(head);
 
         col.addView(text(11.5f, 400, Ui.SECONDARY,

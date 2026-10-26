@@ -360,7 +360,7 @@ public class HomeActivity extends Activity {
         meridiem.setTypeface(Ui.font(500));
         meridiem.setTextColor(Ui.SECONDARY);
         meridiem.setAllCaps(true);
-        timeRow.addView(meridiem, leftOf(5));
+        timeRow.addView(meridiem, ui.leftOf(5));
         clock.addView(timeRow);
 
         LinearLayout dateRow = ui.row();
@@ -416,19 +416,18 @@ public class HomeActivity extends Activity {
 
         tempView = ui.line(22, 500, Ui.LABEL);
         tempView.setFontFeatureSettings("tnum");
-        row.addView(tempView, leftOf(8));
+        row.addView(tempView, ui.leftOf(8));
 
         LinearLayout lines = ui.column();
         conditionView = ui.line(12, 500, 0xD9F5F5F7);
         feelsView = ui.line(11.5f, 400, Ui.SECONDARY);
         lines.addView(conditionView);
         lines.addView(feelsView, ui.wrap(2));
-        row.addView(lines, leftOf(10));
+        row.addView(lines, ui.leftOf(10));
 
         LinearLayout aqi = ui.row();
         aqi.setGravity(Gravity.CENTER_VERTICAL);
-        View divider = new View(this);
-        divider.setBackgroundColor(Ui.HAIRLINE);
+        View divider = ui.divider();
         LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(ui.hairline(), dp(20));
         dividerLp.leftMargin = dp(14);
         dividerLp.rightMargin = dp(14);
@@ -437,9 +436,9 @@ public class HomeActivity extends Activity {
         aqi.addView(aqiDot, new LinearLayout.LayoutParams(dp(8), dp(8)));
         aqiView = ui.line(15, 500, Ui.LABEL);
         aqiView.setFontFeatureSettings("tnum");
-        aqi.addView(aqiView, leftOf(6));
+        aqi.addView(aqiView, ui.leftOf(6));
         aqiCategoryView = ui.line(12, 500, Ui.LABEL);
-        aqi.addView(aqiCategoryView, leftOf(6));
+        aqi.addView(aqiCategoryView, ui.leftOf(6));
         aqiGroup = aqi;
         row.addView(aqi);
         return row;
@@ -450,12 +449,6 @@ public class HomeActivity extends Activity {
         d.setCornerRadius(dp(20));
         d.setStroke(ui.hairline(), edge);
         return d;
-    }
-
-    private LinearLayout.LayoutParams leftOf(int left) {
-        LinearLayout.LayoutParams lp = Ui.wrap();
-        lp.leftMargin = dp(left);
-        return lp;
     }
 
     private GridLayout newGrid(int columns) {
