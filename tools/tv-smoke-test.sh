@@ -1,12 +1,9 @@
 #!/bin/bash
-# Starts Aangan on a running Android TV emulator or TV and fails if it crashes or stops responding:
-# the welcome, the home screen, Settings and the phone page, the dock's menu, a few festival scenes,
-# the screensaver, and the whole thing in Hindi.
-# CI runs it on the minified release build, which is where shrinking mistakes would show.
+# Drives Aangan on a TV or emulator and fails if a step doesn't show Aangan, or it crashes or hangs.
 #
 #   tools/tv-smoke-test.sh path/to/aangan.apk [screenshot-dir]
 #
-# Needs adb, and zbarimg (from zbar-tools) to read the QR code in Settings.
+# Needs adb, and zbarimg (zbar-tools) to read the QR code in Settings.
 set -euo pipefail
 APK="$1"
 SHOTS="${2:-screenshots}"
@@ -19,31 +16,43 @@ shot() {
     adb exec-out screencap -p > "$SHOTS/$1.png"
 }
 
+front() {
+    adb shell dumpsys activity activities | grep -m1 -E "topResumedActivity|mResumedActivity" || true
+}
+
+# Fails unless the screen in front is Aangan's, or the given activity of it.
+expect_front() {
+    if ! front | grep -q "$PKG/${2:-}"; then
+        echo "$1: expected Aangan in front, got: $(front)" >&2
+        exit 1
+    fi
+}
+
 adb wait-for-device
 adb logcat -c
 adb install -r "$APK"
 
-# First start: the home screen, then the welcome on top of it.
 adb shell am start -W -n "$HOME_ACTIVITY"
 shot 1-welcome 5
+expect_front welcome .WelcomeActivity
 adb shell input keyevent KEYCODE_BACK
 shot 2-home
+expect_front home .HomeActivity
 
-# Settings, and the phone page it serves. Until Aangan is the home screen, its setup tile leads the
-# grid, just below the dock where focus starts.
+# Until Aangan is set up, its tile leads the grid, below the dock where focus starts.
 adb shell input keyevent KEYCODE_DPAD_DOWN
 adb shell input keyevent KEYCODE_DPAD_CENTER
 shot 2-settings 4
-# The address in the QR code, read the way a phone would: "http://10.0.2.15:8737/secret". This
-# checks the QR code itself too. (zbarimg is in the zbar-tools package.)
+expect_front settings .SetupActivity
+
+# The phone page, at the address in the QR code, asked from the TV's own shell as a phone would.
 LINK=$(zbarimg -q --raw "$SHOTS/2-settings.png" || true)
 LINK="${LINK#http://}"
 if [ -z "$LINK" ]; then
-    echo "Settings showed no QR code that could be read; see $SHOTS/2-settings.png." >&2
+    echo "No readable QR code in $SHOTS/2-settings.png." >&2
     exit 1
 fi
 HOST="${LINK%%/*}"
-# Asks the TV's server from the TV's own shell, as a phone on the network would.
 ask() {
     adb shell "printf '$1 /${LINK#*/}$2 HTTP/1.1\r\nHost: $HOST\r\nContent-Length: ${#3}\r\nContent-Type: application/x-www-form-urlencoded\r\nConnection: close\r\n\r\n$3' | nc -w 10 ${HOST%:*} ${HOST#*:}"
 }
@@ -54,68 +63,76 @@ expect() {
         exit 1
     fi
 }
-if adb shell command -v nc > /dev/null; then
-    expect "HTTP/1.1 200" "$(ask GET "" "")"
-    expect "HTTP/1.1 303" "$(ask POST /add "who=Asha&month=1&day=9&kind=birthday")"
-    expect '"who": *"Asha"' "$(ask GET /export "")"
-    shot 2-settings-changed 2
-else
-    echo "This TV has no nc, so the phone page itself isn't checked."
-fi
+expect "HTTP/1.1 200" "$(ask GET "" "")"
+expect "HTTP/1.1 303" "$(ask POST /add "who=Asha&month=1&day=9&kind=birthday")"
+expect '"who": *"Asha"' "$(ask GET /export "")"
+shot 2-settings-changed 2
+
+# City is the first row.
+adb shell input keyevent KEYCODE_DPAD_CENTER
+shot 2-city
+expect_front city .CityActivity
+adb shell input keyevent KEYCODE_BACK
 adb shell input keyevent KEYCODE_BACK
 
-adb shell cmd package set-home-activity "$HOME_ACTIVITY"
+# Home through Aangan's accessibility service, as people set it up on TVs that can't change home app.
+adb shell settings put secure enabled_accessibility_services "$PKG/.HomeButton"
+adb shell settings put secure accessibility_enabled 1
+sleep 3
+adb shell input keyevent KEYCODE_HOME
+shot 3-home-button
+expect_front "Home button" .HomeActivity
 
-# Festival scenes, as the developer preview shows them (see HomeActivity.onNewIntent).
-# (Names are passed through adb's remote shell, so none with an apostrophe.)
+# Names go through adb's remote shell, so none with an apostrophe.
 for festival in Diwali Holi "Karwa Chauth" Christmas Lohri; do
     adb shell am start -W -n "$HOME_ACTIVITY" --es festival "'$festival'"
-    shot "3-$(echo "$festival" | tr -cd 'A-Za-z')" 4
+    shot "4-$(echo "$festival" | tr -cd 'A-Za-z')" 4
 done
 
-# The Home button returns to Aangan, and the Today card opens with Up then OK.
 adb shell input keyevent KEYCODE_HOME
 adb shell input keyevent KEYCODE_DPAD_UP
 adb shell input keyevent KEYCODE_DPAD_CENTER
-shot 4-today
+shot 5-today
+expect_front today .HomeActivity
 adb shell input keyevent KEYCODE_BACK
 
-# Holding OK on an app opens its menu (put it in the dock, hide it); Back closes it.
 adb shell input keyevent KEYCODE_DPAD_DOWN
 adb shell input keyevent --longpress KEYCODE_DPAD_CENTER
-shot 5-app-menu 2
+shot 6-app-menu 2
+expect_front "app menu" .HomeActivity
 adb shell input keyevent KEYCODE_BACK
 
-# The screensaver, where the TV lets a shell start one (Android 12 and later have "cmd dreams").
-if adb shell cmd dreams start-dreaming "$PKG/.ClockDream" 0 > /dev/null 2>&1; then
-    shot 6-screensaver 5
+# Google TV offers only its own Ambient mode, so this runs where the TV lets a shell start a dream.
+adb shell settings put secure screensaver_components "$PKG/.ClockDream"
+adb shell settings put secure screensaver_enabled 1
+if adb shell cmd dreams start-dreaming > /dev/null 2>&1; then
+    shot 7-screensaver 5
+    if ! adb shell dumpsys dreams | grep -q "ClockDream"; then
+        echo "The screensaver didn't start:" >&2
+        adb shell dumpsys dreams >&2
+        exit 1
+    fi
     adb shell cmd dreams stop-dreaming > /dev/null 2>&1 || true
 else
-    echo "This TV can't start the screensaver from the shell; skipping it."
+    echo "This TV can't start a screensaver from the shell; skipping it."
 fi
 
-# In Hindi: Android 13 and later can set one app's language from the shell.
 adb shell am force-stop "$PKG"
 adb shell cmd locale set-app-locales "$PKG" --locales hi
 adb shell am start -W -n "$HOME_ACTIVITY"
-shot 7-hindi 5
+shot 8-hindi 5
+expect_front hindi .HomeActivity
 adb shell cmd locale set-app-locales "$PKG" --locales ""
 
-if ! adb shell pidof "$PKG" > /dev/null; then
-    echo "Aangan isn't running at the end of the test." >&2
-    adb logcat -d | tail -200 >&2
-    exit 1
-fi
 if adb logcat -d -b crash | grep -q "$PKG"; then
     echo "Aangan crashed:" >&2
     adb logcat -d -b crash >&2
     exit 1
 fi
-# "Does not have a focused window" is the emulator being slow to show a window, and Google's own apps
-# get it too; Aangan's main thread being stuck reads "Waited 5000ms for KeyEvent" or similar.
+# "Does not have a focused window" is the emulator being slow to show a window; Google's apps get it too.
 if adb logcat -d -b events | grep "am_anr" | grep "$PKG" | grep -vq "does not have a focused window"; then
     echo "Aangan stopped responding:" >&2
     adb logcat -d -b events | grep "am_anr" >&2
     exit 1
 fi
-echo "Aangan ran without crashing or stopping responding."
+echo "Aangan passed."
