@@ -2,6 +2,10 @@
 
 Each version's notes become its GitHub release notes and the website's changelog page.
 
+## 1.3.4 · 28 October 2026
+
+- **See how it looks**: choose a festival or family day in Settings to see its scene on the home screen now, instead of waiting for the day. Back returns to Settings.
+
 ## 1.3.3
 
 - Checked on Android TV 13, Google TV 14 and Google TV 16 (the newest), as well as Android TV 9 and Google TV 12.
