@@ -56,10 +56,6 @@ adb install -r "$APK"
 adb shell am start -W -n "$PKG/.HomeActivity"; sleep 5
 key KEYCODE_BACK; sleep 2   # past the welcome
 expect_front .HomeActivity home
-adb shell settings put secure enabled_accessibility_services "$PKG/.HomeButton"
-adb shell settings put secure accessibility_enabled 1
-sleep 2
-
 # 1. Settings -> Diwali -> See how it looks.
 open_settings
 shot settings
@@ -86,10 +82,15 @@ pass "Leaving the preview leaves no festival behind"
 # 4. Home button ends a preview.
 open_settings
 preview_from_settings Diwali Diwali
+# Home through Aangan's service. It counts as set up, which moves the Settings tile, so only for this step.
+adb shell settings put secure enabled_accessibility_services "$PKG/.HomeButton"
+adb shell settings put secure accessibility_enabled 1
+sleep 3
 key KEYCODE_HOME; sleep 3
 expect_front .HomeActivity "Home during preview"
 expect_not "A preview of" "Home during preview"
 expect_not "Happy Diwali" "Home during preview"
+adb shell settings put secure enabled_accessibility_services '""'
 pass "Home ends a preview"
 
 # 5. Opening another app ends a preview; Back from it comes home without it.
