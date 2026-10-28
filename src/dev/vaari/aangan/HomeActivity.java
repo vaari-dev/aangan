@@ -288,7 +288,11 @@ public class HomeActivity extends Activity {
 
     /** The first time on a TV that isn't set up, the welcome; then a few visits with a tip. */
     private void welcomeOrTip() {
-        if (preview != null) return;
+        if (preview != null) {
+            tip.animate().cancel();
+            tip.setAlpha(0f);
+            return;
+        }
         if (WelcomeActivity.needed(prefs)) {
             if (!isSetUp()) {
                 startActivity(new Intent(this, WelcomeActivity.class));
