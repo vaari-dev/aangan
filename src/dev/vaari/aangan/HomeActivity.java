@@ -141,6 +141,8 @@ public class HomeActivity extends Activity {
     /** How many visits to the home screen show the tips. */
     private static final int TIP_VISITS = 8;
 
+    static final String PREVIEW = "festival";
+
     /** How often to check, while visible, whether weather or air quality is due a refresh. */
     private static final long WEATHER_CHECK_MS = 5 * 60_000L;
 
@@ -205,7 +207,7 @@ public class HomeActivity extends Activity {
     private TextView festivalView;
     private TextView tip;
     private Festive festive;
-    /** A festival to show instead of today's, set with: am start -n dev.vaari.aangan/.HomeActivity --es festival Holi */
+    /** A festival to show as though it were today, until the home screen is left; see Festival.preview. */
     private String preview;
     private long festivePlayedAt;
     private GradientDrawable glass;
@@ -272,6 +274,12 @@ public class HomeActivity extends Activity {
     }
 
     @Override
+    protected void onStop() {
+        preview = null;
+        super.onStop();
+    }
+
+    @Override
     protected void onPause() {
         resumed = false;
         handler.removeCallbacks(weatherCheck);
@@ -280,6 +288,11 @@ public class HomeActivity extends Activity {
 
     /** The first time on a TV that isn't set up, the welcome; then a few visits with a tip. */
     private void welcomeOrTip() {
+        if (preview != null) {
+            tip.animate().cancel();
+            tip.setAlpha(0f);
+            return;
+        }
         if (WelcomeActivity.needed(prefs)) {
             if (!isSetUp()) {
                 startActivity(new Intent(this, WelcomeActivity.class));
@@ -300,21 +313,33 @@ public class HomeActivity extends Activity {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        // A plain Home press clears any preview.
-        preview = intent.getStringExtra("festival");
+        // A plain Home press clears any preview; a new one plays its opening.
+        preview = intent.getStringExtra(PREVIEW);
+        if (preview != null) festivePlayedAt = 0;
         if (today != null) closeToday();
         goToTop();
+        // On screen already, onResume may not follow.
+        if (resumed) {
+            showFestival();
+            showWeather();
+        }
     }
 
-    /** Back never leaves the home screen; it returns to the dock instead. */
+    /** Back never leaves the home screen: it returns to the dock, or from a preview to Settings. */
     @Override
     public void onBackPressed() {
         back();
     }
 
     private void back() {
-        if (today != null) closeToday();
-        else goToTop();
+        Festival previewed = Festival.preview(preview);
+        if (today != null) {
+            closeToday();
+        } else if (previewed != null) {
+            startActivity(new Intent(this, SetupActivity.class).putExtra(SetupActivity.FOCUS, previewed.key()));
+        } else {
+            goToTop();
+        }
     }
 
     // ---- units -------------------------------------------------------------------------------
@@ -519,7 +544,7 @@ public class HomeActivity extends Activity {
     private void showWeather() {
         long now = System.currentTimeMillis();
         Festival festival = preview != null ? Festival.preview(preview) : Festival.next(Festival.today());
-        festivalView.setText(festival == null ? "" : "  ·  " + festival.headline(Festival.today()));
+        festivalView.setText(festival == null ? "" : "  ·  " + festival.headline(Festival.today()) + (preview != null ? "  ·  Preview" : ""));
         if (festival != null) festivalView.setTextColor(festival.theme.accent);
         boolean any = weather.hasWeather() || weather.hasAir();
         pill.setVisibility(any ? View.VISIBLE : View.INVISIBLE);

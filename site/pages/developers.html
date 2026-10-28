@@ -26,9 +26,9 @@ cd aangan
 ./build.sh install    # and install it over adb (set ANDROID_SERIAL with several devices)
 ./build.sh bundle     # also build/aangan.aab for Google Play</code></pre>
     <p>The script runs <code>aapt2</code> → <code>javac</code> → <code>d8</code> → <code>zipalign</code> → <code>apksigner</code>, in about ten seconds. The bundle step fetches a pinned <code>bundletool</code> once and checks its SHA-256 digest.</p>
-    <p>To preview a festival's scene on a connected TV:</p>
+    <p>To preview a festival's scene on a connected TV, with Aangan open:</p>
 <pre><code>adb shell am start -n dev.vaari.aangan/.HomeActivity --es festival Diwali</code></pre>
-    <p>Any festival name from the calendar works, as does a family day such as <code>"Asha's birthday"</code>. Press <kbd>Home</kbd> to clear it.</p>
+    <p>Any festival name from the calendar works, as does a family day such as <code>"Asha's birthday"</code>. Press <kbd>Back</kbd> for Settings, or <kbd>Home</kbd> to clear it.</p>
 
     <h2 id=release>Releases</h2>
     <p>Release builds are signed with the project's key, kept off any repository:</p>

@@ -133,8 +133,8 @@ third-party libraries: the app uses only Android itself.
   unless it's signed with the known certificate.
 - **Downloads:** the only one, bundletool, is checked against a pinned SHA-256.
 
-To preview a festival's scene: `adb shell "am start -n dev.vaari.aangan/.HomeActivity --es festival Diwali"`.
-Press Home to clear it.
+To preview a festival's scene, choose **See how it looks** on it in Settings, or run
+`adb shell "am start -n dev.vaari.aangan/.HomeActivity --es festival Diwali"`. Home clears it.
 
 ### The festival calendar
 

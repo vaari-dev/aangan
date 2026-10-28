@@ -14,8 +14,8 @@ esac
 
 # The release version. Raising VERSION_NAME on main publishes it (see .github/workflows/ci.yml);
 # VERSION_CODE must go up with every release, and CHANGELOG.md needs a section for the new name.
-VERSION_CODE=12
-VERSION_NAME=1.3.3
+VERSION_CODE=13
+VERSION_NAME=1.3.4
 # The Android versions built for: Android 9 and up, targeting Android 16's behaviour, compiled
 # against the newest SDK. (Targeting 17 would need a local-network permission prompt for the phone page.)
 MIN_SDK=28
