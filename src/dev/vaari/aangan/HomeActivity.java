@@ -592,10 +592,11 @@ public class HomeActivity extends Activity {
         Festival festival = Festival.preview(preview);
         previewNote.animate().cancel();
         previewNote.setAlpha(0f);
+        // Emptied too, as an invisible view is still read out.
+        previewNote.setText(festival == null ? "" : "A preview of " + festival.name + "     ·     Back returns to Settings");
         if (festival == null) return;
         tip.animate().cancel();
         tip.setAlpha(0f);
-        previewNote.setText("A preview of " + festival.name + "     ·     Back returns to Settings");
         previewNote.animate().alpha(1f).setStartDelay(TIP_DELAY_MS).setDuration(TIP_FADE_MS).start();
     }
 
