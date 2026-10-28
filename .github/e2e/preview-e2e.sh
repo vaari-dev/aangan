@@ -107,7 +107,9 @@ pass "Home ends a preview"
 # 5. Opening another app ends a preview; Back from it comes home without it.
 adb shell am start -W -n "$PKG/.HomeActivity" --es festival Holi > /dev/null; sleep 3
 expect "A preview of Holi" "adb preview"
-adb shell am start -W -a android.settings.SETTINGS > /dev/null; sleep 3
+# A full-screen app: the TV's Settings is a side panel on some TVs, leaving the home screen on screen.
+adb shell monkey -p com.android.vending -c android.intent.category.LEANBACK_LAUNCHER 1 > /dev/null; sleep 5
+front | grep -q com.android.vending || fail "Play Store didn't open: $(front)"
 key KEYCODE_BACK; sleep 3
 expect_front .HomeActivity "back from another app"
 expect_not "A preview of" "back from another app"
@@ -141,7 +143,9 @@ key KEYCODE_DPAD_CENTER; sleep 1
 pass "A hidden festival can be previewed"
 
 # 8. A family day, added from the phone page.
-LINK=$(zbarimg -q --raw "$SHOTS/01-settings.png" || true); LINK="${LINK#http://}"
+# The address changes each time Settings opens.
+shot settings-now
+LINK=$(zbarimg -q --raw "$SHOTS/$(printf %02d $n)-settings-now.png" || true); LINK="${LINK#http://}"
 [ -n "$LINK" ] || fail "no QR code"
 HOST="${LINK%%/*}"; BODY="who=Asha&month=1&day=9&kind=birthday"
 adb shell "printf 'POST /${LINK#*/}/add HTTP/1.1\r\nHost: $HOST\r\nContent-Length: ${#BODY}\r\nContent-Type: application/x-www-form-urlencoded\r\nConnection: close\r\n\r\n$BODY' | nc -w 10 ${HOST%:*} ${HOST#*:}" | head -1
