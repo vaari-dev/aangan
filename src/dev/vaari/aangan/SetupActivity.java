@@ -39,7 +39,7 @@ import java.util.Map;
  */
 public class SetupActivity extends Activity {
 
-    /** The intent extra naming the row to focus: a festival's key or a family day's name, after its preview. */
+    /** The {@link Festival#key()} of the row to focus. */
     static final String FOCUS = "focus";
     private static final String[] MONTHS = Dates.months(TextStyle.SHORT);
     private static final ComponentName SONY_SCREENSAVER =
@@ -50,7 +50,6 @@ public class SetupActivity extends Activity {
     private LinearLayout rows;
     private LinearLayout phonePanel;
     private PhoneSetup phone;
-    /** The row to focus when the rows are next shown, or null. */
     private String focusTag;
 
     @Override
@@ -335,7 +334,6 @@ public class SetupActivity extends Activity {
     private void askFestival(Festival f) {
         List<String> actions = new ArrayList<>();
         List<Runnable> runs = new ArrayList<>();
-        // A festival with only a greeting has no scene to see.
         if (f.theme != Festive.Theme.PLAIN) {
             actions.add("See how it looks");
             runs.add(() -> preview(f.key()));
@@ -357,10 +355,6 @@ public class SetupActivity extends Activity {
         dialog(f.name).setItems(actions.toArray(new String[0]), (d, which) -> runs.get(which).run()).show();
     }
 
-    /**
-     * Shows a festival's or family day's scene on the home screen as though it were today, with its
-     * opening; Back there comes back to its row here.
-     */
     private void preview(String festival) {
         startActivity(new Intent(this, HomeActivity.class).putExtra(HomeActivity.PREVIEW, festival));
     }

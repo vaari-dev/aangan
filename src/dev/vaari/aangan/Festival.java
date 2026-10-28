@@ -15,6 +15,7 @@ import java.time.MonthDay;
 import java.time.format.TextStyle;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -76,9 +77,9 @@ final class Festival {
         return !date.equals(original);
     }
 
-    /** Identifies a festival day across edits, for the phone page's forms. */
+    /** Identifies a festival day across edits, for the phone page's forms; a family day by its name. */
     String key() {
-        return original + "|" + name;
+        return personalDay ? name : original + "|" + name;
     }
 
     // ---- loading ----------------------------------------------------------------------------
@@ -120,7 +121,6 @@ final class Festival {
         personal = Collections.unmodifiableList(days);
     }
 
-    /** A family day's name on the home screen: "Asha's birthday". */
     static String name(People.Day d) {
         return d.who + (d.birthday ? "'s birthday" : "'s anniversary");
     }
@@ -303,16 +303,13 @@ final class Festival {
         return next.isEmpty() || next.get(0).daysFrom(today) > HORIZON_DAYS ? null : next.get(0);
     }
 
-    /**
-     * The festival with this {@link #key()}, or the festival or personal day called {@code name}, as
-     * though it were today, for previewing its look. Hidden festivals count, so they can be seen before
-     * being shown again.
-     */
-    static Festival preview(String name) {
-        Festival byKey = byKey(name);
-        if (byKey != null) return byKey.on(today());
-        for (Festival f : festivals) if (f.name.equalsIgnoreCase(name)) return f.on(today());
-        for (Festival p : personal) if (p.name.equalsIgnoreCase(name)) return p.on(today());
+    /** The festival or personal day with this {@link #key()} or name, as though it were today, or null. */
+    static Festival preview(String keyOrName) {
+        for (List<Festival> days : Arrays.asList(festivals, personal)) {
+            for (Festival f : days) {
+                if (f.key().equals(keyOrName) || f.name.equalsIgnoreCase(keyOrName)) return f.on(today());
+            }
+        }
         return null;
     }
 

@@ -141,7 +141,6 @@ public class HomeActivity extends Activity {
     /** How many visits to the home screen show the tips. */
     private static final int TIP_VISITS = 8;
 
-    /** The intent extra naming a festival to preview. */
     static final String PREVIEW = "festival";
 
     /** How often to check, while visible, whether weather or air quality is due a refresh. */
@@ -209,10 +208,7 @@ public class HomeActivity extends Activity {
     private TextView tip;
     private TextView previewNote;
     private Festive festive;
-    /**
-     * A festival to show instead of today's, by its key or name: from "See how it looks" in Settings,
-     * or am start -n dev.vaari.aangan/.HomeActivity --es festival Holi. Leaving the home screen ends it.
-     */
+    /** A festival to show as though it were today, until the home screen is left; see Festival.preview. */
     private String preview;
     private long festivePlayedAt;
     private GradientDrawable glass;
@@ -240,7 +236,6 @@ public class HomeActivity extends Activity {
         prefs = Prefs.of(this);
         Festival.load(this, prefs);
         weather = Weather.load(prefs);
-        preview = getIntent().getStringExtra(PREVIEW);
         DOCK.shadow = shadowBitmap(DOCK);
         GRID.shadow = shadowBitmap(GRID);
         // From Android 16, Back reaches apps targeting it only through this callback, not onBackPressed.
@@ -280,7 +275,6 @@ public class HomeActivity extends Activity {
         maybeRefreshWeather();
     }
 
-    /** A preview lasts only while it is on screen, so a festival that isn't today never lingers. */
     @Override
     protected void onStop() {
         preview = null;
@@ -317,25 +311,30 @@ public class HomeActivity extends Activity {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        // A plain Home press clears any preview; a new one always plays its opening.
+        // A plain Home press clears any preview; a new one plays its opening.
         preview = intent.getStringExtra(PREVIEW);
         if (preview != null) festivePlayedAt = 0;
         if (today != null) closeToday();
         goToTop();
+        // On screen already, onResume may not follow.
+        if (resumed) {
+            showFestival();
+            showPreviewNote();
+        }
     }
 
-    /** Back never leaves the home screen; it returns to the dock instead. */
+    /** Back never leaves the home screen: it returns to the dock, or from a preview to Settings. */
     @Override
     public void onBackPressed() {
         back();
     }
 
-    /** During a preview, Back ends it and returns to the festival in Settings. */
     private void back() {
+        Festival previewed = Festival.preview(preview);
         if (today != null) {
             closeToday();
-        } else if (previewing() != null) {
-            startActivity(new Intent(this, SetupActivity.class).putExtra(SetupActivity.FOCUS, preview));
+        } else if (previewed != null) {
+            startActivity(new Intent(this, SetupActivity.class).putExtra(SetupActivity.FOCUS, previewed.key()));
         } else {
             goToTop();
         }
@@ -397,7 +396,6 @@ public class HomeActivity extends Activity {
                 ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
         tipLp.bottomMargin = dp(TIP_MARGIN);
         root.addView(tip, tipLp);
-        // In the tip's place, while a festival is being previewed.
         previewNote = ui.line(13, 400, Ui.SECONDARY, "");
         previewNote.setAlpha(0f);
         root.addView(previewNote, new FrameLayout.LayoutParams(tipLp));
@@ -546,7 +544,7 @@ public class HomeActivity extends Activity {
 
     private void showWeather() {
         long now = System.currentTimeMillis();
-        Festival festival = preview != null ? previewing() : Festival.next(Festival.today());
+        Festival festival = preview != null ? Festival.preview(preview) : Festival.next(Festival.today());
         festivalView.setText(festival == null ? "" : "  ·  " + festival.headline(Festival.today()));
         if (festival != null) festivalView.setTextColor(festival.theme.accent);
         boolean any = weather.hasWeather() || weather.hasAir();
@@ -587,26 +585,17 @@ public class HomeActivity extends Activity {
     }
 
     private Festival celebrating() {
-        return preview != null ? previewing() : Festival.celebrating(Festival.today());
+        return preview != null ? Festival.preview(preview) : Festival.celebrating(Festival.today());
     }
 
-    /** The festival being previewed, as though it were today, or null. */
-    private Festival previewing() {
-        return preview == null ? null : Festival.preview(preview);
-    }
-
-    /** Says that the scene is only a preview, and how to end it, so an ordinary day doesn't look like a festival. */
     private void showPreviewNote() {
-        Festival festival = previewing();
+        Festival festival = Festival.preview(preview);
         previewNote.animate().cancel();
-        if (festival == null) {
-            previewNote.setAlpha(0f);
-            return;
-        }
+        previewNote.setAlpha(0f);
+        if (festival == null) return;
         tip.animate().cancel();
         tip.setAlpha(0f);
         previewNote.setText("A preview of " + festival.name + "     ·     Back returns to Settings");
-        previewNote.setAlpha(0f);
         previewNote.animate().alpha(1f).setStartDelay(TIP_DELAY_MS).setDuration(TIP_FADE_MS).start();
     }
 
