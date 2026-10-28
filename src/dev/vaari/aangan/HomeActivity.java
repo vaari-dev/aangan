@@ -206,7 +206,6 @@ public class HomeActivity extends Activity {
     private TextView credit;
     private TextView festivalView;
     private TextView tip;
-    private TextView previewNote;
     private Festive festive;
     /** A festival to show as though it were today, until the home screen is left; see Festival.preview. */
     private String preview;
@@ -271,7 +270,6 @@ public class HomeActivity extends Activity {
         refresh();
         welcomeOrTip();
         showFestival();
-        showPreviewNote();
         maybeRefreshWeather();
     }
 
@@ -319,7 +317,7 @@ public class HomeActivity extends Activity {
         // On screen already, onResume may not follow.
         if (resumed) {
             showFestival();
-            showPreviewNote();
+            showWeather();
         }
     }
 
@@ -396,9 +394,6 @@ public class HomeActivity extends Activity {
                 ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
         tipLp.bottomMargin = dp(TIP_MARGIN);
         root.addView(tip, tipLp);
-        previewNote = ui.line(13, 400, Ui.SECONDARY, "");
-        previewNote.setAlpha(0f);
-        root.addView(previewNote, new FrameLayout.LayoutParams(tipLp));
         setContentView(root);
         paintBackdrop(glowColor());
     }
@@ -545,7 +540,7 @@ public class HomeActivity extends Activity {
     private void showWeather() {
         long now = System.currentTimeMillis();
         Festival festival = preview != null ? Festival.preview(preview) : Festival.next(Festival.today());
-        festivalView.setText(festival == null ? "" : "  ·  " + festival.headline(Festival.today()));
+        festivalView.setText(festival == null ? "" : "  ·  " + festival.headline(Festival.today()) + (preview != null ? "  ·  Preview" : ""));
         if (festival != null) festivalView.setTextColor(festival.theme.accent);
         boolean any = weather.hasWeather() || weather.hasAir();
         pill.setVisibility(any ? View.VISIBLE : View.INVISIBLE);
@@ -586,18 +581,6 @@ public class HomeActivity extends Activity {
 
     private Festival celebrating() {
         return preview != null ? Festival.preview(preview) : Festival.celebrating(Festival.today());
-    }
-
-    private void showPreviewNote() {
-        Festival festival = Festival.preview(preview);
-        previewNote.animate().cancel();
-        previewNote.setAlpha(0f);
-        // Emptied too, as an invisible view is still read out.
-        previewNote.setText(festival == null ? "" : "A preview of " + festival.name + "     ·     Back returns to Settings");
-        if (festival == null) return;
-        tip.animate().cancel();
-        tip.setAlpha(0f);
-        previewNote.animate().alpha(1f).setStartDelay(TIP_DELAY_MS).setDuration(TIP_FADE_MS).start();
     }
 
     /**
