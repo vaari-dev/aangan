@@ -20,7 +20,7 @@ android {
         minSdk = 28
         targetSdk = 36
         // A new versionName on main is released by CI, and needs a CHANGELOG.md section.
-        versionCode = 13
+        versionCode = 14
         versionName = "1.4"
     }
 

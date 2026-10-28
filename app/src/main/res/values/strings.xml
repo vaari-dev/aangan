@@ -224,6 +224,9 @@
     <string name="edit_day">Edit %1$s\'s day</string>
     <string name="remove_birthday">Remove %1$s\'s birthday?</string>
     <string name="remove_anniversary">Remove %1$s\'s anniversary?</string>
+    <string name="see_how_it_looks">See how it looks</string>
+    <!-- After the greeting on the home screen while a festival is previewed. -->
+    <string name="preview">Preview</string>
     <string name="change_date">Change the date</string>
     <string name="show_it">Show it</string>
     <string name="hide_it">Hide it</string>

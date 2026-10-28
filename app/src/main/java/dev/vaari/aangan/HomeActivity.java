@@ -67,6 +67,7 @@ public class HomeActivity extends Activity {
     // Dock tiles are tagged by slot, not app, so focus stays on a place whatever app is in it.
     private static final String DOCK_TAG = "dock:";
     static final String HIDDEN = "hidden";
+    static final String PREVIEW = "festival";
     // "tips2" from 1.3, so upgraders see the tips again.
     private static final String TIPS = "tips2";
 
@@ -176,7 +177,8 @@ public class HomeActivity extends Activity {
     private TextView festivalView;
     private TextView tip;
     private Festive festive;
-    // Preview a festival: am start -n dev.vaari.aangan/.HomeActivity --es festival Holi
+    // Shown as though today until the home screen is left: Settings, or
+    // am start -n dev.vaari.aangan/.HomeActivity --es festival Holi
     private String preview;
     private long festivePlayedAt;
     private View today;
@@ -240,6 +242,12 @@ public class HomeActivity extends Activity {
     }
 
     @Override
+    protected void onStop() {
+        preview = null;
+        super.onStop();
+    }
+
+    @Override
     protected void onPause() {
         resumed = false;
         handler.removeCallbacks(weatherCheck);
@@ -247,6 +255,11 @@ public class HomeActivity extends Activity {
     }
 
     private void welcomeOrTip() {
+        if (preview != null) {
+            tip.animate().cancel();
+            tip.setAlpha(0f);
+            return;
+        }
         if (WelcomeActivity.needed(prefs)) {
             if (!isSetUp()) {
                 startActivity(new Intent(this, WelcomeActivity.class));
@@ -266,9 +279,15 @@ public class HomeActivity extends Activity {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        preview = intent.getStringExtra("festival");
+        preview = intent.getStringExtra(PREVIEW);
+        if (preview != null) festivePlayedAt = 0;
         if (today != null) closeToday();
         goToTop();
+        // Already on screen, so onResume may not follow.
+        if (resumed) {
+            showFestival();
+            showWeather();
+        }
     }
 
     // Before Android 13. A home screen has nowhere to go back to, so it doesn't opt into predictive back.
@@ -280,8 +299,14 @@ public class HomeActivity extends Activity {
     }
 
     private void back() {
-        if (today != null) closeToday();
-        else goToTop();
+        Festival previewed = preview != null ? Festival.preview(preview) : null;
+        if (today != null) {
+            closeToday();
+        } else if (previewed != null) {
+            startActivity(new Intent(this, SetupActivity.class).putExtra(SetupActivity.FOCUS, previewed.key()));
+        } else {
+            goToTop();
+        }
     }
 
     private int dp(float v) {
@@ -461,7 +486,8 @@ public class HomeActivity extends Activity {
 
     private void showWeather() {
         Festival festival = preview != null ? Festival.preview(preview) : Festival.next(Festival.today());
-        festivalView.setText(festival == null ? "" : "  ·  " + festival.headline(this, Festival.today()));
+        festivalView.setText(festival == null ? ""
+                : "  ·  " + festival.headline(this, Festival.today()) + (preview != null ? "  ·  " + getString(R.string.preview) : ""));
         if (festival != null) festivalView.setTextColor(festival.theme.accent);
         boolean any = weather.hasWeather() || weather.hasAir();
         pill.setVisibility(any ? View.VISIBLE : View.INVISIBLE);

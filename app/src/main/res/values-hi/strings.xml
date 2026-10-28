@@ -206,6 +206,8 @@
     <string name="edit_day">%1$s का दिन बदलें</string>
     <string name="remove_birthday">%1$s का जन्मदिन हटाएँ?</string>
     <string name="remove_anniversary">%1$s की सालगिरह हटाएँ?</string>
+    <string name="see_how_it_looks">देखें कैसा दिखता है</string>
+    <string name="preview">झलक</string>
     <string name="change_date">तारीख बदलें</string>
     <string name="show_it">दिखाएँ</string>
     <string name="hide_it">छिपाएँ</string>

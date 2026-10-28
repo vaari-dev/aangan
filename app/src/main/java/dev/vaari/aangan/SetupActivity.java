@@ -43,11 +43,15 @@ public class SetupActivity extends Activity {
 
     private final Runnable letScreenSleep = () -> getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
+    /** The {@link Festival#key()} of the row to focus. */
+    static final String FOCUS = "focus";
+
     private Ui ui;
     private SharedPreferences prefs;
     private LinearLayout rows;
     private LinearLayout phonePanel;
     private PhoneSetup phone;
+    private String focusTag;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -59,6 +63,7 @@ public class SetupActivity extends Activity {
         super.onCreate(state);
         ui = new Ui(this);
         prefs = Prefs.of(this);
+        focusTag = getIntent().getStringExtra(FOCUS);
 
         LinearLayout root = ui.row();
         root.setPadding(ui.dp(48), ui.dp(36), ui.dp(48), ui.dp(24));
@@ -115,7 +120,7 @@ public class SetupActivity extends Activity {
         rows.addView(t);
     }
 
-    private void row(String title, String value, View.OnClickListener action) {
+    private View row(String title, String value, View.OnClickListener action) {
         LinearLayout row = ui.row();
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(ui.dp(16), ui.dp(12), ui.dp(16), ui.dp(12));
@@ -128,6 +133,7 @@ public class SetupActivity extends Activity {
         v.setPadding(ui.dp(16), 0, 0, 0);
         row.addView(v, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0));
         rows.addView(row);
+        return row;
     }
 
     private void showRows() {
@@ -154,24 +160,28 @@ public class SetupActivity extends Activity {
         heading(R.string.family_days_heading);
         for (People.Day d : People.load(prefs)) {
             row(d.who, getString(d.birthday ? R.string.birthday : R.string.anniversary) + "  ·  " + Dates.dayMonth(d.month, d.day),
-                    v -> dialog(d.who).setItems(new String[]{getString(R.string.edit), getString(R.string.remove)}, (dlg, which) -> {
-                        if (which == 0) askDay(d);
+                    v -> dialog(d.who).setItems(new String[]{getString(R.string.see_how_it_looks), getString(R.string.edit),
+                            getString(R.string.remove)}, (dlg, which) -> {
+                        if (which == 0) preview(Festival.name(d));
+                        else if (which == 1) askDay(d);
                         else confirm(getString(d.birthday ? R.string.remove_birthday : R.string.remove_anniversary, d.who),
                                 null, R.string.remove, R.string.keep, () -> People.remove(prefs, d.key()));
-                    }).show());
+                    }).show()).setTag(Festival.name(d));
         }
         row(getString(R.string.add_one), "", v -> askDay(null));
 
         heading(R.string.festivals);
         for (Festival f : Festival.editable(Festival.today())) {
             String state = f.hidden ? "  ·  " + getString(R.string.hidden) : f.moved() ? "  ·  " + getString(R.string.moved) : "";
-            row(f.title(this), f.shortDate(getResources()) + state, v -> askFestival(f));
+            row(f.title(this), f.shortDate(getResources()) + state, v -> askFestival(f)).setTag(f.key());
         }
 
         heading(R.string.about);
         row(getString(R.string.version), BuildConfig.VERSION_NAME, v -> { });
 
-        View target = rows.getChildAt(Math.max(0, Math.min(focus, rows.getChildCount() - 1)));
+        View target = focusTag != null ? rows.findViewWithTag(focusTag) : null;
+        focusTag = null;
+        if (target == null) target = rows.getChildAt(Math.max(0, Math.min(focus, rows.getChildCount() - 1)));
         if (target == null || !target.isFocusable()) target = rows.getChildAt(0);
         target.requestFocus();
     }
@@ -311,17 +321,31 @@ public class SetupActivity extends Activity {
     }
 
     private void askFestival(Festival f) {
-        String change = getString(R.string.change_date);
-        String hide = getString(f.hidden ? R.string.show_it : R.string.hide_it);
-        String[] actions = f.moved()
-                ? new String[]{change, hide, getString(R.string.back_to, Dates.dayMonth(f.original))}
-                : new String[]{change, hide};
-        dialog(f.title(this)).setItems(actions, (d, which) -> {
-            if (which == 0) askFestivalDate(f);
-            else if (which == 1) Festival.hide(prefs, f, !f.hidden);
-            else Festival.move(prefs, f, f.original);
-            if (which != 0) showRows();
-        }).show();
+        List<String> actions = new ArrayList<>();
+        List<Runnable> runs = new ArrayList<>();
+        if (f.theme != Festive.Theme.PLAIN) {
+            actions.add(getString(R.string.see_how_it_looks));
+            runs.add(() -> preview(f.key()));
+        }
+        actions.add(getString(R.string.change_date));
+        runs.add(() -> askFestivalDate(f));
+        actions.add(getString(f.hidden ? R.string.show_it : R.string.hide_it));
+        runs.add(() -> {
+            Festival.hide(prefs, f, !f.hidden);
+            showRows();
+        });
+        if (f.moved()) {
+            actions.add(getString(R.string.back_to, Dates.dayMonth(f.original)));
+            runs.add(() -> {
+                Festival.move(prefs, f, f.original);
+                showRows();
+            });
+        }
+        dialog(f.title(this)).setItems(actions.toArray(new String[0]), (d, which) -> runs.get(which).run()).show();
+    }
+
+    private void preview(String festival) {
+        startActivity(new Intent(this, HomeActivity.class).putExtra(HomeActivity.PREVIEW, festival));
     }
 
     private void askFestivalDate(Festival f) {

@@ -16,6 +16,7 @@ import java.time.MonthDay;
 import java.time.format.TextStyle;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -68,8 +69,9 @@ final class Festival {
         return !date.equals(original);
     }
 
+    /** A family day is known by its name. */
     String key() {
-        return original + "|" + name;
+        return personalDay ? name : original + "|" + name;
     }
 
     static synchronized void load(Context context, SharedPreferences prefs) {
@@ -106,8 +108,7 @@ final class Festival {
         List<Festival> days = new ArrayList<>();
         for (People.Day d : People.load(prefs)) {
             LocalDate date = d.in(2000);
-            days.add(new Festival(date,
-                    d.who + (d.birthday ? "'s birthday" : "'s anniversary"),
+            days.add(new Festival(date, name(d),
                     (d.birthday ? "Happy birthday, " : "Happy anniversary, ") + d.who,
                     d.birthday ? Festive.Theme.BIRTHDAY : Festive.Theme.ANNIVERSARY, false, true, d.who, date, false));
         }
@@ -272,9 +273,17 @@ final class Festival {
         return next.isEmpty() || next.get(0).daysFrom(today) > HORIZON_DAYS ? null : next.get(0);
     }
 
-    static Festival preview(String name) {
-        for (Festival f : festivals) if (f.name.equalsIgnoreCase(name)) return f.on(today());
-        for (Festival p : personal) if (p.name.equalsIgnoreCase(name)) return p.on(today());
+    static String name(People.Day d) {
+        return d.who + (d.birthday ? "'s birthday" : "'s anniversary");
+    }
+
+    /** The day with this {@link #key()} or name, as though it were today. */
+    static Festival preview(String keyOrName) {
+        for (List<Festival> days : Arrays.asList(festivals, personal)) {
+            for (Festival f : days) {
+                if (f.key().equals(keyOrName) || f.name.equalsIgnoreCase(keyOrName)) return f.on(today());
+            }
+        }
         return null;
     }
 

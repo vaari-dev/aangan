@@ -25,9 +25,9 @@ cd aangan
 ./gradlew assembleDebug    # app/build/outputs/apk/debug/aangan-debug.apk
 ./gradlew installDebug     # and install it over adb (set ANDROID_SERIAL with several devices)
 ./gradlew check            # unit tests, Android Lint and javac warnings</code></pre>
-    <p>Every warning is an error. CI also runs emulator smoke tests and CodeQL. Preview a scene:</p>
+    <p>Every warning is an error. CI also runs emulator smoke tests and CodeQL. Preview a scene with <b>See how it looks</b> in Settings, or with Aangan open:</p>
 <pre><code>adb shell am start -n dev.vaari.aangan/.HomeActivity --es festival Diwali</code></pre>
-    <p>Any calendar name works, or a family day such as <code>"Asha's birthday"</code>. <kbd>Home</kbd> clears it.</p>
+    <p>Any calendar name works, or a family day such as <code>"Asha's birthday"</code>. <kbd>Back</kbd> goes to Settings, <kbd>Home</kbd> clears it.</p>
 
     <h2 id=release>Releases</h2>
     <p>Signed with the project's key:</p>

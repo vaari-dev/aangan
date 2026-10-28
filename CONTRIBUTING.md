@@ -52,7 +52,7 @@ After changing `gradle/libs.versions.toml`, regenerate it and review the diff:
 - Families' moves and hides are keyed by the original date and name, so changing either drops them. Correct a line
   only when it's wrong.
 
-Without editing the file, use the **Festival date** issue form. Preview a scene:
+Without editing the file, use the **Festival date** issue form. Preview a scene with **See how it looks** in Settings, or:
 
     adb shell am start -n dev.vaari.aangan/.HomeActivity --es festival Diwali
 

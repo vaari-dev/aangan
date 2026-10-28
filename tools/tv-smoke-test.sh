@@ -89,6 +89,10 @@ for festival in Diwali Holi "Karwa Chauth" Christmas Lohri; do
     adb shell am start -W -n "$HOME_ACTIVITY" --es festival "'$festival'"
     shot "4-$(echo "$festival" | tr -cd 'A-Za-z')" 4
 done
+adb shell input keyevent KEYCODE_BACK
+shot 4-preview-back 2
+expect_front "Back from a preview" .SetupActivity
+adb shell input keyevent KEYCODE_BACK
 
 adb shell input keyevent KEYCODE_HOME
 # Keys sent before Aangan's window is back are dropped.
