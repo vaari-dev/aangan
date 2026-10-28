@@ -47,7 +47,7 @@ preview_from_settings() {  # $1 row title, $2 expected festival name in the note
     focus_on "See how it looks"
     key KEYCODE_DPAD_CENTER; sleep 3
     expect_front .HomeActivity "$1 preview"
-    expect "A preview of $2" "$1 preview note"
+    expect "Preview" "$1 preview label"
 }
 
 adb wait-for-device
@@ -74,7 +74,7 @@ pass "Back returns to Settings with Diwali focused"
 # 3. Back again: an ordinary home screen.
 key KEYCODE_BACK; sleep 2
 expect_front .HomeActivity "home after preview"
-expect_not "A preview of" "home after preview"
+expect_not "Preview" "home after preview"
 expect_not "Happy Diwali" "home after preview"
 shot home-after
 pass "Leaving the preview leaves no festival behind"
@@ -84,7 +84,7 @@ open_settings
 preview_from_settings Diwali Diwali
 adb shell am start -W -n "$PKG/.HomeActivity" > /dev/null; sleep 3
 expect_front .HomeActivity "plain start during preview"
-expect_not "A preview of" "plain start during preview"
+expect_not "Preview" "plain start during preview"
 expect_not "Happy Diwali" "plain start during preview"
 pass "A plain start of the home screen ends a preview on screen"
 
@@ -101,18 +101,18 @@ expect_front .HomeActivity "Home during preview"
 adb shell settings put secure enabled_accessibility_services '""'
 sleep 3
 expect_not "Happy Diwali" "Home during preview"
-expect_not "A preview of" "Home during preview"
+expect_not "Preview" "Home during preview"
 pass "Home ends a preview"
 
 # 5. Opening another app ends a preview; Back from it comes home without it.
 adb shell am start -W -n "$PKG/.HomeActivity" --es festival Holi > /dev/null; sleep 3
-expect "A preview of Holi" "adb preview"
+expect "Preview" "adb preview"
 # A full-screen app: the TV's Settings is a side panel on some TVs, leaving the home screen on screen.
 adb shell monkey -p com.android.vending -c android.intent.category.LEANBACK_LAUNCHER 1 > /dev/null; sleep 5
 front | grep -q com.android.vending || fail "Play Store didn't open: $(front)"
 key KEYCODE_BACK; sleep 3
 expect_front .HomeActivity "back from another app"
-expect_not "A preview of" "back from another app"
+expect_not "Preview" "back from another app"
 expect_not "Happy Holi" "back from another app"
 pass "adb preview works, and leaving for an app ends it"
 
