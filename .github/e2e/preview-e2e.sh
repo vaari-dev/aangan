@@ -79,17 +79,26 @@ expect_not "Happy Diwali" "home after preview"
 shot home-after
 pass "Leaving the preview leaves no festival behind"
 
-# 4. Home button ends a preview.
+# 4a. A plain start of the home screen, as the Home button service sends, ends a preview on screen.
 open_settings
 preview_from_settings Diwali Diwali
-# Home through Aangan's service. It counts as set up, which moves the Settings tile, so only for this step.
+adb shell am start -W -n "$PKG/.HomeActivity" > /dev/null; sleep 3
+expect_front .HomeActivity "plain start during preview"
+expect_not "A preview of" "plain start during preview"
+expect_not "Happy Diwali" "plain start during preview"
+pass "A plain start of the home screen ends a preview on screen"
+
+# 4b. The Home button itself. The system may hold apps back for a few seconds after Home.
+open_settings
+preview_from_settings Diwali Diwali
 adb shell settings put secure enabled_accessibility_services "$PKG/.HomeButton"
 adb shell settings put secure accessibility_enabled 1
 sleep 3
-key KEYCODE_HOME; sleep 3
+key KEYCODE_HOME; sleep 10
 expect_front .HomeActivity "Home during preview"
 expect_not "A preview of" "Home during preview"
 expect_not "Happy Diwali" "Home during preview"
+shot home-button
 adb shell settings put secure enabled_accessibility_services '""'
 pass "Home ends a preview"
 
