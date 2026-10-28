@@ -96,8 +96,8 @@ adb shell settings put secure accessibility_enabled 1
 sleep 3
 key KEYCODE_HOME; sleep 10
 expect_front .HomeActivity "Home during preview"
-expect_not "A preview of" "Home during preview"
 expect_not "Happy Diwali" "Home during preview"
+expect_not "A preview of" "Home during preview"
 shot home-button
 adb shell settings put secure enabled_accessibility_services '""'
 pass "Home ends a preview"
