@@ -112,13 +112,17 @@ final class Festival {
         List<Festival> days = new ArrayList<>();
         for (People.Day d : People.load(prefs)) {
             LocalDate date = d.in(2000);
-            days.add(new Festival(date,
-                    d.who + (d.birthday ? "'s birthday" : "'s anniversary"),
+            days.add(new Festival(date, name(d),
                     (d.birthday ? "Happy birthday, " : "Happy anniversary, ") + d.who,
                     d.birthday ? Festive.Theme.BIRTHDAY : Festive.Theme.ANNIVERSARY, false, true, date, false));
         }
         festivals = Collections.unmodifiableList(applied);
         personal = Collections.unmodifiableList(days);
+    }
+
+    /** A family day's name on the home screen: "Asha's birthday". */
+    static String name(People.Day d) {
+        return d.who + (d.birthday ? "'s birthday" : "'s anniversary");
     }
 
     // ---- the family's changes ---------------------------------------------------------------
@@ -299,8 +303,14 @@ final class Festival {
         return next.isEmpty() || next.get(0).daysFrom(today) > HORIZON_DAYS ? null : next.get(0);
     }
 
-    /** The festival or personal day called {@code name}, as though it were today, for previewing its look. */
+    /**
+     * The festival with this {@link #key()}, or the festival or personal day called {@code name}, as
+     * though it were today, for previewing its look. Hidden festivals count, so they can be seen before
+     * being shown again.
+     */
     static Festival preview(String name) {
+        Festival byKey = byKey(name);
+        if (byKey != null) return byKey.on(today());
         for (Festival f : festivals) if (f.name.equalsIgnoreCase(name)) return f.on(today());
         for (Festival p : personal) if (p.name.equalsIgnoreCase(name)) return p.on(today());
         return null;

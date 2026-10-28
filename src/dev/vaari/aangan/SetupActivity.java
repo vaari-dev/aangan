@@ -39,6 +39,8 @@ import java.util.Map;
  */
 public class SetupActivity extends Activity {
 
+    /** The intent extra naming the row to focus: a festival's key or a family day's name, after its preview. */
+    static final String FOCUS = "focus";
     private static final String[] MONTHS = Dates.months(TextStyle.SHORT);
     private static final ComponentName SONY_SCREENSAVER =
             new ComponentName("com.android.tv.settings", "com.sony.dtv.settings.device.display.daydream.DaydreamActivity");
@@ -48,6 +50,8 @@ public class SetupActivity extends Activity {
     private LinearLayout rows;
     private LinearLayout phonePanel;
     private PhoneSetup phone;
+    /** The row to focus when the rows are next shown, or null. */
+    private String focusTag;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -59,6 +63,7 @@ public class SetupActivity extends Activity {
         super.onCreate(state);
         ui = new Ui(this);
         prefs = Prefs.of(this);
+        focusTag = getIntent().getStringExtra(FOCUS);
 
         LinearLayout root = ui.row();
         root.setPadding(ui.dp(48), ui.dp(36), ui.dp(48), ui.dp(24));
@@ -112,7 +117,7 @@ public class SetupActivity extends Activity {
     }
 
     /** A focusable line with a title on the left and its current value on the right. */
-    private void row(String title, String value, View.OnClickListener action) {
+    private View row(String title, String value, View.OnClickListener action) {
         LinearLayout row = ui.row();
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(ui.dp(16), ui.dp(12), ui.dp(16), ui.dp(12));
@@ -130,6 +135,7 @@ public class SetupActivity extends Activity {
         v.setPadding(ui.dp(16), 0, 0, 0);
         row.addView(v, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0));
         rows.addView(row);
+        return row;
     }
 
     private void showRows() {
@@ -152,19 +158,23 @@ public class SetupActivity extends Activity {
         heading("Birthdays & anniversaries");
         for (People.Day d : People.load(prefs)) {
             row(d.who, (d.birthday ? "Birthday" : "Anniversary") + "  ·  " + Dates.dayMonth(d.month, d.day),
-                    v -> dialog(d.who).setItems(new String[]{"Edit", "Remove"}, (dlg, which) -> {
-                        if (which == 0) askDay(d);
+                    v -> dialog(d.who).setItems(new String[]{"See how it looks", "Edit", "Remove"}, (dlg, which) -> {
+                        if (which == 0) preview(Festival.name(d));
+                        else if (which == 1) askDay(d);
                         else confirmRemove(d);
-                    }).show());
+                    }).show()).setTag(Festival.name(d));
         }
         row("Add one", "", v -> askDay(null));
 
         heading("Festivals");
         for (Festival f : Festival.editable(Festival.today())) {
-            row(f.name, f.shortDate() + (f.hidden ? "  ·  Hidden" : f.moved() ? "  ·  Moved" : ""), v -> askFestival(f));
+            row(f.name, f.shortDate() + (f.hidden ? "  ·  Hidden" : f.moved() ? "  ·  Moved" : ""), v -> askFestival(f))
+                    .setTag(f.key());
         }
 
-        View target = rows.getChildAt(Math.max(0, Math.min(focus, rows.getChildCount() - 1)));
+        View target = focusTag != null ? rows.findViewWithTag(focusTag) : null;
+        focusTag = null;
+        if (target == null) target = rows.getChildAt(Math.max(0, Math.min(focus, rows.getChildCount() - 1)));
         if (target == null || !target.isFocusable()) target = rows.getChildAt(0);
         target.requestFocus();
     }
@@ -323,15 +333,36 @@ public class SetupActivity extends Activity {
     }
 
     private void askFestival(Festival f) {
-        String[] actions = f.moved()
-                ? new String[]{"Change the date", f.hidden ? "Show it" : "Hide it", "Back to " + Dates.dayMonth(f.original)}
-                : new String[]{"Change the date", f.hidden ? "Show it" : "Hide it"};
-        dialog(f.name).setItems(actions, (d, which) -> {
-            if (which == 0) askFestivalDate(f);
-            else if (which == 1) Festival.hide(prefs, f, !f.hidden);
-            else Festival.move(prefs, f, f.original);
-            if (which != 0) showRows();
-        }).show();
+        List<String> actions = new ArrayList<>();
+        List<Runnable> runs = new ArrayList<>();
+        // A festival with only a greeting has no scene to see.
+        if (f.theme != Festive.Theme.PLAIN) {
+            actions.add("See how it looks");
+            runs.add(() -> preview(f.key()));
+        }
+        actions.add("Change the date");
+        runs.add(() -> askFestivalDate(f));
+        actions.add(f.hidden ? "Show it" : "Hide it");
+        runs.add(() -> {
+            Festival.hide(prefs, f, !f.hidden);
+            showRows();
+        });
+        if (f.moved()) {
+            actions.add("Back to " + Dates.dayMonth(f.original));
+            runs.add(() -> {
+                Festival.move(prefs, f, f.original);
+                showRows();
+            });
+        }
+        dialog(f.name).setItems(actions.toArray(new String[0]), (d, which) -> runs.get(which).run()).show();
+    }
+
+    /**
+     * Shows a festival's or family day's scene on the home screen as though it were today, with its
+     * opening; Back there comes back to its row here.
+     */
+    private void preview(String festival) {
+        startActivity(new Intent(this, HomeActivity.class).putExtra(HomeActivity.PREVIEW, festival));
     }
 
     private void askFestivalDate(Festival f) {
