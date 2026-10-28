@@ -95,11 +95,13 @@ adb shell settings put secure enabled_accessibility_services "$PKG/.HomeButton"
 adb shell settings put secure accessibility_enabled 1
 sleep 3
 key KEYCODE_HOME; sleep 10
+shot home-button
 expect_front .HomeActivity "Home during preview"
+# uiautomator's dump goes stale while another accessibility service is on.
+adb shell settings put secure enabled_accessibility_services '""'
+sleep 3
 expect_not "Happy Diwali" "Home during preview"
 expect_not "A preview of" "Home during preview"
-shot home-button
-adb shell settings put secure enabled_accessibility_services '""'
 pass "Home ends a preview"
 
 # 5. Opening another app ends a preview; Back from it comes home without it.
