@@ -1,0 +1,32 @@
+# Temporary: checks the release job's APK comparison against 1.4's real APKs. Removed before merge.
+name: Verify (temporary)
+on: pull_request
+permissions:
+  contents: read
+  actions: read
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: The comparison passes on 1.4's tested and released APKs, and fails on a different APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 41163438370 -R "$GITHUB_REPOSITORY" -n aangan-1.4-dev -D tested
+          mkdir -p build
+          gh release download v1.4.0 -R "$GITHUB_REPOSITORY" -p aangan.apk -D build
+          python3 -c 'import yaml; s=[s for s in yaml.safe_load(open(".github/workflows/ci.yml"))["jobs"]["release"]["steps"] if s.get("name","").startswith("Check it")][0]; open("/tmp/check.sh","w").write(s["run"])'
+          bash -e /tmp/check.sh
+          gh release download v1.3.4 -R "$GITHUB_REPOSITORY" -p aangan.apk -O build/aangan.apk --clobber
+          if bash -e /tmp/check.sh; then echo "should have failed"; exit 1; fi
+      - name: The path filter skips a docs-only change and not an app change
+        run: |
+          git config user.email t@t; git config user.name t
+          f() { git checkout -q -B t origin/main && echo x >> "$1" && git commit -qam t && git diff --name-only HEAD^1 HEAD | grep -qvE '^(site/|store/|fastlane/|docs/|[^/]+\.md$|\.github/ISSUE_TEMPLATE/)' && echo app || echo skip; }
+          test "$(f README.md)" = skip
+          test "$(f site/pages/index.html)" = skip
+          test "$(f app/src/main/res/values/strings.xml)" = app
