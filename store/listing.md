@@ -1,8 +1,7 @@
 # Google Play store listing
 
-The listing itself is in [`fastlane/metadata/android/en-US/`](../fastlane/metadata/android/en-US/), the layout
-F-Droid and Play tools read. Copy each field into Play Console → Grow users → Store presence → Main store
-listing. `tools/store.py`, run by CI, checks each field against Play's limits.
+The listing is in [`fastlane/metadata/android/en-IN/`](../fastlane/metadata/android/en-IN/). Copy each field into
+Play Console → Grow users → Store presence → Main store listing. CI checks Play's limits.
 
 ## Rules this listing follows
 
@@ -31,7 +30,7 @@ Checked against Google's Play Console Help on 25 October 2026:
 | App name | `title.txt` | 30 |
 | Short description | `short_description.txt` | 80 |
 | Full description | `full_description.txt` | 4,000 |
-| Release notes | `changelogs/<versionCode>.txt`, written from `CHANGELOG.md` by `tools/store.py` and sent with each Play upload | 500 |
+| Release notes | `changelogs/<versionCode>.txt`, written from `CHANGELOG.md` by `tools/store.py` | 500 |
 
 If a weather search term matters more than "private", `Aangan: TV Launcher & Weather` (29) also fits the name.
 
@@ -47,7 +46,7 @@ If a weather search term matters more than "private", `Aangan: TV Launcher & Wea
 | Phone | Optional; leave it empty. |
 | Privacy policy | https://vaari-dev.github.io/aangan/privacy.html |
 
-## Graphics (in `fastlane/metadata/android/en-US/images/`)
+## Graphics (in `fastlane/metadata/android/en-IN/images/`)
 
 | Asset | File |
 |---|---|

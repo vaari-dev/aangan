@@ -1,41 +1,33 @@
 #!/usr/bin/env python3
-"""The store listing in fastlane/metadata (read by F-Droid, and by Play tooling): python3 tools/store.py
-
-Checks the text against Google Play's limits, and writes the current version's release notes,
-changelogs/<versionCode>.txt, from CHANGELOG.md: plain text, cut to Play's 500 characters.
+"""Checks the Play listing (fastlane/metadata) against Play's limits, and writes this version's
+release notes there from CHANGELOG.md: python3 tools/store.py
 """
 import os
 import re
 
 import release
 
-LISTING = os.path.join(release.REPO_ROOT, "fastlane", "metadata", "android", "en-US")
+LISTING = os.path.join(release.REPO_ROOT, "fastlane", "metadata", "android", "en-IN")
 LIMITS = {"title.txt": 30, "short_description.txt": 80, "full_description.txt": 4000}
 NOTES_LIMIT = 500
 MORE = "More: github.com/vaari-dev/aangan/releases"
 
 
-def version_code():
-    with open(os.path.join(release.REPO_ROOT, "app", "build.gradle.kts"), encoding="utf-8") as f:
-        return int(re.search(r"^\s*versionCode = (\d+)", f.read(), re.M).group(1))
-
-
 def plain(markdown):
-    s = re.sub(r"\*\*(.+?)\*\*", r"\1", markdown)
-    s = re.sub(r"`(.+?)`", r"\1", s)
-    return re.sub(r"\[(.+?)\]\((.+?)\)", r"\1", s)
+    s = re.sub(r"\*\*(.+?)\*\*|`(.+?)`", r"\1\2", markdown)
+    return re.sub(r"\[(.+?)\]\(.+?\)", r"\1", s)
 
 
-def play_notes(name=None):
-    """Whole bullets, in order, while they fit; then a pointer to the full notes."""
-    bullets = ["• " + plain(b[2:]) for b in release.notes(name).splitlines()]
-    if len("\n".join(bullets)) <= NOTES_LIMIT:
-        return "\n".join(bullets)
+def play_notes():
+    """Whole bullets while they fit, then a link to the rest."""
+    lines = ["• " + plain(b) for b in release.bullets()]
+    if len("\n".join(lines)) <= NOTES_LIMIT:
+        return "\n".join(lines)
     kept = []
-    for b in bullets:
-        if len("\n".join(kept + [b, MORE])) > NOTES_LIMIT:
+    for line in lines:
+        if len("\n".join(kept + [line, MORE])) > NOTES_LIMIT:
             break
-        kept.append(b)
+        kept.append(line)
     return "\n".join(kept + [MORE])
 
 
@@ -45,9 +37,9 @@ def main():
             length = len(f.read().rstrip("\n"))
         if length > limit:
             raise SystemExit(f"{name} is {length} characters; Play allows {limit}.")
-    path = os.path.join(LISTING, "changelogs", f"{version_code()}.txt")
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(play_notes() + "\n")
+    # No trailing newline: Play counts it.
+    with open(os.path.join(LISTING, "changelogs", f"{release.code()}.txt"), "w", encoding="utf-8") as f:
+        f.write(play_notes())
 
 
 if __name__ == "__main__":

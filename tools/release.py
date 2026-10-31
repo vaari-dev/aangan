@@ -2,6 +2,7 @@
 """The version (from app/build.gradle.kts) and the changelog (CHANGELOG.md), for the website and for releases.
 
     python3 tools/release.py version      # 1.4
+    python3 tools/release.py code         # 14
     python3 tools/release.py tag          # v1.4.0
     python3 tools/release.py notes [1.4]  # that version's changelog, as Markdown
 """
@@ -13,9 +14,17 @@ import sys
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def version():
+def _gradle(key):
     with open(os.path.join(REPO_ROOT, "app", "build.gradle.kts"), encoding="utf-8") as f:
-        return re.search(r'^\s*versionName = "([^"]+)"', f.read(), re.M).group(1)
+        return re.search(rf'^\s*{key} = "?([^"\n]+)"?$', f.read(), re.M).group(1)
+
+
+def version():
+    return _gradle("versionName")
+
+
+def code():
+    return int(_gradle("versionCode"))
 
 
 def tag(name=None):
@@ -37,12 +46,16 @@ def changelog():
     return entries
 
 
-def notes(name=None):
+def bullets(name=None):
     name = name or version()
-    for v, _, bullets in changelog():
-        if v == name:
-            return "\n".join("- " + b for b in bullets)
-    raise SystemExit(f"CHANGELOG.md has no section for {name}")
+    for v, _, items in changelog():
+        if v == name and items:
+            return items
+    raise SystemExit(f"CHANGELOG.md has no notes for {name}")
+
+
+def notes(name=None):
+    return "\n".join("- " + b for b in bullets(name))
 
 
 def inline_html(markdown):
@@ -57,6 +70,8 @@ if __name__ == "__main__":
     command = sys.argv[1] if len(sys.argv) > 1 else ""
     if command == "version":
         print(version())
+    elif command == "code":
+        print(code())
     elif command == "tag":
         print(tag())
     elif command == "notes":

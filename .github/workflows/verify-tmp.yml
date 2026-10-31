@@ -26,7 +26,8 @@ jobs:
       - name: The path filter skips a docs-only change and not an app change
         run: |
           git config user.email t@t; git config user.name t
-          f() { git checkout -q -B t origin/main && echo x >> "$1" && git commit -qam t && git diff --name-only HEAD^1 HEAD | grep -qvE '^(site/|store/|fastlane/|docs/|[^/]+\.md$|\.github/ISSUE_TEMPLATE/)' && echo app || echo skip; }
-          test "$(f README.md)" = skip
-          test "$(f site/pages/index.html)" = skip
-          test "$(f app/src/main/res/values/strings.xml)" = app
+          f() { git checkout -q -B t origin/main && eval "$1" && git commit -qam t && git diff --no-renames --name-only HEAD^1 HEAD | grep -qvE '^(site/|store/|fastlane/|docs/|[^/]+\.md$|\.github/ISSUE_TEMPLATE/)' && echo app || echo skip; }
+          test "$(f 'echo x >> README.md')" = skip
+          test "$(f 'echo x >> site/pages/index.html')" = skip
+          test "$(f 'echo x >> app/src/main/res/values/strings.xml')" = app
+          test "$(f 'git mv app/proguard-rules.pro docs/')" = app
