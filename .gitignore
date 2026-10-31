@@ -1,4 +1,12 @@
 build/
+.gradle/
+.kotlin/
+# Machine-specific: the SDK's location.
+local.properties
 # The signing key stays off any repository.
 keystore/
+*.jks
+*.keystore
 __pycache__/
+.idea/
+*.iml

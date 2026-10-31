@@ -1,13 +1,7 @@
 #!/usr/bin/env python3
-"""Builds Aangan's website into build/site/, which CI publishes to GitHub Pages. From the repository root:
+"""Builds the website into build/site/: python3 tools/site.py
 
-    python3 tools/site.py
-
-Pages live in site/pages/<name>.html, each starting with a JSON comment giving its title and
-description; this adds the shared head, navigation and footer. The festival calendar comes from
-assets/festivals.csv, scene colours from Festive.Theme, the changelog from CHANGELOG.md, and the
-font and pictures from where the app and README keep them. The site has no scripts, cookies or
-analytics, and loads nothing from anywhere else.
+Each site/pages/<name>.html starts with a JSON comment holding its title and description.
 """
 import csv
 import datetime
@@ -28,7 +22,6 @@ REPO = "https://github.com/vaari-dev/aangan"
 NAV = [("index", "Home"), ("guide", "Guide"), ("privacy", "Privacy"), ("festivals", "Festivals"),
        ("faq", "FAQ"), ("developers", "Developers")]
 
-# What each scene draws; its colours come from Festive.Theme.
 SCENES = {
     "DIWALI": ("Diwali", "Clay diyas lighting one by one, rangoli and fireworks"),
     "TORAN": ("Toran", "Marigold garlands with mango leaves"),
@@ -53,7 +46,6 @@ SCENES = {
 
 
 def path(name):
-    """A page's path on the site: "" for the home page, "faq.html" for the rest."""
     return "" if name == "index" else name + ".html"
 
 
@@ -67,15 +59,15 @@ def read(*path):
 
 
 def theme_colours():
-    """{"DIWALI": ("#7A5A2E", "#FFC56B"), ...}: each Festive.Theme's glow and accent."""
-    java = read("src", "dev", "vaari", "aangan", "Festive.java")
+    """{"DIWALI": (glow, accent), ...} from Festive.Theme."""
+    java = read("app", "src", "main", "java", "dev", "vaari", "aangan", "Festive.java")
     enum = re.search(r"enum Theme \{(.*?);", java, re.S).group(1)
     return {name: ("#" + glow, "#" + accent)
             for name, glow, accent in re.findall(r"(\w+)\(0xFF(\w{6}), 0xFF(\w{6})\)", enum)}
 
 
 def festivals():
-    for row in csv.reader(line for line in read("assets", "festivals.csv").splitlines()
+    for row in csv.reader(line for line in read("app", "src", "main", "assets", "festivals.csv").splitlines()
                           if line.strip() and not line.startswith("#")):
         row = [x.strip() for x in row]
         yield datetime.date.fromisoformat(row[0]), row[1], row[2], row[3], row[4:] == ["expected"]
@@ -124,7 +116,6 @@ def changelog():
 
 
 def faq_items(body):
-    """Questions and answers from the FAQ page's details blocks, as plain text."""
     return [{"@type": "Question", "name": html.unescape(q),
              "acceptedAnswer": {"@type": "Answer",
                                 "text": re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", "", a))).strip()}}
@@ -132,7 +123,6 @@ def faq_items(body):
 
 
 def structured(name, meta, body, url):
-    """Schema.org data for search engines: the app on the home page, questions on the FAQ, a trail elsewhere."""
     graph = [{"@type": "Organization", "@id": SITE + "#org", "name": "Vaari", "url": "https://github.com/vaari-dev",
               "logo": SITE + "icon.png"},
              {"@type": "WebSite", "@id": SITE + "#site", "name": "Aangan", "url": SITE, "inLanguage": "en-IN",
@@ -150,8 +140,7 @@ def structured(name, meta, body, url):
             "codeRepository": REPO, "inLanguage": "en",
             "screenshot": [SITE + f for f in ("home.jpg", "today.jpg", "diwali.jpg", "settings.jpg")],
             "image": SITE + "social.png", "author": {"@id": SITE + "#org"}, "publisher": {"@id": SITE + "#org"},
-            # No aggregateRating or review: Google's software-app rich result needs one, and there are
-            # no genuine ratings to give. The markup still describes the app to search engines.
+            # No aggregateRating: Google's rich result wants one, but there are no genuine ratings.
             "featureList": ["No ads, tracking or account", "A dock of four apps you choose",
                             "Weather and air quality (CPCB AQI in India, US AQI elsewhere)",
                             "City search that knows older names such as Bombay and Gurgaon",
@@ -235,9 +224,9 @@ def page(name, meta, body):
 
 
 def lastmod(name):
-    """When the page's sources last changed, from git, or None in a shallow clone, where every file
-    would get the newest commit's date. Google uses lastmod only while it's accurate."""
-    sources = {"changelog": ["CHANGELOG.md"], "festivals": ["site/pages/festivals.html", "assets/festivals.csv"]}
+    """None in a shallow clone, where every file would get the newest commit's date; Google
+    ignores lastmod once it's inaccurate."""
+    sources = {"changelog": ["CHANGELOG.md"], "festivals": ["site/pages/festivals.html", "app/src/main/assets/festivals.csv"]}
     files = sources.get(name, [f"site/pages/{name}.html"])
     try:
         if subprocess.run(["git", "rev-parse", "--is-shallow-repository"], cwd=ROOT, capture_output=True,
@@ -253,11 +242,10 @@ def lastmod(name):
 def main():
     shutil.rmtree(OUT, ignore_errors=True)
     os.makedirs(os.path.join(OUT, "assets"))
-    # Pictures shared with the README, the font shared with the phone page.
     for f in os.listdir(os.path.join(ROOT, "docs")):
         shutil.copy(os.path.join(ROOT, "docs", f), OUT)
     shutil.copy(os.path.join(ROOT, "site", "site.css"), os.path.join(OUT, "assets"))
-    shutil.copy(os.path.join(ROOT, "assets", "phone", "fraunces.woff2"), os.path.join(OUT, "assets"))
+    shutil.copy(os.path.join(ROOT, "app", "src", "main", "assets", "phone", "fraunces.woff2"), os.path.join(OUT, "assets"))
 
     sources = {f[:-5]: read("site", "pages", f) for f in os.listdir(os.path.join(ROOT, "site", "pages")) if f.endswith(".html")}
     sources["changelog"] = changelog()

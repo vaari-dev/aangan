@@ -1,0 +1,12 @@
+[versions]
+agp = "9.4.1"
+junit = "4.13.2"
+robolectric = "4.17"
+
+[libraries]
+junit = { module = "junit:junit", version.ref = "junit" }
+# Runs the tests against real Android resources and APIs on the JVM, without a device.
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }

@@ -1,8 +1,16 @@
-# Proposes updates to the GitHub Actions the workflows use, as pull requests that update both the
-# pinned commit and its version comment. Each new version waits a week first, so a compromised
-# release is likely to be caught and pulled before it's proposed here.
+# The week's cooldown gives a compromised release time to be caught and pulled. A Gradle update also
+# needs gradle/verification-metadata.xml updated (see CONTRIBUTING.md).
 version: 2
 updates:
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      gradle:
+        update-types: [minor, patch]
   - package-ecosystem: github-actions
     directories: ["/", "/.github/actions/*"]
     schedule:

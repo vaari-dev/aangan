@@ -1,0 +1,58 @@
+name: Festival date
+description: Correct a festival's date, or suggest one to add.
+labels: [festival]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Dates follow [Drik Panchang](https://www.drikpanchang.com/calendars/indian/indiancalendar.html) for New Delhi; national holidays and Eid follow the Government of India's list.
+        If only your family keeps it on another day, [move it on your TV](https://vaari-dev.github.io/aangan/guide.html#move).
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Is this a correction or an addition?
+      options:
+        - A date is wrong
+        - A festival is missing
+    validations:
+      required: true
+  - type: input
+    id: name
+    attributes:
+      label: Festival
+      placeholder: e.g. Onam
+    validations:
+      required: true
+  - type: input
+    id: dates
+    attributes:
+      label: Date or dates
+      description: For several days, list each one.
+      placeholder: e.g. 2027-09-12
+    validations:
+      required: true
+  - type: input
+    id: year
+    attributes:
+      label: Year
+      placeholder: e.g. 2027
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Source
+      description: A link to Drik Panchang, a government holiday list, or another checkable calendar.
+    validations:
+      required: true
+  - type: input
+    id: region
+    attributes:
+      label: Region or tradition
+      description: Where, or by whom, it's kept on this date.
+      placeholder: e.g. Kerala; or Bengali tradition
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: E.g. a greeting, or which scene would suit it.

@@ -2,6 +2,21 @@
 
 Each version's notes become its GitHub release notes and the website's changelog page.
 
+## 1.4
+
+- **Hindi.** Aangan, festival names and the phone page follow the TV's language, now English or Hindi. Corrections to this first translation are welcome.
+- **Back up and restore.** The phone page saves the city, dock, family days, festival changes and hidden apps to a file on your phone, and restores them on a new TV. No cloud involved.
+- Settings shows the version, for bug reports.
+- Family-day names stop at 40 characters on the TV, as on the phone page. Longer existing names are kept.
+- Fixed: after a time-zone change, festivals and birthdays could show on the wrong day around midnight until Aangan restarted.
+- Smoother festival scenes on slower TVs.
+- The screen stays on while the phone page is in use, so the screensaver no longer interrupts an edit; it can sleep again 20 minutes after the last change.
+- Fixed: with a VPN app on the TV, the QR code pointed at the VPN's unreachable address.
+- Fixed: a rare crash when a forecast arrived while the Today card was drawing.
+- Crash notes leave out the error message, which could quote a family member's name, and their GitHub link is short enough for browsers.
+- The privacy policy lists what Google Play's data safety section does: the city's rounded coordinates and city searches, sent to Open-Meteo.
+- Under the hood: a Gradle build, automated tests, stricter checks, and emulator runs on Android TV and Google TV before each release. Releases are reproducible, with build provenance.
+
 ## 1.3.4 · 28 October 2026
 
 - **See how it looks**: choose a festival or family day in Settings to see its scene on the home screen now, instead of waiting for the day. Back returns to Settings.
