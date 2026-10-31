@@ -76,7 +76,8 @@ The Hindi draft (`values-hi`) needs a native speaker's review.
 ## Releasing
 
 1. Raise `versionName` and `versionCode` in [`app/build.gradle.kts`](app/build.gradle.kts) and add the version to [`CHANGELOG.md`](CHANGELOG.md).
-2. Push to `main`. After an owner approves the `release` environment, CI signs the build, checks the certificate,
+2. Run `python3 tools/store.py` to write Play's release notes (its first bullets that fit in 500 characters) and commit them.
+3. Push to `main`. After an owner approves the `release` environment, CI signs the build, checks the certificate,
    publishes the GitHub release and uploads to Play's internal track ([`store/README.md`](store/README.md)).
 
 ## Pull requests

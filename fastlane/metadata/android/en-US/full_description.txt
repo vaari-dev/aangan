@@ -1,0 +1,44 @@
+Aangan is a calm, private launcher for Android TV and Google TV. It replaces the stock home screen, with its rows of ads and recommendations, with your apps, the sky outside and the days your family celebrates.
+
+Your apps, and nothing else
+• A dock of your four favourite apps, large across the top, and every other app in a tidy grid. You choose the dock, and it stays put.
+• Hold OK on any app to put it in the dock or hide it.
+• No sponsored rows, no autoplaying trailers, nothing promoted.
+
+Weather and air quality
+• The time, weather and air quality (AQI) for your city, always in the corner.
+• Pick from a list of large cities, or type a few letters. Older names such as Bombay, Madras or Gurgaon find the city they mean.
+• Press Up then OK for the whole day: the next hours, high and low, sunrise and sunset, UV and the moon.
+• A 36-hour PM2.5 trend against the safe limit, on India's CPCB scale in India and the US EPA scale elsewhere, and the best time to air out the house.
+
+Festivals and family days
+• A countdown to the next festival, and on the day a hand-drawn scene behind your apps: diyas for Diwali, gulal for Holi, the moon through the chalni for Karwa Chauth, lanterns for Eid, lights and snow for Christmas, and more.
+• Add birthdays and anniversaries; Aangan celebrates them with balloons or petals and a greeting by name.
+• Your family keeps a festival on another day? Move it, or hide one you don't celebrate.
+
+Set up from your phone
+• Scan the code in Settings to choose your city, set the dock and add dates from your phone's browser. The TV serves the page itself, on your Wi-Fi, only while Settings is open.
+
+A quiet screensaver
+• A dim clock and the weather, drifting slowly so nothing burns in, on TVs that let you choose a screensaver.
+
+Private by design
+• No ads, analytics, crash reporting or account.
+• If Aangan ever crashes, it keeps a short note on the TV and sends nothing. You can read it on your phone and report it yourself, or delete it.
+• No location permission: you choose your city.
+• Your family's dates stay on the TV and are excluded from cloud backup.
+• The only outside service is Open-Meteo, for your city's forecast and city search.
+
+Light on your TV
+• About 150 KB, with no third-party libraries.
+• Nothing moves on an ordinary day, so it uses no processor time while you watch.
+
+Open source
+• Every line is public under the MIT licence: github.com/vaari-dev/aangan
+
+Open with the Home button
+Most TVs offer no setting to choose a home screen. Aangan can optionally use an accessibility service to open itself when you press Home or when the TV's own home screen appears. It reacts to the Home button only, every other button passes straight through, and it can't see what's on screen. Aangan shows this explanation and asks for your agreement before you switch it on.
+
+Works on TVs and streaming boxes with Android TV or Google TV, on Android 9 or later. Tested on Sony Bravia TVs (Android TV 9 and Google TV 12) and on Google's emulators for Android TV 13, Google TV 14 and Google TV 16.
+
+Weather and air quality by Open-Meteo (CC BY 4.0) and Copernicus CAMS. Festival dates follow Drik Panchang for New Delhi. Android TV and Google TV are trademarks of Google LLC.

@@ -1,6 +1,6 @@
 # Google Play runbook
 
-Listing text: [`listing.md`](listing.md). Graphics: [`graphics/`](graphics/).
+Listing: [`listing.md`](listing.md), with its text and graphics in [`fastlane/metadata/android/en-US/`](../fastlane/metadata/android/en-US/).
 
 ## 1. Account
 
@@ -122,7 +122,9 @@ CI uploads each release to the internal track once set up:
 
        gh secret set PLAY_SERVICE_ACCOUNT_JSON --env release --repo vaari-dev/aangan < key.json
 
-5. Until the first production release Play takes drafts only, rolled out in the Console. Afterwards:
+5. Each upload carries release notes from `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`, in
+   the en-IN listing.
+6. Until the first production release Play takes drafts only, rolled out in the Console. Afterwards:
    `gh variable set PLAY_RELEASE_STATUS --body completed --repo vaari-dev/aangan`.
 
 Promotion to production stays manual.
