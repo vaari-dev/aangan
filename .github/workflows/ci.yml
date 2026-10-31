@@ -24,6 +24,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
       unreleased: ${{ steps.version.outputs.unreleased }}
+      app: ${{ steps.changes.outputs.app }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -31,6 +32,20 @@ jobs:
           # The sitemap dates each page from git history.
           fetch-depth: 0
       - uses: ./.github/actions/setup
+
+      # A pull request that changes only the website, store listing or docs skips the emulators.
+      # On main they always run, since a release waits for them.
+      - name: Does the app change?
+        id: changes
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" != pull_request ] \
+            || git diff --name-only HEAD^1 HEAD | grep -qvE '^(site/|store/|docs/|[^/]+\.md$|\.github/ISSUE_TEMPLATE/)'; then
+            echo "app=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "app=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Version and changelog
         id: version
@@ -79,6 +94,7 @@ jobs:
 
   tv:
     needs: build
+    if: needs.build.outputs.app == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:
