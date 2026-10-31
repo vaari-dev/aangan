@@ -105,11 +105,8 @@ jobs:
             api-level: 33
             target: android-tv
             arch: x86
-          # Only an x86 image exists.
-          - name: Google TV 14
-            api-level: 34
-            target: google-tv
-            arch: x86
+          # Not Google TV 14: its only image is x86, whose graphics fail part way on GitHub's runners
+          # ("Failed to find ColorBuffer"), so it failed runs the other two passed with the same APK.
           - name: Google TV 16
             api-level: 36
             target: google-tv
