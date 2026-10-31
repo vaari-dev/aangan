@@ -24,6 +24,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
       unreleased: ${{ steps.version.outputs.unreleased }}
+      app: ${{ steps.changes.outputs.app }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -31,6 +32,19 @@ jobs:
           # The sitemap dates each page from git history.
           fetch-depth: 0
       - uses: ./.github/actions/setup
+
+      # On main the emulators always run: a release waits for them.
+      - name: Does the app change?
+        id: changes
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" != pull_request ] \
+            || git diff --no-renames --name-only HEAD^1 HEAD | grep -qvE '^(site/|store/|fastlane/|docs/|[^/]+\.md$|\.github/ISSUE_TEMPLATE/)'; then
+            echo "app=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "app=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Version and changelog
         id: version
@@ -44,6 +58,13 @@ jobs:
             echo "unreleased=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Check the store listing, and that generated files are current
+        run: |
+          python3 tools/icon.py
+          python3 tools/store.py
+          git status --porcelain
+          test -z "$(git status --porcelain)"
+
       - name: Test, lint and build
         run: ./gradlew check assembleRelease bundleRelease
 
@@ -52,9 +73,6 @@ jobs:
           sha256sum app/build/outputs/apk/release/aangan-release.apk app/build/outputs/bundle/release/aangan-release.aab > first.sha
           ./gradlew clean assembleRelease bundleRelease --no-build-cache --rerun-tasks
           sha256sum --check first.sha
-
-      - name: Check the icon's generated files are current
-        run: python3 tools/icon.py && git diff --exit-code
 
       - name: Build the website
         run: python3 tools/site.py
@@ -79,6 +97,7 @@ jobs:
 
   tv:
     needs: build
+    if: needs.build.outputs.app == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:
@@ -89,18 +108,12 @@ jobs:
             api-level: 33
             target: android-tv
             arch: x86
-          # Only an x86 image exists, and its graphics crash part way on GitHub's runners.
-          - name: Google TV 14
-            api-level: 34
-            target: google-tv
-            arch: x86
-            experimental: true
+          # Not Google TV 14: its x86-only image's graphics fail part way on GitHub's runners.
           - name: Google TV 16
             api-level: 36
             target: google-tv
             arch: x86_64
     name: tv (${{ matrix.name }})
-    continue-on-error: ${{ matrix.experimental == true }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -116,6 +129,10 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - name: Install a QR code reader
         run: sudo apt-get install -y --no-install-recommends zbar-tools
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /usr/local/lib/android/sdk/system-images/android-${{ matrix.api-level }}/${{ matrix.target }}/${{ matrix.arch }}
+          key: system-image-${{ matrix.api-level }}-${{ matrix.target }}-${{ matrix.arch }}
       - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: ${{ matrix.api-level }}
@@ -201,6 +218,26 @@ jobs:
           cp app/build/outputs/apk/release/aangan-release.apk build/aangan.apk
           cp app/build/outputs/bundle/release/aangan-release.aab build/aangan.aab
 
+      # The emulators tested the build job's debug-signed APK. The signature sits outside the
+      # zip entries (no v1 signing at minSdk 28), so every entry must match.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: aangan-${{ needs.build.outputs.version }}-dev
+          path: tested
+      - name: Check it's the APK the emulators tested
+        run: |
+          python3 - tested/aangan-release.apk build/aangan.apk <<'PY'
+          import sys, zipfile
+          def entries(path):
+              with zipfile.ZipFile(path) as z:
+                  return {i.filename: (i.CRC, i.file_size) for i in z.infolist()}
+          tested, released = (entries(p) for p in sys.argv[1:])
+          if tested != released:
+              diff = sorted(set(tested.items()) ^ set(released.items()))
+              sys.exit("The release APK differs from the tested one:\n" + "\n".join(map(str, diff[:20])))
+          print(f"Same {len(released)} entries as the tested APK.")
+          PY
+
       - name: Check both are signed with the release certificate
         run: |
           apksigner="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner"
@@ -241,6 +278,12 @@ jobs:
           CONFIGURED: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
         run: echo "configured=$CONFIGURED" >> "$GITHUB_OUTPUT"
 
+      - name: Release notes for Play
+        if: steps.play.outputs.configured == 'true'
+        run: |
+          mkdir whatsnew
+          cp "fastlane/metadata/android/en-IN/changelogs/$(python3 tools/release.py code).txt" whatsnew/whatsnew-en-IN
+
       # Play accepts only drafts until the first production release; then set
       # PLAY_RELEASE_STATUS=completed.
       - name: Upload to Google Play (internal testing)
@@ -250,5 +293,6 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: dev.vaari.aangan
           releaseFiles: build/aangan.aab
+          whatsNewDirectory: whatsnew
           track: internal
           status: ${{ vars.PLAY_RELEASE_STATUS || 'draft' }}
