@@ -105,18 +105,16 @@ jobs:
             api-level: 33
             target: android-tv
             arch: x86
-          # Only an x86 image exists, and its graphics crash part way on GitHub's runners.
+          # Only an x86 image exists.
           - name: Google TV 14
             api-level: 34
             target: google-tv
             arch: x86
-            experimental: true
           - name: Google TV 16
             api-level: 36
             target: google-tv
             arch: x86_64
     name: tv (${{ matrix.name }})
-    continue-on-error: ${{ matrix.experimental == true }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -132,6 +130,13 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - name: Install a QR code reader
         run: sudo apt-get install -y --no-install-recommends zbar-tools
+      # Downloading these each run took about a minute, and a corrupt download once failed a run.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            /usr/local/lib/android/sdk/emulator
+            /usr/local/lib/android/sdk/system-images/android-${{ matrix.api-level }}/${{ matrix.target }}/${{ matrix.arch }}
+          key: emulator-${{ matrix.api-level }}-${{ matrix.target }}-${{ matrix.arch }}-v1
       - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: ${{ matrix.api-level }}
@@ -216,6 +221,27 @@ jobs:
           mkdir -p build
           cp app/build/outputs/apk/release/aangan-release.apk build/aangan.apk
           cp app/build/outputs/bundle/release/aangan-release.aab build/aangan.aab
+
+      # The emulators ran the build job's APK; this one is rebuilt with no cache. Apart from the
+      # signature, which lives outside the entries, they must be the same file by file.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: aangan-${{ needs.build.outputs.version }}-dev
+          path: tested
+      - name: Check it's the APK the emulators tested
+        run: |
+          python3 - tested/aangan-release.apk build/aangan.apk <<'PY'
+          import sys, zipfile
+          def entries(path):
+              with zipfile.ZipFile(path) as z:
+                  return {i.filename: (i.CRC, i.file_size) for i in z.infolist()
+                          if not i.filename.startswith("META-INF/")}
+          tested, released = (entries(p) for p in sys.argv[1:])
+          if tested != released:
+              diff = sorted(set(tested.items()) ^ set(released.items()))
+              sys.exit("The release APK differs from the tested one:\n" + "\n".join(map(str, diff[:20])))
+          print(f"Same {len(released)} entries as the tested APK.")
+          PY
 
       - name: Check both are signed with the release certificate
         run: |
