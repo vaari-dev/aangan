@@ -64,6 +64,10 @@ streamer instead ([why](https://vaari-dev.github.io/aangan/faq.html#samsung)).
 
    When the TV says it can't install from this source, choose **Settings**, switch Downloader on, and press Back. (Later: **Settings → Apps → Security** on Google TV, **Settings → Device Preferences → Security & restrictions** on older Android TV.) This isn't developer mode.
 3. Choose **Install**. The same link updates it.
+
+   If Play Protect says *App blocked to protect your device* (common in India, because Aangan has an accessibility
+   service), choose **Got it**, turn off **Play Store → Settings → Play Protect → Scan apps with Play Protect**,
+   install again, then turn scanning back on.
 4. Open **Aangan**. The welcome covers the rest:
 
 ![Welcome](docs/welcome.jpg)

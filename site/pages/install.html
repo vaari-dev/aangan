@@ -14,7 +14,7 @@
       <li><h3>Install Downloader</h3><p>On the TV, open the Google Play Store and install <b>Downloader</b> by AFTVnews. It's free. Aangan isn't connected to it; it's simply the easiest way to fetch a file on a TV.</p></li>
       <li><h3>Enter the address</h3><p>Open Downloader and type this address into its box:</p><p><code class=url>https://github.com/vaari-dev/aangan/releases/latest/download/aangan.apk</code></p><p>It always fetches the newest version.</p></li>
       <li><h3>Allow the install, once</h3><p>The TV says it isn't allowed to install apps from this source. Choose <b>Settings</b>, switch Downloader on, and press <kbd>Back</kbd>. This is an ordinary setting, not developer mode. If you need it later, it's under <b>Settings → Apps → Security</b> on Google TV, or <b>Settings → Device Preferences → Security &amp; restrictions</b> on older Android TV.</p></li>
-      <li><h3>Install and open</h3><p>Choose <b>Install</b>, then <b>Open</b>. You can also find Aangan in your TV's app list later.</p></li>
+      <li><h3>Install and open</h3><p>Choose <b>Install</b>, then <b>Open</b>. You can also find Aangan in your TV's app list later.</p><p>If Google Play Protect says <b>App blocked to protect your device</b>, that's its fraud check for apps with an accessibility service, which is on by default in India. Choose <b>Got it</b>, open the Play Store, go to <b>Settings → Play Protect</b> and turn off <b>Scan apps with Play Protect</b>. Install again, then turn scanning back on. Aangan stays installed.</p></li>
     </ol>
 
     <h2 id=welcome>The welcome</h2>
@@ -35,7 +35,7 @@
     <p>Aangan is being prepared for the Google Play Store, which will make it searchable on the TV and update it automatically. Until then, use Downloader. Copies installed either way are signed with the same key, so a Play update will install over a Downloader install without losing your settings.</p>
 
     <h2 id=adb>With a computer</h2>
-    <p>If you already use <code>adb</code>, you can install directly and make Aangan the TV's true default home screen, which doesn't need the accessibility service at all:</p>
+    <p>If you already use <code>adb</code>, you can install directly, which Play Protect doesn't block, and make Aangan the TV's default home app. On Google TV, Home still opens the Google TV launcher, so turn on <b>Open with Home</b> too:</p>
 <pre><code>adb install aangan.apk
 adb shell cmd package set-home-activity dev.vaari.aangan/.HomeActivity</code></pre>
     <p>Not every TV accepts <code>set-home-activity</code>; where it doesn't, use Open with Home instead.</p>
