@@ -74,7 +74,8 @@ streamer instead ([why](https://vaari-dev.github.io/aangan/faq.html#samsung)).
 - **Your city.** Defaults to Gurgaon.
 - **Family days.** Easiest from your phone, below.
 
-> With adb you can make Aangan the true default home: `adb shell cmd package set-home-activity dev.vaari.aangan/.HomeActivity`.
+> With adb you can make Aangan the default home app: `adb shell cmd package set-home-activity dev.vaari.aangan/.HomeActivity`.
+> On Google TV this isn't enough: Home still opens the Google TV launcher, so turn on *Open with Home* too.
 
 ## Set up from your phone
 
