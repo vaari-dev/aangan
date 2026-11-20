@@ -1,0 +1,4 @@
+• Hindi. Aangan, festival names and the phone page follow the TV's language, now English or Hindi. Corrections to this first translation are welcome.
+• Back up and restore. The phone page saves the city, dock, family days, festival changes and hidden apps to a file on your phone, and restores them on a new TV. No cloud involved.
+• Settings shows the version, for bug reports.
+More: github.com/vaari-dev/aangan/releases
